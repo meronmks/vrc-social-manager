@@ -79,7 +79,7 @@ impl<E: Display> From<E> for RustError {
 
 #[tauri::command]
 #[specta::specta]
-async fn cookieClear() {
+async fn cookie_clear() {
     let cookie_store  = COOKIE_STORE.clone();
     cookie_store.lock().unwrap().clear();
     let _ = save_cookies().await;
@@ -256,6 +256,7 @@ async fn get_world_by_id(state: State<'_, Mutex<AppState>>, worldid: &str) -> Re
         return Ok(serde_json::to_string(&w).unwrap());
     }
 
+    #[cfg(debug_assertions)]
     println!("Call get_world_by_id {:?}", worldid);
     let now = time::Instant::now();
 
@@ -287,10 +288,12 @@ async fn get_world_by_id(state: State<'_, Mutex<AppState>>, worldid: &str) -> Re
                             println!("Failed to perse World")
                         }
                     }
+                    #[cfg(debug_assertions)]
                     println!("Receive get_world_by_id {:?} time: {:?}", worldid, now.elapsed());
                     return Ok(res_text);
                 },
                 _ => {
+                    #[cfg(debug_assertions)]
                     println!("Receive Error get_world_by_id {:?} time: {:?}", worldid, now.elapsed());
                     return Err("Failed...".into());
                 },
@@ -341,7 +344,7 @@ struct AppState {
 fn main() {
     let mut builder = Builder::<tauri::Wry>::new()
         // Then register them (separated by a comma)
-        .commands(collect_commands![login, emailOtp, twoFactorAuth, verifyAuthToken, cookieClear, get_current_user_info, get_current_user_friends, get_world_by_id, get_raw_world_by_id]);
+        .commands(collect_commands![login, emailOtp, twoFactorAuth, verifyAuthToken, cookie_clear, get_current_user_info, get_current_user_friends, get_world_by_id, get_raw_world_by_id]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds
     builder

@@ -38,7 +38,7 @@ async verifyAuthToken() : Promise<Result<boolean, RustError>> {
 }
 },
 async cookieClear() : Promise<void> {
-    await TAURI_INVOKE("cookieClear");
+    await TAURI_INVOKE("cookie_clear");
 },
 async getCurrentUserInfo() : Promise<Result<string, RustError>> {
     try {

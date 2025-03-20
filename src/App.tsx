@@ -7,6 +7,7 @@ import { LazyStore } from '@tauri-apps/plugin-store';
 import DebugScreen from "./screens/debugScreen";
 
 export default function App() {
+  const isDev = import.meta.env.DEV;
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const store = new LazyStore('store.json');
 
@@ -25,7 +26,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<FriendScreen onFriendSelect={setSelectedFriend} />} />
         <Route path="/settings" element={<SettingsScreen />} />
-        <Route path="/debug" element={<DebugScreen />} />
+        {isDev && <Route path="/debug" element={<DebugScreen />} />}
       </Routes>
       {selectedFriend && (
         <FriendDetailDialog friend={selectedFriend} onClose={() => setSelectedFriend(null)} />
