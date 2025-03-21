@@ -185,6 +185,7 @@ export default function SettingsScreen() {
                 placeholder="Email or Username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
               />
               <input
                 type="password"
@@ -192,6 +193,7 @@ export default function SettingsScreen() {
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
               />
               <button className="btn btn-primary w-full mt-4" onClick={handleLogin}>Login</button>
             </div>
@@ -203,6 +205,9 @@ export default function SettingsScreen() {
                 placeholder="Enter 2FA Code"
                 value={twoFactorCode}
                 onChange={(e) => setTwoFactorCode(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" &&
+                    (twoFactorMethod === "emailOtp" ? handleemailOtpVerification() : handle2FAVerification())
+                }
               />
               { twoFactorMethod === "emailOtp" ? (
                 <button className="btn btn-primary w-full mt-4" onClick={handleemailOtpVerification}>
