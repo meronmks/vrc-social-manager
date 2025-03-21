@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm install && npm run build:vite",
+    "build:vite": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "lint": "tsc"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.0.12",
