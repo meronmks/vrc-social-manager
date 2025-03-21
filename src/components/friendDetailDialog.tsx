@@ -13,7 +13,7 @@ export interface FriendDetailDialogProps {
 
 export default function FriendDetailDialog({ friend, onClose }: FriendDetailDialogProps) {
   return (
-    <div className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 transition-opacity ${friend ? "opacity-100 visible" : "opacity-0 invisible"}`}>
+    <div className={`fixed inset-0 flex z-20 items-center justify-center bg-black bg-opacity-50 transition-opacity ${friend ? "opacity-100 visible" : "opacity-0 invisible"}`}>
       <div className="modal modal-open">
         <div className="modal-box">
           <h2 className="text-lg font-bold">{friend?.name}</h2>

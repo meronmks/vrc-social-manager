@@ -104,19 +104,24 @@ export default function InstanceView({ instance, callback }: { instance: Instanc
 
   return (
     <Card key={instance.id} className="mb-4">
-      <img src={instance.thumbnail} alt={instance.worldId} className="w-full h-32 object-cover rounded-t-lg" />
-      <CardContent>
-        <a href={instanceLink} target="_blank" className="p-2 rounded-lg hover:bg-base-300">
+      <div className="sticky top-0 z-10 p-2 pb-4 bg-base-100/70 backdrop-blur-sm shadow-md">
+        <img src={instance.thumbnail} alt={instance.worldId} className="w-full h-24 object-cover rounded-t-lg" />
+        <a href={instanceLink} target="_blank" className="p-2 rounded-lg hover:bg-base-300 block">
           <h2 className="text-lg font-semibold">{instance.name}</h2>
           <p>instanceID: {instanceData.instanceId}</p>
           <p>instanceAccessLevel: {instanceData.accessType}</p>
         </a>
+      </div>
+      <CardContent>
         <div className="mt-2 space-y-2">
           <div className="mt-2 grid grid-cols-4 gap-2">
             {instance.friends.map((friend) => (
               <div key={friend.id} className="flex flex-col items-center p-2 hover:bg-base-300 rounded-lg cursor-pointer" onClick={() => callback(friend)}>
-                <Avatar src={friend.avatar}/>
-                <span className="text-sm text-center">{friend.name} <span className={getStatusColor(friend.status)}>●</span> </span>
+                <div className="indicator">
+                  <span className={`indicator-item ${getStatusColor(friend.status)}`}>●</span>
+                  <Avatar src={friend.avatar}/>
+                </div>
+                <span className="text-sm text-center">{friend.name} </span>
               </div>
             ))}
           </div>

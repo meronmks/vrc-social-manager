@@ -15,7 +15,7 @@ async login(userName: string, password: string) : Promise<Result<string, RustErr
 },
 async emailOtp(otp: string) : Promise<Result<boolean, RustError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("emailOtp", { otp }) };
+    return { status: "ok", data: await TAURI_INVOKE("email_otp", { otp }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -23,7 +23,7 @@ async emailOtp(otp: string) : Promise<Result<boolean, RustError>> {
 },
 async twoFactorAuth(otp: string) : Promise<Result<boolean, RustError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("twoFactorAuth", { otp }) };
+    return { status: "ok", data: await TAURI_INVOKE("two_factor_auth", { otp }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -31,7 +31,7 @@ async twoFactorAuth(otp: string) : Promise<Result<boolean, RustError>> {
 },
 async verifyAuthToken() : Promise<Result<boolean, RustError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("verifyAuthToken") };
+    return { status: "ok", data: await TAURI_INVOKE("verify_auth_token") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };

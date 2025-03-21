@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import {useState, useMemo, useEffect} from "react";
 import { Input } from "@/components/ui/input";
 
 import { Avatar } from "@/components/ui/avatar";
@@ -22,6 +22,20 @@ export default function FriendScreen({ onFriendSelect }: FriendScreenProps) {
   const [onlineUserCount, setOnlineUserCount] = useState(0);
   const store = new LazyStore('store.json');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    async function checkAuthToken() {
+      const res = await commands.verifyAuthToken();
+      if (res.status == "ok") {
+        const currentUser = await commands.getCurrentUserInfo();
+        if (currentUser.status == "ok") {
+          setUserData(JSON.parse(currentUser.data));
+        }
+      }
+    }
+
+    checkAuthToken();
+  }, []);
 
   const filteredInstances = useMemo(() =>
     instancesData.map((instance) => ({
@@ -50,28 +64,21 @@ export default function FriendScreen({ onFriendSelect }: FriendScreenProps) {
     setInstancesData([]);
     setOnlineUserCount(0);
     setIsLoading(true);
-    const res = await commands.verifyAuthToken();
-    if (res.status == "ok") {
-      const currentUser = await commands.getCurrentUserInfo();
-      if (currentUser.status == "ok") {
-        setUserData(JSON.parse(currentUser.data));
-        let getMaxCount = await store.get<number>("fetch-friends-count");
-        if (!getMaxCount) {
-          getMaxCount = 50;
-        }
-        for (let i: number = 0; ; i++) {
-          const friends = await commands.getCurrentUserFriends(getMaxCount * i, getMaxCount, false);
-          if (friends.status == "ok") {
-            await loadInstances(friends.data);
-            const friendNum: number = JSON.parse(friends.data).length;
+    let getMaxCount = await store.get<number>("fetch-friends-count");
+    if (!getMaxCount) {
+      getMaxCount = 50;
+    }
+    for (let i: number = 0; ; i++) {
+      const friends = await commands.getCurrentUserFriends(getMaxCount * i, getMaxCount, false);
+      if (friends.status == "ok") {
+        await loadInstances(friends.data);
+        const friendNum: number = JSON.parse(friends.data).length;
 
-            setOnlineUserCount((prev) => prev + friendNum)
-            if (friendNum < getMaxCount) break;
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-          } else {
-            break;
-          }
-        }
+        setOnlineUserCount((prev) => prev + friendNum)
+        if (friendNum < getMaxCount) break;
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      } else {
+        break;
       }
     }
 
