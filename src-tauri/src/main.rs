@@ -1,23 +1,18 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::collections::HashMap;
-use std::time;
-use std::{fmt::Display, fs, path::PathBuf};
+use std::{fs, path::PathBuf};
 use reqwest_cookie_store::{CookieStore, CookieStoreMutex};
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use specta_typescript::Typescript;
 use tauri::Manager;
-use tauri::State;
-use tauri_specta::{collect_commands, Builder};
 use once_cell::sync::Lazy;
-use reqwest::{Client, cookie::Jar};
+use reqwest::{Client};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use dirs::config_dir;
+use crate::structs::AppState;
 
 mod commands;
+mod structs;
 
 fn get_cookie_path() -> PathBuf {
     let mut path = config_dir().unwrap_or_else(|| PathBuf::from("."));
@@ -56,25 +51,6 @@ async fn save_cookies() -> Result<(), Box<dyn std::error::Error>> {
     let json = serde_json::to_string_pretty(&*cookie_store)?;
     fs::write(cookie_path, json)?;
     Ok(())
-}
-
-#[derive(Serialize, Deserialize)]
-#[allow(non_snake_case)]
-struct World {
-    id: String,
-    name: String,
-    thumbnailImageUrl: String,
-}
-
-#[derive(Default)]
-struct Worlds {
-    world: HashMap<String, World>,
-}
-
-#[derive(Default)]
-struct AppState {
-    is_login: bool,
-    worlds: Worlds,
 }
 
 fn main() {

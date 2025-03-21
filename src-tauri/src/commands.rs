@@ -1,18 +1,22 @@
 use std::fmt::Display;
 use std::time;
+use reqwest::Response;
 use serde::Serialize;
 use serde_json::json;
-use tauri::ipc::{Invoke, RuntimeCapability};
+use tauri::ipc::{Invoke};
 use tauri::{generate_handler, State};
 use tokio::sync::Mutex;
-use crate::{save_cookies, AppState, World, CLIENT, COOKIE_STORE};
+use crate::{save_cookies, CLIENT, COOKIE_STORE};
+use crate::structs::{AppState, World};
+
+const VRCHAT_API_BASE_URL: &str = "https://api.vrchat.cloud/api";
 
 pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
     generate_handler![
         login,
-        emailOtp,
-        twoFactorAuth,
-        verifyAuthToken,
+        email_otp,
+        two_factor_auth,
+        verify_auth_token,
         cookie_clear,
         get_current_user_info,
         get_current_user_friends,
@@ -26,9 +30,9 @@ pub(crate) fn export_ts() {
     tauri_specta::Builder::<tauri::Wry>::new()
         .commands(tauri_specta::collect_commands![
             login,
-            emailOtp,
-            twoFactorAuth,
-            verifyAuthToken,
+            email_otp,
+            two_factor_auth,
+            verify_auth_token,
             cookie_clear,
             get_current_user_info,
             get_current_user_friends,
@@ -73,11 +77,11 @@ async fn cookie_clear() {
 
 #[tauri::command]
 #[specta::specta]
-async fn login(userName: &str, password: &str) -> Result<String, RustError> {
+async fn login(user_name: &str, password: &str) -> Result<String, RustError> {
     let client = CLIENT.lock().await;
 
-    let res = client.get("https://api.vrchat.cloud/api/1/auth/user")
-        .basic_auth(userName, Some(password))
+    let res = client.get(format!("{VRCHAT_API_BASE_URL}/1/auth/user"))
+        .basic_auth(user_name, Some(password))
         .send()
         .await?;
 
@@ -88,33 +92,50 @@ async fn login(userName: &str, password: &str) -> Result<String, RustError> {
             let res_json: serde_json::Value = serde_json::from_str(&res_text).unwrap();
             if res_json["requiresTwoFactorAuth"].is_array() {
                 if res_json["requiresTwoFactorAuth"].as_array().unwrap().contains(&json!("emailOtp")) {
-                    return Ok("emailOtp".to_string())
+                    Ok("emailOtp".to_string())
                 } else {
-                    return Ok("totp".to_string())
+                    Ok("totp".to_string())
                 }
             } else {
-                return Ok(res_text)
+                Ok(res_text)
             }
         },
         _ => {
-            return Err("Login Failed...".into());
+            Err("Login Failed...".into())
         },
-    };
+    }
 }
 
 #[tauri::command]
 #[specta::specta]
-async fn emailOtp(otp: &str) -> Result<bool, RustError> {
+async fn email_otp(otp: &str) -> Result<bool, RustError> {
     let client = CLIENT.lock().await;
 
-    let res = client.post("https://api.vrchat.cloud/api/1/auth/twofactorauth/emailotp/verify")
+    let res = client.post(format!("{VRCHAT_API_BASE_URL}/1/auth/twofactorauth/emailotp/verify"))
         .json(&json!({"code": otp}))
         .send()
         .await?;
 
-    match res.status() {
+    otp_verified_check(res).await
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn two_factor_auth(otp: &str) -> Result<bool, RustError> {
+    let client = CLIENT.lock().await;
+
+    let res = client.post(format!("{VRCHAT_API_BASE_URL}/1/auth/twofactorauth/totp/verify"))
+        .json(&json!({"code": otp}))
+        .send()
+        .await?;
+
+    otp_verified_check(res).await
+}
+
+async fn otp_verified_check(r: Response) -> Result<bool, RustError> {
+    match r.status() {
         reqwest::StatusCode::OK => {
-            let res_text = res.error_for_status()?.text().await?;
+            let res_text = r.error_for_status()?.text().await?;
             let res_json: serde_json::Value = serde_json::from_str(&res_text).unwrap();
             if res_json["verified"].is_boolean() {
                 if res_json["verified"].as_bool().unwrap() {
@@ -122,48 +143,20 @@ async fn emailOtp(otp: &str) -> Result<bool, RustError> {
                     return Ok(true);
                 }
             }
-            return Ok(false);
+            Ok(false)
         },
         _ => {
-            return Err("Login Failed...".into());
+            Err("Login Failed...".into())
         },
-    };
+    }
 }
 
 #[tauri::command]
 #[specta::specta]
-async fn twoFactorAuth(otp: &str) -> Result<bool, RustError> {
+async fn verify_auth_token(state: State<'_, Mutex<AppState>>) -> Result<bool, RustError> {
     let client = CLIENT.lock().await;
 
-    let res = client.post("https://api.vrchat.cloud/api/1/auth/twofactorauth/totp/verify")
-        .json(&json!({"code": otp}))
-        .send()
-        .await?;
-
-    match res.status() {
-        reqwest::StatusCode::OK => {
-            let res_text = res.error_for_status()?.text().await?;
-            let res_json: serde_json::Value = serde_json::from_str(&res_text).unwrap();
-            if res_json["verified"].is_boolean() {
-                if res_json["verified"].as_bool().unwrap() {
-                    save_cookies().await?;
-                    return Ok(true);
-                }
-            }
-            return Ok(false);
-        },
-        _ => {
-            return Err("Login Failed...".into());
-        },
-    };
-}
-
-#[tauri::command]
-#[specta::specta]
-async fn verifyAuthToken(state: State<'_, Mutex<AppState>>) -> Result<bool, RustError> {
-    let client = CLIENT.lock().await;
-
-    let res = client.get("https://api.vrchat.cloud/api/1/auth")
+    let res = client.get(format!("{VRCHAT_API_BASE_URL}/1/auth"))
         .send()
         .await?;
 
@@ -178,12 +171,12 @@ async fn verifyAuthToken(state: State<'_, Mutex<AppState>>) -> Result<bool, Rust
                     return Ok(true);
                 }
             }
-            return Ok(false);
+            Ok(false)
         },
         _ => {
-            return Err("Login Failed...".into());
+            Err("Login Failed...".into())
         },
-    };
+    }
 }
 
 #[tauri::command]
@@ -191,19 +184,19 @@ async fn verifyAuthToken(state: State<'_, Mutex<AppState>>) -> Result<bool, Rust
 async fn get_current_user_info() -> Result<String, RustError> {
     let client = CLIENT.lock().await;
 
-    let res = client.get("https://api.vrchat.cloud/api/1/auth/user")
+    let res = client.get(format!("{VRCHAT_API_BASE_URL}/1/auth/user"))
         .send()
         .await?;
 
     match res.status() {
         reqwest::StatusCode::OK => {
             let res_text = res.error_for_status()?.text().await.map_err(|e| e.to_string())?;
-            return Ok(res_text);
+            Ok(res_text)
         },
         _ => {
-            return Err("Failed...".into());
+            Err("Failed...".into())
         },
-    };
+    }
 }
 
 #[tauri::command]
@@ -211,7 +204,7 @@ async fn get_current_user_info() -> Result<String, RustError> {
 async fn get_current_user_friends(offset: i32, n: i32, offline: bool) -> Result<String, RustError> {
     let client = CLIENT.lock().await;
 
-    let res = client.get("https://api.vrchat.cloud/api/1/auth/user/friends")
+    let res = client.get(format!("{VRCHAT_API_BASE_URL}/1/auth/user/friends"))
         .query(&[("offset", offset), ("n", n)])
         .query(&[("offline", offline)])
         .send()
@@ -220,12 +213,12 @@ async fn get_current_user_friends(offset: i32, n: i32, offline: bool) -> Result<
     match res.status() {
         reqwest::StatusCode::OK => {
             let res_text = res.error_for_status()?.text().await.map_err(|e| e.to_string())?;
-            return Ok(res_text);
+            Ok(res_text)
         },
         _ => {
-            return Err("Failed...".into());
+            Err("Failed...".into())
         },
-    };
+    }
 }
 
 #[tauri::command]
@@ -258,7 +251,7 @@ async fn get_world_by_id(state: State<'_, Mutex<AppState>>, worldid: &str) -> Re
         None => {
             let client = CLIENT.lock().await;
 
-            let res = client.get(format!("https://api.vrchat.cloud/api/1/worlds/{worldid}"))
+            let res = client.get(format!("{VRCHAT_API_BASE_URL}/1/worlds/{worldid}"))
                 .send()
                 .await?;
 
@@ -270,20 +263,20 @@ async fn get_world_by_id(state: State<'_, Mutex<AppState>>, worldid: &str) -> Re
                         Ok(o) => {
                             state.worlds.world.insert((&worldid).to_string(), o);
                         },
-                        Err(e) => {
+                        Err(_e) => {
                             println!("Failed to perse World")
                         }
                     }
                     #[cfg(debug_assertions)]
                     println!("Receive get_world_by_id {:?} time: {:?}", worldid, now.elapsed());
-                    return Ok(res_text);
+                    Ok(res_text)
                 },
                 _ => {
                     #[cfg(debug_assertions)]
                     println!("Receive Error get_world_by_id {:?} time: {:?}", worldid, now.elapsed());
-                    return Err("Failed...".into());
+                    Err("Failed...".into())
                 },
-            };
+            }
         }
     }
 }
@@ -293,17 +286,17 @@ async fn get_world_by_id(state: State<'_, Mutex<AppState>>, worldid: &str) -> Re
 async fn get_raw_world_by_id(worldid: &str) -> Result<String, RustError> {
     let client = CLIENT.lock().await;
 
-    let res = client.get(format!("https://api.vrchat.cloud/api/1/worlds/{worldid}"))
+    let res = client.get(format!("{VRCHAT_API_BASE_URL}/1/worlds/{worldid}"))
         .send()
         .await?;
 
     match res.status() {
         reqwest::StatusCode::OK => {
             let res_text = res.error_for_status()?.text().await.map_err(|e| e.to_string())?;
-            return Ok(res_text);
+            Ok(res_text)
         },
         _ => {
-            return Err("Failed...".into());
+            Err("Failed...".into())
         },
-    };
+    }
 }
