@@ -104,7 +104,7 @@ export default function InstanceView({ instance, callback }: { instance: Instanc
 
   return (
     <Card key={instance.id} className="mb-4">
-      <div className="sticky top-0 z-10 p-2 pb-4 bg-base-100/70 backdrop-blur-sm shadow-md">
+      <div className="sticky top-0 z-10 p-2 bg-base-100/70 backdrop-blur-sm shadow-md">
         <img src={instance.thumbnail} alt={instance.worldId} className="w-full h-24 object-cover rounded-t-lg" />
         <a href={instanceLink} target="_blank" className="p-2 rounded-lg hover:bg-base-300 block">
           <h2 className="text-lg font-semibold">{instance.name}</h2>
@@ -113,8 +113,8 @@ export default function InstanceView({ instance, callback }: { instance: Instanc
         </a>
       </div>
       <CardContent>
-        <div className="mt-2 space-y-2">
-          <div className="mt-2 grid grid-cols-4 gap-2">
+        <div className="space-y-2">
+          <div className="grid grid-cols-4 gap-2">
             {instance.friends.map((friend) => (
               <div key={friend.id} className="flex flex-col items-center p-2 hover:bg-base-300 rounded-lg cursor-pointer" onClick={() => callback(friend)}>
                 <div className="indicator">
