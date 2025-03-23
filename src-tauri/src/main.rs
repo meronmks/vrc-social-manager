@@ -58,11 +58,18 @@ fn main() {
     commands::export_ts();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(commands::handlers())
         .setup(move |app| {
+            #[cfg(debug_assertions)] // only include this code on debug builds
+            {
+                let window = app.get_webview_window("main").unwrap();
+                window.open_devtools();
+                window.close_devtools();
+            }
             app.manage(Mutex::new(AppState::default()));
             Ok(())
         })

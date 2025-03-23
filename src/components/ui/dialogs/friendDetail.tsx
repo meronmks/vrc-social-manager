@@ -1,3 +1,7 @@
+import { createCallable } from 'react-call'
+
+interface Props { friend: Friend | null }
+
 export interface Friend {
   id: string;
   name: string;
@@ -6,14 +10,8 @@ export interface Friend {
   location: string;
 }
 
-export interface FriendDetailDialogProps {
-  friend: Friend | null;
-  onClose: () => void;
-}
-
-export default function FriendDetailDialog({ friend, onClose }: FriendDetailDialogProps) {
-  return (
-    <div className={`fixed inset-0 flex z-20 items-center justify-center bg-black bg-opacity-50 transition-opacity ${friend ? "opacity-100 visible" : "opacity-0 invisible"}`}>
+export const FriendDetail = createCallable<Props, void>(({ call,friend }) => (
+    <div className="fixed inset-0 flex z-20 items-center justify-center">
       <div className="modal modal-open">
         <div className="modal-box">
           <h2 className="text-lg font-bold">{friend?.name}</h2>
@@ -23,10 +21,10 @@ export default function FriendDetailDialog({ friend, onClose }: FriendDetailDial
             <p>Instance: {friend?.location}</p>
           </div>
           <div className="modal-action">
-            <button className="btn btn-primary" onClick={onClose}>Close</button>
+            <button className="btn btn-primary" onClick={() => call.end()}>Close</button>
           </div>
         </div>
       </div>
     </div>
-  );
-}
+))
+

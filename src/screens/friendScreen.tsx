@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 
 import { Avatar } from "@/components/ui/avatar";
 import { useNavigate } from 'react-router-dom';
-import { Friend } from "@/components/friendDetailDialog"
+import { Friend } from "@/components/ui/dialogs/friendDetail.tsx"
 import InstanceView, { Instance } from "@/components/ui/instance";
 import { Virtuoso } from "react-virtuoso";
 import { commands } from "@/bindings";
@@ -11,11 +11,7 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {getVersion} from "@tauri-apps/api/app";
 
-export interface FriendScreenProps {
-  onFriendSelect: (friend: Friend) => void;
-}
-
-export default function FriendScreen({ onFriendSelect }: FriendScreenProps) {
+export default function FriendScreen() {
   const isDev = import.meta.env.DEV;
   const [instancesData, setInstancesData] = useState<Instance[]>([]);
   const [search, setSearch] = useState("");
@@ -192,7 +188,7 @@ export default function FriendScreen({ onFriendSelect }: FriendScreenProps) {
           <Virtuoso
             totalCount={filteredInstances.length}
             itemContent={(index) => (
-              <InstanceView instance={filteredInstances[index]} callback={onFriendSelect} />
+              <InstanceView instance={filteredInstances[index]} />
             )}
           />
         </div>

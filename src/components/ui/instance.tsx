@@ -1,4 +1,4 @@
-import { Friend } from "@/components/friendDetailDialog"
+import {Friend, FriendDetail} from "@/components/ui/dialogs/friendDetail.tsx"
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { useCallback } from "react";
@@ -83,7 +83,7 @@ const parseInstanceString = (input: string): InstanceData => {
   return data as InstanceData;
 };
 
-export default function InstanceView({ instance, callback }: { instance: Instance, callback: (friend: Friend) => void }) {
+export default function InstanceView({ instance }: { instance: Instance }) {
   const getStatusColor = useCallback((status: any) => {
     switch (status) {
       case "join me":
@@ -116,7 +116,7 @@ export default function InstanceView({ instance, callback }: { instance: Instanc
         <div className="space-y-2">
           <div className="grid grid-cols-4 gap-2">
             {instance.friends.map((friend) => (
-              <div key={friend.id} className="flex flex-col items-center p-2 hover:bg-base-300 rounded-lg cursor-pointer" onClick={() => callback(friend)}>
+              <div key={friend.id} className="flex flex-col items-center p-2 hover:bg-base-300 rounded-lg cursor-pointer" onClick={() => FriendDetail.call({ friend: friend })}>
                 <div className="indicator">
                   <span className={`indicator-item ${getStatusColor(friend.status)}`}>●</span>
                   <Avatar src={friend.avatar}/>
