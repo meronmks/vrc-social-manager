@@ -26,12 +26,12 @@
   },
   "productName": "vrc-social-manager",
   "mainBinaryName": "vrc-social-manager",
-  "version": "0.0.0-beta.3",
+  "version": "0.0.0-beta.4",
   "identifier": "com.meronmks.vsm",
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY0NUY2QzkyQUQzMEEwRDkKUldUWm9EQ3RrbXhmWkxQak51cG13T1l1QzJEMFFoTDRybnFyK3dIODJaalFnRERrYmdDbzNVckIK",
-      "endpoints": ["https://github.com/meronmks/vrc-social-manage/releases/latest/latest.json"],
+      "endpoints": ["https://github.com/meronmks/vrc-social-manager/releases/latest/download/latest.json"],
       "windows": {
         "installMode": "passive"
       },
@@ -41,7 +41,7 @@
   "app": {
     "security": {
       "csp": null,
-      "capabilities": ["migrated"]
+      "capabilities": ["desktop-capability", "migrated"]
     },
     "windows": [
       {
