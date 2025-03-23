@@ -8,6 +8,8 @@ import InstanceView, { Instance } from "@/components/ui/instance";
 import { Virtuoso } from "react-virtuoso";
 import { commands } from "@/bindings";
 import { LazyStore } from "@tauri-apps/plugin-store";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import {getVersion} from "@tauri-apps/api/app";
 
 export interface FriendScreenProps {
   onFriendSelect: (friend: Friend) => void;
@@ -22,8 +24,13 @@ export default function FriendScreen({ onFriendSelect }: FriendScreenProps) {
   const [onlineUserCount, setOnlineUserCount] = useState(0);
   const store = new LazyStore('store.json');
   const [isLoading, setIsLoading] = useState(false);
+  const [appVersion, setAppVersion] = useState("unknown");
 
   useEffect(() => {
+    async function init() {
+      const version = await getVersion();
+      setAppVersion(version);
+    }
     async function checkAuthToken() {
       const res = await commands.verifyAuthToken();
       if (res.status == "ok") {
@@ -33,7 +40,7 @@ export default function FriendScreen({ onFriendSelect }: FriendScreenProps) {
         }
       }
     }
-
+    init();
     checkAuthToken();
   }, []);
 
@@ -163,6 +170,9 @@ export default function FriendScreen({ onFriendSelect }: FriendScreenProps) {
             <button className="btn btn-ghost w-full hover:bg-base-100" onClick={() => navigate("/debug")}>Debug</button>
           </nav>
         }
+        <nav className="mt-4">
+          <button className="btn btn-ghost w-full hover:bg-base-100" onClick={() => writeText(appVersion)}>v{appVersion}</button>
+        </nav>
       </div>
 
       {/* Main Content */}
