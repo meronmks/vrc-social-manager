@@ -9,6 +9,7 @@ export interface Friend {
   status: string;
   avatar: string;
   location: string;
+  bio: string;
 }
 
 export const FriendDetail = createCallable<Props, void>(({ call,friend }) => (
@@ -20,6 +21,10 @@ export const FriendDetail = createCallable<Props, void>(({ call,friend }) => (
             <Avatar src={friend.avatar} className="w-24"/>
             <p>Status: {friend.status}</p>
             <p>Instance: {friend.location}</p>
+          </div>
+          <div className="flex flex-col p-2">
+            <p>Bio</p>
+            <p className="whitespace-pre-wrap max-h-32 w-full overflow-x-auto overflow-y-auto">{friend.bio}</p>
           </div>
           <div className="modal-action">
             <button className="btn btn-primary" onClick={() => call.end()}>Close</button>

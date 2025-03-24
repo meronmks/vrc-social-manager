@@ -91,7 +91,7 @@ export default function FriendScreen() {
   const loadInstances = async (data: string) => {
     const friendList = JSON.parse(data);
 
-    const newInstances = await Promise.all(friendList.map(async (friend: { location: any; id: any; displayName: any; imageUrl: any; status: any; }) => {
+    const newInstances = await Promise.all(friendList.map(async (friend: any) => {
       const instanceId = friend.location;
       const splitW = instanceId.split(":");
       const worldId = splitW[0];
@@ -119,6 +119,7 @@ export default function FriendScreen() {
           avatar: friend.imageUrl,
           status: friend.status,
           location: friend.location,
+          bio: friend.bio,
         }],
       };
     }));
