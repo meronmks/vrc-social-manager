@@ -108,8 +108,12 @@ export default function InstanceView({ instance }: { instance: Instance }) {
         <img src={instance.thumbnail} alt={instance.worldId} className="w-full h-24 object-cover rounded-t-lg" />
         <a href={instanceLink} target="_blank" className="p-2 rounded-lg hover:bg-base-300 block">
           <h2 className="text-lg font-semibold">{instance.name}</h2>
-          <p>instanceID: {instanceData.instanceId}</p>
-          <p>instanceAccessLevel: {instanceData.accessType}</p>
+          {instanceData.instanceId &&
+            <>
+              <p>instanceID: {instanceData.instanceId}</p>
+              <p>instanceAccessLevel: {instanceData.accessType}</p>
+            </>
+          }
         </a>
       </div>
       <CardContent>
