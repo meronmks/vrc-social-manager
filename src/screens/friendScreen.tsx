@@ -149,7 +149,7 @@ export default function FriendScreen() {
       {/* Sidebar */}
       <div className="w-64 p-4 shadow-lg flex flex-col h-screen">
         <div className="flex items-center gap-2">
-          {userData ? <Avatar src={userData.currentAvatarThumbnailImageUrl} /> : <></>}
+          {userData ? <Avatar src={userData.currentAvatarThumbnailImageUrl} className="w-10" /> : <></>}
           {userData ? <span className="text-lg font-semibold">{userData?.displayName}</span> : <span className="text-lg font-semibold">Not Login</span>}
         </div>
         <div className="mt-4 text-sm">

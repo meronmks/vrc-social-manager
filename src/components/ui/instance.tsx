@@ -119,7 +119,7 @@ export default function InstanceView({ instance }: { instance: Instance }) {
               <div key={friend.id} className="flex flex-col items-center p-2 hover:bg-base-300 rounded-lg cursor-pointer" onClick={() => FriendDetail.call({ friend: friend })}>
                 <div className="indicator">
                   <span className={`indicator-item ${getStatusColor(friend.status)}`}>●</span>
-                  <Avatar src={friend.avatar}/>
+                  <Avatar src={friend.avatar} className="w-10"/>
                 </div>
                 <span className="text-sm text-center">{friend.name} </span>
               </div>
