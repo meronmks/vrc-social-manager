@@ -4,10 +4,12 @@ use reqwest::Response;
 use serde::Serialize;
 use serde_json::json;
 use std::fmt::Display;
+use std::sync::Arc;
 use std::time;
+use once_cell::sync::Lazy;
 use tauri::ipc::Invoke;
 use tauri::{generate_handler, State};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 
 const VRCHAT_API_BASE_URL: &str = "https://api.vrchat.cloud/api";
 
@@ -22,6 +24,7 @@ pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         get_current_user_friends,
         get_world_by_id,
         get_raw_world_by_id,
+        get_instance,
     ]
 }
 
@@ -38,6 +41,7 @@ pub(crate) fn export_ts() {
             get_current_user_friends,
             get_world_by_id,
             get_raw_world_by_id,
+            get_instance,
         ])
         .export(
             specta_typescript::Typescript::default()
@@ -45,6 +49,34 @@ pub(crate) fn export_ts() {
             "../src/bindings.ts",
         )
         .unwrap();
+}
+
+macro_rules! handle_raw_response {
+    ($res:expr) => {{
+        match $res.status() {
+            reqwest::StatusCode::OK => {
+                let res_text = $res
+                    .error_for_status()?
+                    .text()
+                    .await
+                    .map_err(|e| e.to_string())?;
+                Ok(res_text)
+            }
+            _ => Err("Failed...".into()),
+        }
+    }};
+}
+
+static APP_STATE: Lazy<Arc<RwLock<AppState>>> = Lazy::new(|| Arc::new(RwLock::new(AppState::default())));
+
+pub async fn insert_world(world_id: String, world: World) {
+    let mut state = APP_STATE.write().await;
+    state.worlds.world.insert(world_id, world);
+}
+
+pub async fn get_world(world_id: String) -> Option<World> {
+    let state = APP_STATE.read().await;
+    state.worlds.world.get(&world_id).cloned()
 }
 
 #[derive(Debug, Clone, Serialize, specta::Type)]
@@ -79,7 +111,7 @@ async fn cookie_clear() {
 #[tauri::command]
 #[specta::specta]
 async fn login(user_name: &str, password: &str) -> Result<String, RustError> {
-    let client = CLIENT.lock().await;
+    let client = CLIENT.clone();
 
     let res = client
         .get(format!("{VRCHAT_API_BASE_URL}/1/auth/user"))
@@ -113,7 +145,7 @@ async fn login(user_name: &str, password: &str) -> Result<String, RustError> {
 #[tauri::command]
 #[specta::specta]
 async fn email_otp(otp: &str) -> Result<bool, RustError> {
-    let client = CLIENT.lock().await;
+    let client = CLIENT.clone();
 
     let res = client
         .post(format!(
@@ -129,7 +161,7 @@ async fn email_otp(otp: &str) -> Result<bool, RustError> {
 #[tauri::command]
 #[specta::specta]
 async fn two_factor_auth(otp: &str) -> Result<bool, RustError> {
-    let client = CLIENT.lock().await;
+    let client = CLIENT.clone();
 
     let res = client
         .post(format!(
@@ -161,8 +193,8 @@ async fn otp_verified_check(r: Response) -> Result<bool, RustError> {
 
 #[tauri::command]
 #[specta::specta]
-async fn verify_auth_token(state: State<'_, Mutex<AppState>>) -> Result<bool, RustError> {
-    let client = CLIENT.lock().await;
+async fn verify_auth_token() -> Result<bool, RustError> {
+    let client = CLIENT.clone();
 
     let res = client
         .get(format!("{VRCHAT_API_BASE_URL}/1/auth"))
@@ -175,8 +207,7 @@ async fn verify_auth_token(state: State<'_, Mutex<AppState>>) -> Result<bool, Ru
             let res_json: serde_json::Value = serde_json::from_str(&res_text).unwrap();
             if res_json["ok"].is_boolean() {
                 if res_json["ok"].as_bool().unwrap() {
-                    let mut state = state.lock().await;
-                    state.is_login = true;
+                    APP_STATE.write().await.is_login = true;
                     return Ok(true);
                 }
             }
@@ -189,30 +220,20 @@ async fn verify_auth_token(state: State<'_, Mutex<AppState>>) -> Result<bool, Ru
 #[tauri::command]
 #[specta::specta]
 async fn get_current_user_info() -> Result<String, RustError> {
-    let client = CLIENT.lock().await;
+    let client = CLIENT.clone();
 
     let res = client
         .get(format!("{VRCHAT_API_BASE_URL}/1/auth/user"))
         .send()
         .await?;
 
-    match res.status() {
-        reqwest::StatusCode::OK => {
-            let res_text = res
-                .error_for_status()?
-                .text()
-                .await
-                .map_err(|e| e.to_string())?;
-            Ok(res_text)
-        }
-        _ => Err("Failed...".into()),
-    }
+    handle_raw_response!(res)
 }
 
 #[tauri::command]
 #[specta::specta]
 async fn get_current_user_friends(offset: i32, n: i32, offline: bool) -> Result<String, RustError> {
-    let client = CLIENT.lock().await;
+    let client = CLIENT.clone();
 
     let res = client
         .get(format!("{VRCHAT_API_BASE_URL}/1/auth/user/friends"))
@@ -221,23 +242,12 @@ async fn get_current_user_friends(offset: i32, n: i32, offline: bool) -> Result<
         .send()
         .await?;
 
-    match res.status() {
-        reqwest::StatusCode::OK => {
-            let res_text = res
-                .error_for_status()?
-                .text()
-                .await
-                .map_err(|e| e.to_string())?;
-            Ok(res_text)
-        }
-        _ => Err("Failed...".into()),
-    }
+    handle_raw_response!(res)
 }
 
 #[tauri::command]
 #[specta::specta]
 async fn get_world_by_id(
-    state: State<'_, Mutex<AppState>>,
     worldid: &str,
 ) -> Result<String, RustError> {
     if worldid == "private" {
@@ -270,9 +280,7 @@ async fn get_world_by_id(
     println!("Call get_world_by_id {:?}", worldid);
     let now = time::Instant::now();
 
-    let mut state = state.lock().await;
-
-    let world = state.worlds.world.get(worldid);
+    let world = get_world(worldid.to_string()).await;
 
     match world {
         Some(result) => {
@@ -284,7 +292,7 @@ async fn get_world_by_id(
             return Ok(serde_json::to_string(&result).unwrap());
         }
         None => {
-            let client = CLIENT.lock().await;
+            let client = CLIENT.clone();
 
             let res = client
                 .get(format!("{VRCHAT_API_BASE_URL}/1/worlds/{worldid}"))
@@ -301,7 +309,7 @@ async fn get_world_by_id(
                     let json = serde_json::from_str::<World>(&res_text);
                     match json {
                         Ok(o) => {
-                            state.worlds.world.insert((&worldid).to_string(), o);
+                            insert_world((&worldid).to_string(), o).await;
                         }
                         Err(_e) => {
                             println!("Failed to perse World")
@@ -332,22 +340,25 @@ async fn get_world_by_id(
 #[tauri::command]
 #[specta::specta]
 async fn get_raw_world_by_id(worldid: &str) -> Result<String, RustError> {
-    let client = CLIENT.lock().await;
+    let client = CLIENT.clone();
 
     let res = client
         .get(format!("{VRCHAT_API_BASE_URL}/1/worlds/{worldid}"))
         .send()
         .await?;
 
-    match res.status() {
-        reqwest::StatusCode::OK => {
-            let res_text = res
-                .error_for_status()?
-                .text()
-                .await
-                .map_err(|e| e.to_string())?;
-            Ok(res_text)
-        }
-        _ => Err("Failed...".into()),
-    }
+    handle_raw_response!(res)
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn get_instance(worldid: &str, instanceid: &str) -> Result<String, RustError> {
+    let client = CLIENT.clone();
+
+    let res = client
+        .get(format!("{VRCHAT_API_BASE_URL}/1/instances/{worldid}:{instanceid}"))
+        .send()
+        .await?;
+
+    handle_raw_response!(res)
 }

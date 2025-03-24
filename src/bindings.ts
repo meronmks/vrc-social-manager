@@ -71,6 +71,14 @@ async getRawWorldById(worldid: string) : Promise<Result<string, RustError>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async getInstance(worldid: string, instanceid: string) : Promise<Result<string, RustError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_instance", { worldid, instanceid }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 

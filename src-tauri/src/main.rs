@@ -9,7 +9,7 @@ use reqwest_cookie_store::{CookieStore, CookieStoreMutex};
 use std::sync::Arc;
 use std::{fs, path::PathBuf};
 use tauri::Manager;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 
 mod commands;
 mod structs;
@@ -34,7 +34,7 @@ static COOKIE_STORE: Lazy<Arc<CookieStoreMutex>> = Lazy::new(|| {
     Arc::new(cookie_store)
 });
 
-static CLIENT: Lazy<Arc<Mutex<Client>>> = Lazy::new(|| {
+static CLIENT: Lazy<Arc<Client>> = Lazy::new(|| {
     let cookie_store = COOKIE_STORE.clone();
     let client = Client::builder()
         .cookie_provider(cookie_store)
@@ -42,7 +42,7 @@ static CLIENT: Lazy<Arc<Mutex<Client>>> = Lazy::new(|| {
         .build()
         .unwrap();
 
-    Arc::new(Mutex::new(client))
+    Arc::new(client)
 });
 
 async fn save_cookies() -> Result<(), Box<dyn std::error::Error>> {
@@ -70,7 +70,6 @@ fn main() {
                 window.open_devtools();
                 window.close_devtools();
             }
-            app.manage(Mutex::new(AppState::default()));
             Ok(())
         })
         .plugin(tauri_plugin_shell::init())

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[allow(non_snake_case)]
 pub(crate) struct World {
     pub(crate) id: String,
@@ -9,12 +9,12 @@ pub(crate) struct World {
     pub(crate) thumbnailImageUrl: String,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub(crate) struct Worlds {
     pub(crate) world: HashMap<String, World>,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub(crate) struct AppState {
     pub(crate) is_login: bool,
     pub(crate) worlds: Worlds,
