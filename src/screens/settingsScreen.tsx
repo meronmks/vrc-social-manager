@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { LazyStore } from '@tauri-apps/plugin-store';
 import { commands } from "@/bindings";
 

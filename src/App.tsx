@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes } from "react-router";
 import FriendScreen from "@/screens/friendScreen";
 import SettingsScreen from "@/screens/settingsScreen";
 import { LazyStore } from '@tauri-apps/plugin-store';

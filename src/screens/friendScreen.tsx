@@ -2,7 +2,7 @@ import {useState, useMemo, useEffect} from "react";
 import { Input } from "@/components/ui/input";
 
 import { Avatar } from "@/components/ui/avatar";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Friend } from "@/components/ui/dialogs/friendDetail.tsx"
 import InstanceView, { Instance } from "@/components/ui/instance";
 import { Virtuoso } from "react-virtuoso";
