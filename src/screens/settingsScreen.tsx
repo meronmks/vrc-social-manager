@@ -127,7 +127,7 @@ export default function SettingsScreen() {
   return (
     <div className="flex flex-col h-screen bg-base-200 p-4">
       <h1 className="text-xl font-semibold mb-4">Settings</h1>
-      <ul className="menu bg-base-100 p-2 rounded-box shadow-md w-full max-w-md">
+      <ul className="menu bg-base-100 p-2 rounded-box shadow-md w-full">
         <li>
           {isLoggedIn ? (
             <div className="flex justify-between items-center w-full">
