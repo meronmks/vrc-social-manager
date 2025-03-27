@@ -41,13 +41,16 @@ export default function App() {
     <>
       <Confirm.Root />
       <FriendDetail.Root />
-      <Router>
-        <Routes>
-          <Route path="/" element={<FriendScreen/>} />
-          <Route path="/settings" element={<SettingsScreen />} />
-          {isDev && <Route path="/debug" element={<DebugScreen />} />}
-        </Routes>
-      </Router>
+      {/* 理由がよくわからんがメインコンテンツをw-screenで覆わないとダイアログ表示時になんかズレる */}
+      <div className="w-screen">
+        <Router>
+          <Routes>
+            <Route path="/" element={<FriendScreen/>} />
+            <Route path="/settings" element={<SettingsScreen />} />
+            {isDev && <Route path="/debug" element={<DebugScreen />} />}
+          </Routes>
+        </Router>
+      </div>
     </>
   );
 }
