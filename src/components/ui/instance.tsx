@@ -94,8 +94,10 @@ export default function InstanceView({ instance }: { instance: Instance }) {
         return "text-orange-500";
       case "busy":
         return "text-red-500"
+      case "offline":
+        return "text-black";
       default:
-        return "text-black-500";
+        return "bg-white";
     }
   }, []);
 
