@@ -250,20 +250,31 @@ async fn get_current_user_friends(offset: i32, n: i32, offline: bool) -> Result<
 async fn get_world_by_id(
     worldid: &str,
 ) -> Result<String, RustError> {
+    #[cfg(debug_assertions)]
+    println!("Call get_world_by_id {:?}", worldid);
+
     if worldid == "private" {
         let w = World {
             id: "private".to_string(),
             name: "In a private world".to_string(),
             thumbnailImageUrl:
-                "https://assets.vrchat.com/www/images/user-location-private-world.png".to_string(),
+            "https://assets.vrchat.com/www/images/user-location-private-world.png".to_string(),
+        };
+        return Ok(serde_json::to_string(&w).unwrap());
+    } else if worldid == "web_or_mobile" {
+        let w = World {
+            id: "web_or_mobile".to_string(),
+            name: "On Web or Mobile".to_string(),
+            thumbnailImageUrl:
+            "https://assets.vrchat.com/www/images/user-location-private-world.png".to_string(),
         };
         return Ok(serde_json::to_string(&w).unwrap());
     } else if worldid == "offline" {
         let w = World {
             id: "offline".to_string(),
-            name: "On Web or Mobile".to_string(),
+            name: "Offline".to_string(),
             thumbnailImageUrl:
-                "https://assets.vrchat.com/www/images/user-location-private-world.png".to_string(),
+                "https://assets.vrchat.com/www/images/user-location-offline.png".to_string(),
         };
         return Ok(serde_json::to_string(&w).unwrap());
     } else if worldid == "traveling" {
@@ -275,9 +286,6 @@ async fn get_world_by_id(
         };
         return Ok(serde_json::to_string(&w).unwrap());
     }
-
-    #[cfg(debug_assertions)]
-    println!("Call get_world_by_id {:?}", worldid);
     let now = time::Instant::now();
 
     let world = get_world(worldid.to_string()).await;

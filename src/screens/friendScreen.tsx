@@ -56,6 +56,9 @@ export default function FriendScreen() {
         if (a.id.toLowerCase() === "offline") return 1;
         if (b.id.toLowerCase() === "offline") return -1;
 
+        if (a.id.toLowerCase() === "web_or_mobile") return 1;
+        if (b.id.toLowerCase() === "web_or_mobile") return -1;
+
         if (a.id.toLowerCase() === "private") return 1;
         if (b.id.toLowerCase() === "private") return -1;
 
@@ -88,6 +91,19 @@ export default function FriendScreen() {
       }
     }
 
+    for (let i: number = 0; ; i++) {
+      const friends = await commands.getCurrentUserFriends(getMaxCount * i, getMaxCount, true);
+      if (friends.status == "ok") {
+        await loadInstances(friends.data);
+        const friendNum: number = JSON.parse(friends.data).length;
+
+        if (friendNum < getMaxCount) break;
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      } else {
+        break;
+      }
+    }
+
     setIsLoading(false);
   };
 
@@ -95,10 +111,15 @@ export default function FriendScreen() {
     const friendList = JSON.parse(data);
 
     const newInstances = await Promise.all(friendList.map(async (friend: any) => {
-      const instanceId = friend.location;
+      let instanceId = friend.location;
       const splitW = instanceId.split(":");
-      const worldId = splitW[0];
+      let worldId = splitW[0];
       const instanceDetail = splitW[1] || "";
+
+      if (worldId === "offline" && friend.status !== "offline") {
+        instanceId = "web_or_mobile";
+        worldId = "web_or_mobile";
+      }
 
       const worldRes = await commands.getWorldById(worldId);
       let worldName = worldId;
