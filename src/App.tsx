@@ -8,6 +8,7 @@ import { check } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
 import { Confirm } from "@/components/ui/dialogs/confirm";
 import { FriendDetail } from "./components/ui/dialogs/friendDetail";
+import {ToastContainer} from "react-toastify";
 
 
 export default function App() {
@@ -39,6 +40,7 @@ export default function App() {
 
   return (
     <>
+      <ToastContainer />
       <Confirm.Root />
       <FriendDetail.Root />
       {/* 理由がよくわからんがメインコンテンツをw-screenで覆わないとダイアログ表示時になんかズレる */}

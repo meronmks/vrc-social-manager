@@ -10,6 +10,7 @@ import { commands } from "@/bindings";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {getVersion} from "@tauri-apps/api/app";
+import {toastError} from "@/components/toast.tsx";
 
 export default function FriendScreen() {
   const isDev = import.meta.env.DEV;
@@ -34,6 +35,8 @@ export default function FriendScreen() {
         if (currentUser.status == "ok") {
           setUserData(JSON.parse(currentUser.data));
         }
+      } else {
+        toastError(res.error.message);
       }
     }
     init();
