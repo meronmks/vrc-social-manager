@@ -106,7 +106,7 @@ export default function InstanceView({ instance }: { instance: Instance }) {
     <Card key={instance.id} className="mb-4">
       <div className="sticky top-0 z-10 p-2 bg-base-100/70 backdrop-blur-sm shadow-md">
         <img src={instance.thumbnail} alt={instance.worldId} className="w-full h-24 object-cover rounded-t-lg" />
-        <a href={instanceLink} target="_blank" className="p-2 rounded-lg hover:bg-base-300 block">
+        <a href={instanceLink} target="_blank" className={`p-2 rounded-lg hover:bg-base-300 block ${!instanceData.instanceId && "pointer-events-none"}`}>
           <h2 className="text-lg font-semibold">{instance.name}</h2>
           {instanceData.instanceId &&
             <>
