@@ -3,14 +3,14 @@ import { Input } from "@/components/ui/input";
 
 import { Avatar } from "@/components/ui/avatar";
 import { useNavigate } from 'react-router';
-import { Friend } from "@/components/ui/dialogs/friendDetail.tsx"
-import InstanceView, { Instance } from "@/components/ui/instance";
 import { Virtuoso } from "react-virtuoso";
 import { commands } from "@/bindings";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {getVersion} from "@tauri-apps/api/app";
 import {toastError} from "@/components/toast.tsx";
+import {Friend, Instance} from "@/libs/exportInterfaces.tsx";
+import InstanceView from "@/components/ui/instance.tsx";
 
 export default function FriendScreen() {
   const isDev = import.meta.env.DEV;

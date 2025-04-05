@@ -1,16 +1,8 @@
 import { createCallable } from 'react-call'
 import {Avatar} from "@/components/ui/avatar.tsx";
+import {Friend} from "@/libs/exportInterfaces.tsx";
 
 interface Props { friend: Friend }
-
-export interface Friend {
-  id: string;
-  name: string;
-  status: string;
-  avatar: string;
-  location: string;
-  bio: string;
-}
 
 export const FriendDetail = createCallable<Props, void>(({ call,friend }) => (
     <div className="fixed inset-0 flex z-20 items-center justify-center">

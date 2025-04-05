@@ -25,6 +25,7 @@ pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         get_world_by_id,
         get_raw_world_by_id,
         get_instance,
+        get_user_by_id,
     ]
 }
 
@@ -42,6 +43,7 @@ pub(crate) fn export_ts() {
             get_world_by_id,
             get_raw_world_by_id,
             get_instance,
+            get_user_by_id,
         ])
         .export(
             specta_typescript::Typescript::default()
@@ -239,6 +241,19 @@ async fn get_current_user_friends(offset: i32, n: i32, offline: bool) -> Result<
         .get(format!("{VRCHAT_API_BASE_URL}/1/auth/user/friends"))
         .query(&[("offset", offset), ("n", n)])
         .query(&[("offline", offline)])
+        .send()
+        .await?;
+
+    handle_raw_response!(res)
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn get_user_by_id(userId: &str) -> Result<String, RustError> {
+    let clinet = CLIENT.clone();
+
+    let res = clinet
+        .get(format!("{VRCHAT_API_BASE_URL}/1/users/{userId}"))
         .send()
         .await?;
 

@@ -9,6 +9,7 @@ import { relaunch } from '@tauri-apps/plugin-process'
 import { Confirm } from "@/components/ui/dialogs/confirm";
 import { FriendDetail } from "./components/ui/dialogs/friendDetail";
 import {ToastContainer} from "react-toastify";
+import {InstanceDetail} from "@/components/ui/dialogs/instanceDetail.tsx";
 
 
 export default function App() {
@@ -43,6 +44,7 @@ export default function App() {
       <ToastContainer />
       <Confirm.Root />
       <FriendDetail.Root />
+      <InstanceDetail.Root />
       {/* 理由がよくわからんがメインコンテンツをw-screenで覆わないとダイアログ表示時になんかズレる */}
       <div className="w-screen">
         <Router>

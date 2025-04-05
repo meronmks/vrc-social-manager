@@ -1,16 +1,11 @@
-import {Friend, FriendDetail} from "@/components/ui/dialogs/friendDetail.tsx"
+import {FriendDetail} from "@/components/ui/dialogs/friendDetail.tsx"
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { useCallback } from "react";
-
-export interface Instance {
-  id: string;
-  worldId: string;
-  instanceId: string;
-  name: string;
-  thumbnail: string;
-  friends: Friend[];
-}
+import {Instance, InstanceDetailData} from "@/libs/exportInterfaces.tsx";
+import {commands} from "@/bindings.ts";
+import {toastError} from "@/components/toast.tsx";
+import {InstanceDetail} from "@/components/ui/dialogs/instanceDetail.tsx";
 
 type InstanceData = {
   instanceId: string;
@@ -83,6 +78,18 @@ const parseInstanceString = (input: string): InstanceData => {
   return data as InstanceData;
 };
 
+const showInstanceDetail = async (worldID: string, instanceID: string) => {
+  const responce = await commands.getInstance(worldID, instanceID);
+  const instanceLink: string = "https://vrchat.com/home/launch?worldId=" + worldID + "&instanceId=" + instanceID;
+  if (responce.status == "ok") {
+    console.log(JSON.stringify(JSON.parse(responce.data), null, 2))
+    const jsonData = JSON.parse(responce.data) as InstanceDetailData;
+    InstanceDetail.call({instance: jsonData, instanceLink: instanceLink});
+  } else {
+    toastError(responce.error.message);
+  }
+};
+
 export default function InstanceView({ instance }: { instance: Instance }) {
   const getStatusColor = useCallback((status: any) => {
     switch (status) {
@@ -101,22 +108,21 @@ export default function InstanceView({ instance }: { instance: Instance }) {
     }
   }, []);
 
-  const instanceLink: string = "https://vrchat.com/home/launch?worldId=" + instance.worldId + "&instanceId=" + instance.instanceId;
   const instanceData: InstanceData = parseInstanceString("instanceId=" + instance.instanceId);
 
   return (
     <Card key={instance.id} className="mb-4">
       <div className="grid grid-cols-2 sticky top-0 z-10 p-2 bg-base-100/70 backdrop-blur-sm shadow-md">
         <img src={instance.thumbnail} alt={instance.worldId} className="w-full h-24 object-cover rounded-t-lg" />
-        <a href={instanceLink} target="_blank" className={`p-2 rounded-lg hover:bg-base-300 block ${!instanceData.instanceId && "pointer-events-none"}`}>
-          <h2 className="text-lg font-semibold">{instance.name}</h2>
+        <div title={instance.name} className={`flex flex-col p-2 hover:bg-base-300 rounded-lg cursor-pointer ${!instanceData.instanceId && "pointer-events-none"}`} onClick={async () => await showInstanceDetail(instance.worldId, instance.instanceId)}>
+          <h2 className="text-lg font-semibold truncate">{instance.name}</h2>
           {instanceData.instanceId &&
-            <>
-              <p>instanceID: {instanceData.instanceId}</p>
-              <p>instanceAccessLevel: {instanceData.accessType}</p>
-            </>
+              <>
+                <p>instanceID: {instanceData.instanceId}</p>
+                <p>{instanceData.accessType}</p>
+              </>
           }
-        </a>
+        </div>
       </div>
       <CardContent>
         <div className="space-y-2">
