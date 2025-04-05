@@ -10,7 +10,7 @@ import { Confirm } from "@/components/ui/dialogs/confirm";
 import { FriendDetail } from "./components/ui/dialogs/friendDetail";
 import {ToastContainer} from "react-toastify";
 import {InstanceDetail} from "@/components/ui/dialogs/instanceDetail.tsx";
-
+import "@/libs/i18n";
 
 export default function App() {
   const isDev = import.meta.env.DEV;

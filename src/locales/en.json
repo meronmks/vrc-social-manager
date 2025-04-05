@@ -1,0 +1,13 @@
+{
+  "welcome": "Welcome!",
+  "login": {
+    "title": "Please log in",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Login"
+  },
+  "errors": {
+    "network": "Network error. Please try again.",
+    "unauthorized": "You are not authorized."
+  }
+}

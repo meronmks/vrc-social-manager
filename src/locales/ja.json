@@ -1,0 +1,13 @@
+{
+  "welcome": "ようこそ！",
+  "login": {
+    "title": "ログインしてください",
+    "username": "ユーザー名",
+    "password": "パスワード",
+    "submit": "ログイン"
+  },
+  "errors": {
+    "network": "ネットワークエラー。もう一度お試しください。",
+    "unauthorized": "認証されていません。"
+  }
+}

@@ -11,6 +11,7 @@ import {getVersion} from "@tauri-apps/api/app";
 import {toastError} from "@/components/toast.tsx";
 import {Friend, Instance} from "@/libs/exportInterfaces.tsx";
 import InstanceView from "@/components/ui/instance.tsx";
+import { useTranslation } from "react-i18next";
 
 export default function FriendScreen() {
   const isDev = import.meta.env.DEV;
@@ -22,6 +23,7 @@ export default function FriendScreen() {
   const store = new LazyStore('store.json');
   const [isLoading, setIsLoading] = useState(false);
   const [appVersion, setAppVersion] = useState("unknown");
+  const { t } = useTranslation();
 
   useEffect(() => {
     async function init() {
@@ -173,6 +175,7 @@ export default function FriendScreen() {
     <div className="flex min-h-screen bg-base-300">
       {/* Sidebar */}
       <div className="w-64 p-4 shadow-lg flex flex-col h-screen">
+        <p>{t("welcome")}</p>
         <div className="flex items-center gap-2">
           {userData ? <Avatar src={userData.currentAvatarThumbnailImageUrl} className="w-10" /> : <></>}
           {userData ? <span className="text-lg font-semibold">{userData?.displayName}</span> : <span className="text-lg font-semibold">Not Login</span>}
