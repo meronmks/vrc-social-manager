@@ -22,8 +22,12 @@ i18n
     });
 
 const store = new LazyStore('store.json');
-
-const userLang = await store.get<string>("lang");
-i18n.changeLanguage(userLang ?? i18n.language);
+store.get<string>("lang")
+    .then((userLang) => {
+        i18n.changeLanguage(userLang ?? i18n.language);
+    })
+    .catch((e) => {
+        console.log(e);
+    });
 
 export default i18n;
