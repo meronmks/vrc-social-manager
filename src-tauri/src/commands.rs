@@ -10,6 +10,7 @@ use once_cell::sync::Lazy;
 use tauri::ipc::Invoke;
 use tauri::{generate_handler, State};
 use tokio::sync::{Mutex, RwLock};
+use log::error;
 
 const VRCHAT_API_BASE_URL: &str = "https://api.vrchat.cloud/api";
 
@@ -64,7 +65,7 @@ macro_rules! handle_raw_response {
                     .map_err(|e| e.to_string())?;
                 Ok(res_text)
             }
-            _ => Err("Failed...".into()),
+            _ => Err($res.status().into()),
         }
     }};
 }
@@ -98,7 +99,8 @@ impl RustError {
 
 impl<E: Display> From<E> for RustError {
     fn from(value: E) -> Self {
-        RustError::unrecoverable(format!("io error: {value}"))
+        error!("{value}");
+        RustError::unrecoverable(value.to_string())
     }
 }
 
@@ -140,13 +142,19 @@ async fn login(user_name: &str, password: &str) -> Result<String, RustError> {
                 Ok(res_text)
             }
         }
-        _ => Err("Login Failed...".into()),
+        reqwest::StatusCode::UNAUTHORIZED => {
+            Err("errors.loginFail".into())
+        }
+        _ => Err(res.status().into()),
     }
 }
 
 #[tauri::command]
 #[specta::specta]
 async fn email_otp(otp: &str) -> Result<bool, RustError> {
+    #[cfg(debug_assertions)]
+    println!("Call email_otp {:?}", otp);
+
     let client = CLIENT.clone();
 
     let res = client
@@ -163,6 +171,9 @@ async fn email_otp(otp: &str) -> Result<bool, RustError> {
 #[tauri::command]
 #[specta::specta]
 async fn two_factor_auth(otp: &str) -> Result<bool, RustError> {
+    #[cfg(debug_assertions)]
+    println!("Call two_factor_auth {:?}", otp);
+
     let client = CLIENT.clone();
 
     let res = client
@@ -189,7 +200,13 @@ async fn otp_verified_check(r: Response) -> Result<bool, RustError> {
             }
             Ok(false)
         }
-        _ => Err("Login Failed...".into()),
+        reqwest::StatusCode::UNAUTHORIZED => {
+            Err("errors.2faFail".into())
+        }
+        reqwest::StatusCode::BAD_REQUEST => {
+            Err("errors.2faFail".into())
+        }
+        _ => Err(r.status().into()),
     }
 }
 
@@ -215,7 +232,10 @@ async fn verify_auth_token() -> Result<bool, RustError> {
             }
             Ok(false)
         }
-        _ => Err("Login Failed...".into()),
+        reqwest::StatusCode::UNAUTHORIZED => {
+            Err("errors.unauthorized".into())
+        }
+        _ => Err(res.status().into()),
     }
 }
 

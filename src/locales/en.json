@@ -1,13 +1,42 @@
 {
+  "langName": "English",
+  "language": {
+    "title": "Language",
+    "ja": "Japanese",
+    "en": "English"
+  },
   "welcome": "Welcome!",
   "login": {
     "title": "Please log in",
-    "username": "Username",
+    "username": "Username or Email",
     "password": "Password",
-    "submit": "Login"
+    "submit": "Login",
+    "submit2FA": "Verify 2FA"
   },
+  "sidebar": {
+    "reload": "Reload",
+    "online" : "Online",
+    "offline": "Offline"
+  },
+  "settings": "Settings",
+  "settingScreen": {
+    "login": "Login",
+    "logout": "Logout",
+    "theme": "Theme",
+    "switchTheme": "Switch {{theme}} Mode",
+    "fetchFriendsCount": "Fetch Friends Count (1-100)",
+    "generalSettings" : "General Settings",
+    "accountSettings" : "VRChat Account",
+    "loggedIn": "Logged in {{user}}",
+    "loggedOut": "Logged out",
+    "backToHome": "Back to Home"
+  },
+  "searchPlaceholder": "Search instances or friendsName...",
   "errors": {
     "network": "Network error. Please try again.",
-    "unauthorized": "You are not authorized."
+    "loginFail": "Wrong username or password.",
+    "2faFail": "Wrong 2FA code.",
+    "unauthorized": "You are not authorized.",
+    "unknown": "Unknown Error."
   }
 }

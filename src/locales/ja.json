@@ -1,13 +1,42 @@
 {
+  "langName": "日本語",
+  "language": {
+    "title": "言語設定",
+    "ja": "日本語",
+    "en": "英語"
+  },
   "welcome": "ようこそ！",
   "login": {
     "title": "ログインしてください",
-    "username": "ユーザー名",
+    "username": "ユーザー名またはメールアドレス",
     "password": "パスワード",
-    "submit": "ログイン"
+    "submit": "ログイン",
+    "submit2FA": "ログイン"
   },
+  "sidebar": {
+    "reload": "更新",
+    "online" : "オンライン",
+    "offline": "オフライン"
+  },
+  "settings": "設定",
+  "settingScreen": {
+    "login": "ログイン",
+    "logout": "ログアウト",
+    "theme": "テーマ",
+    "switchTheme": "{{theme}} モードに変更",
+    "fetchFriendsCount": "一度に読み込むフレンドの数 (1-100)",
+    "generalSettings" : "一般設定",
+    "accountSettings" : "VRChatのアカウント",
+    "loggedIn": "ログイン中：{{user}}",
+    "loggedOut": "ログアウト中",
+    "backToHome": "ホームに戻る"
+  },
+  "searchPlaceholder": "インスタンス名かフレンド名で検索",
   "errors": {
     "network": "ネットワークエラー。もう一度お試しください。",
-    "unauthorized": "認証されていません。"
+    "loginFail": "ユーザ名またはパスワードが違います",
+    "2faFail": "二要素認証のコードが違います",
+    "unauthorized": "ログインされていません。",
+    "unknown": "不明なエラー"
   }
 }

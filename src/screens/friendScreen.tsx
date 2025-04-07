@@ -38,7 +38,7 @@ export default function FriendScreen() {
           setUserData(JSON.parse(currentUser.data));
         }
       } else {
-        toastError(res.error.message);
+        toastError(t(res.error.message));
       }
     }
     init();
@@ -175,19 +175,18 @@ export default function FriendScreen() {
     <div className="flex min-h-screen bg-base-300">
       {/* Sidebar */}
       <div className="w-64 p-4 shadow-lg flex flex-col h-screen">
-        <p>{t("welcome")}</p>
         <div className="flex items-center gap-2">
           {userData ? <Avatar src={userData.currentAvatarThumbnailImageUrl} className="w-10" /> : <></>}
           {userData ? <span className="text-lg font-semibold">{userData?.displayName}</span> : <span className="text-lg font-semibold">Not Login</span>}
         </div>
         <div className="mt-4 text-sm">
-          {userData ? <>Online: <span className="font-bold">{onlineUserCount}</span> / {userData?.friends.length}</> : <>Offline</>}
+          {userData ? <>{t("sidebar.online")}: <span className="font-bold">{onlineUserCount}</span> / {userData?.friends.length}</> : <>{t("sidebar.offline")}</>}
         </div>
         <nav className="mt-4">
-          <button className="btn btn-ghost w-full hover:bg-base-100" onClick={load}>Reload</button>
+          <button className="btn btn-ghost w-full hover:bg-base-100" onClick={load}>{t("sidebar.reload")}</button>
         </nav>
         <nav className="mt-4">
-          <button className="btn btn-ghost w-full hover:bg-base-100" onClick={() => navigate("/settings")}>Settings</button>
+          <button className="btn btn-ghost w-full hover:bg-base-100" onClick={() => navigate("/settings")}>{t("settings")}</button>
         </nav>
         {isDev &&
           <nav className="mt-4">
@@ -204,7 +203,7 @@ export default function FriendScreen() {
         {/* Search Bar */}
         <Input
           className="w-full mb-4"
-          placeholder="Search instances or friends..."
+          placeholder={t("searchPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
