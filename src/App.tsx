@@ -33,6 +33,9 @@ export default function App() {
       const theme = await store.get<string>("data-theme");
       if (theme) {
         document.documentElement.setAttribute("data-theme", theme);
+      } else {
+        document.documentElement.setAttribute("data-theme", "light");
+        store.set('data-theme', "light").then(() => store.save());
       }
     }
     loadTheme();
