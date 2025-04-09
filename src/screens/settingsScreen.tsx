@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { LazyStore } from '@tauri-apps/plugin-store';
 import { commands } from "@/bindings";
@@ -9,7 +9,7 @@ export default function SettingsScreen() {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [theme, setTheme] = useState("");
-  const loginDialog: HTMLDialogElement = document.getElementById('login_dialog') as HTMLDialogElement;
+  const loginDialogRef = useRef<HTMLDialogElement | null>(null);
   const store = new LazyStore('store.json');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,7 +58,7 @@ export default function SettingsScreen() {
   };
 
   const closeLoginDialog = () => {
-    loginDialog.close();
+    loginDialogRef.current?.close();
     setErrorMessage("");
     setEmail("");
     setPassword("");
@@ -205,13 +205,13 @@ export default function SettingsScreen() {
           ) : (
               <div className="flex justify-between items-center w-full">
                 <span>{t("settingScreen.loggedOut")}</span>
-                <button className="btn btn-sm btn-primary" onClick={() => loginDialog.showModal()}>{t("settingScreen.login")}</button>
+                <button className="btn btn-sm btn-primary" onClick={() => loginDialogRef.current?.showModal()}>{t("settingScreen.login")}</button>
               </div>
           )}
         </li>
       </ul>
       <button className="btn btn-outline mt-4" onClick={() => navigate("/")}>{t("settingScreen.backToHome")}</button>
-      <dialog id="login_dialog" className="modal">
+      <dialog ref={loginDialogRef} id="login_dialog" className="modal">
         <div className="modal-box">
           <h2 className="text-lg font-semibold">{t("login.title")}</h2>
           {errorMessage && 
