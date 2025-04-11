@@ -2,7 +2,7 @@ import { InstanceDetailData } from '@/libs/exportInterfaces'
 import { createCallable } from 'react-call'
 import { useEffect, useState } from "react";
 import { commands } from "@/bindings.ts";
-import { FaUsers, FaGlobe, FaUser, FaServer, FaInfoCircle, FaLock, FaUnlock, FaClock, FaMapMarkerAlt, FaQuestion } from 'react-icons/fa';
+import { FaUsers, FaGlobe, FaUser, FaServer, FaLock, FaMapMarkerAlt, FaQuestion } from 'react-icons/fa';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { toastNormal } from '@/components/toast';
 
