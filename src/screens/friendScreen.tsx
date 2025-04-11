@@ -1,4 +1,4 @@
-import {useState, useMemo, useEffect} from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 
 import { Avatar } from "@/components/ui/avatar";
@@ -7,9 +7,9 @@ import { Virtuoso } from "react-virtuoso";
 import { commands } from "@/bindings";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import {getVersion} from "@tauri-apps/api/app";
-import {toastError} from "@/components/toast.tsx";
-import {Friend, Instance} from "@/libs/exportInterfaces.tsx";
+import { getVersion } from "@tauri-apps/api/app";
+import { toastError } from "@/components/toast.tsx";
+import { Friend, Instance } from "@/libs/exportInterfaces.tsx";
 import InstanceView from "@/components/ui/instance.tsx";
 import { useTranslation } from "react-i18next";
 
@@ -146,6 +146,9 @@ export default function FriendScreen() {
           status: friend.status,
           location: friend.location,
           bio: friend.bio,
+          statusDescription: friend.statusDescription,
+          platform: friend.platform,
+          bioLinks: friend.bioLinks,
         }],
       };
     }));
@@ -207,7 +210,7 @@ export default function FriendScreen() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        
+
         <progress className={`progress progress-info w-full ${!isLoading && "invisible"}`}></progress>
 
         {/* Friend List by Instance */}

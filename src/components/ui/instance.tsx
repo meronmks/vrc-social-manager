@@ -6,6 +6,7 @@ import {Instance, InstanceDetailData} from "@/libs/exportInterfaces.tsx";
 import {commands} from "@/bindings.ts";
 import {toastError} from "@/components/toast.tsx";
 import {InstanceDetail} from "@/components/ui/dialogs/instanceDetail.tsx";
+import { FaUsers, FaUser, FaLock, FaQuestion, FaGlobe } from 'react-icons/fa';
 
 type InstanceData = {
   instanceId: string;
@@ -96,19 +97,42 @@ export default function InstanceView({ instance }: { instance: Instance }) {
       case "join me":
         return "text-blue-500"
       case "active":
-        return "text-green-500";
+        return "text-green-600";
       case "ask me":
         return "text-orange-500";
       case "busy":
-        return "text-red-500"
+        return "text-red-600"
       case "offline":
         return "text-black";
       default:
-        return "bg-white";
+        return "text-white";
     }
   }, []);
 
   const instanceData: InstanceData = parseInstanceString("instanceId=" + instance.instanceId);
+
+  const getInstanceTypeInfo = (type: string) => {
+    switch (type) {
+      case 'Friends+':
+        return { icon: <FaUsers />, label: 'Friends+' };
+      case 'Friends':
+        return { icon: <FaUser />, label: 'Friends' };
+      case 'Private':
+        return { icon: <FaLock className="text-error" />, label: 'Private' };
+      case 'Group Public':
+        return { icon: <FaUsers />, label: 'Group Public' };
+      case 'Group+':
+        return { icon: <FaUsers />, label: 'Group+' };
+      case 'Group':
+        return { icon: <FaUsers />, label: 'Group' };
+      case 'Public':
+        return { icon: <FaGlobe />, label: 'Public' };
+      default:
+        return { icon: <FaQuestion className="text-warning" />, label: 'Unknown' };
+    }
+  };
+
+  const instanceTypeInfo = getInstanceTypeInfo(instanceData.accessType);
 
   return (
     <Card key={instance.id} className="mb-4">
@@ -118,8 +142,8 @@ export default function InstanceView({ instance }: { instance: Instance }) {
           <h2 className="text-lg font-semibold truncate">{instance.name}</h2>
           {instanceData.instanceId &&
               <>
-                <p>instanceID: {instanceData.instanceId}</p>
-                <p>{instanceData.accessType}</p>
+                <p>ID: {instanceData.instanceId}</p>
+                <div className="badge badge-primary">{instanceTypeInfo.icon} {instanceTypeInfo.label}</div>
               </>
           }
         </div>

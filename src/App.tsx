@@ -3,13 +3,14 @@ import { BrowserRouter as Router, Route, Routes } from "react-router";
 import FriendScreen from "@/screens/friendScreen";
 import SettingsScreen from "@/screens/settingsScreen";
 import { LazyStore } from '@tauri-apps/plugin-store';
-import DebugScreen from "./screens/debugScreen";
+import DebugScreen from "@/screens/debugScreen";
 import { check } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
 import { Confirm } from "@/components/ui/dialogs/confirm";
-import { FriendDetail } from "./components/ui/dialogs/friendDetail";
-import {ToastContainer} from "react-toastify";
-import {InstanceDetail} from "@/components/ui/dialogs/instanceDetail.tsx";
+import { FriendDetail } from "@/components/ui/dialogs/friendDetail";
+import { ToastContainer } from "react-toastify";
+import { InstanceDetail } from "@/components/ui/dialogs/instanceDetail.tsx";
+import { Login } from "@/components/ui/dialogs/login";
 import "@/libs/i18n";
 
 export default function App() {
@@ -48,6 +49,7 @@ export default function App() {
       <Confirm.Root />
       <FriendDetail.Root />
       <InstanceDetail.Root />
+      <Login.Root />
       {/* 理由がよくわからんがメインコンテンツをw-screenで覆わないとダイアログ表示時になんかズレる */}
       <div className="w-screen">
         <Router>

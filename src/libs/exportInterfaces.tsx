@@ -1,52 +1,64 @@
 export interface InstanceDetailData {
-    id: string;
-    instanceId: string;
-    ownerId: string | null;
-    name: string;
-    location: string;
-    active: boolean;
-    ageGate: boolean | null;
-    capacity: number;
-    userCount: number;
-    n_users: number;
-    full: boolean;
-    hardClose: string | null;
-    closedAt: string | null;
-    type: string;
-    world: World;
-    worldId: string;
-    region: string;
-    photonRegion: string;
-    canRequestInvite: boolean;
-    queueEnabled: boolean;
-    queueSize: number;
-    hidden?: string;
-    friends?: string;
-    private?: string;
+  id: string;
+  instanceId: string;
+  ownerId: string | null;
+  name: string;
+  location: string;
+  active: boolean;
+  ageGate: boolean | null;
+  capacity: number;
+  userCount: number;
+  n_users: number;
+  full: boolean;
+  hardClose: string | null;
+  closedAt: string | null;
+  type: string;
+  world: World;
+  worldId: string;
+  region: string;
+  photonRegion: string;
+  canRequestInvite: boolean;
+  queueEnabled: boolean;
+  queueSize: number;
+  groupAccessType?: string;
+  hidden?: string;
+  friends?: string;
+  private?: string;
+  platforms?: {
+    android?: number;
+    ios?: number;
+    standalonewindows?: number;
+  };
 }
 
 export interface World {
-    authorId: string;
-    name: string;
-    description: string;
-    instances: any;
-    thumbnailImageUrl: string;
+  authorId: string;
+  name: string;
+  description: string;
+  instances: any;
+  thumbnailImageUrl: string;
+  authorName?: string;
+  popularity?: number;
+  visits?: number;
 }
 
 export interface Friend {
-    id: string;
-    name: string;
-    status: string;
-    avatar: string;
-    location: string;
-    bio: string;
+  id: string;
+  name: string;
+  status: string;
+  avatar: string;
+  location: string;
+  bio: string;
+  statusDescription?: string;
+  platform?: string;
+  bioLinks?: string[];
 }
 
 export interface Instance {
-    id: string;
-    worldId: string;
-    instanceId: string;
-    name: string;
-    thumbnail: string;
-    friends: Friend[];
+  id: string;
+  worldId: string;
+  instanceId: string;
+  name: string;
+  thumbnail: string;
+  friends: Friend[];
 }
