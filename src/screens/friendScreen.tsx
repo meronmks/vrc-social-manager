@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { IoClose } from "react-icons/io5";
 
 import { Avatar } from "@/components/ui/avatar";
 import { useNavigate } from 'react-router';
@@ -204,12 +205,22 @@ export default function FriendScreen() {
       {/* Main Content */}
       <div className="flex-1 p-4 flex flex-col h-screen overflow-hidden">
         {/* Search Bar */}
-        <Input
-          className="w-full mb-4"
-          placeholder={t("searchPlaceholder")}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div className="relative w-full mb-4">
+          <Input
+            className="w-full pr-10"
+            placeholder={t("searchPlaceholder")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-secondary-content cursor-pointer p-1 rounded-full hover:bg-secondary transition-colors"
+              onClick={() => setSearch("")}
+            >
+              <IoClose size={20} />
+            </button>
+          )}
+        </div>
 
         <progress className={`progress progress-info w-full ${!isLoading && "invisible"}`}></progress>
 
