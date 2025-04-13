@@ -87,6 +87,14 @@ async getUserById(userId: string) : Promise<Result<string, RustError>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async inviteMyselfToInstance(worldId: string, instanceId: string) : Promise<Result<boolean, RustError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("invite_myself_to_instance", { worldId, instanceId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 

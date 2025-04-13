@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { commands } from "@/bindings.ts";
 import { FaUsers, FaGlobe, FaUser, FaServer, FaLock, FaMapMarkerAlt, FaQuestion } from 'react-icons/fa';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
-import { toastNormal } from '@/components/toast';
+import { toastNormal, toastError } from '@/components/toast';
 
 interface Props { instance: InstanceDetailData, instanceLink: string }
 
@@ -73,6 +73,16 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
   }
 
   const instanceTypeInfo = getInstanceTypeInfo();
+
+  const inviteMyselfToInstance = async () => {
+    const res = await commands.inviteMyselfToInstance(instance.worldId, instance.instanceId);
+    if (res.status == "ok") {
+      toastNormal("招待リクエストを送信しました");
+    } else {
+      toastError("招待リクエストを送信できませんでした");
+    }
+
+  }
 
   return (
     <div className="fixed inset-0 flex z-20 items-center justify-center" role="dialog">
@@ -202,12 +212,13 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
 
           <div className="modal-action mt-4">
             {isDev &&
-              <button className="btn" onClick={async () => await getInstanceJson2Clipboard()}>JSONをコピー</button>
+              <button className="btn btn-secondary" onClick={async () => await getInstanceJson2Clipboard()}>JSONをコピー</button>
             }
+            <button className="btn btn-primary" onClick={async () => await inviteMyselfToInstance()}>招待リクエストを送信</button>
             <a title={instance.world.name} href={instanceLink} target="_blank" className="btn btn-primary">
               <FaGlobe className="mr-2" /> ブラウザで開く
             </a>
-            <button className="btn" onClick={() => call.end()}>閉じる</button>
+            <button className="btn btn-primary" onClick={() => call.end()}>閉じる</button>
           </div>
         </div>
       </div>

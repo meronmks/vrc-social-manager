@@ -27,6 +27,7 @@ pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         get_raw_world_by_id,
         get_instance,
         get_user_by_id,
+        invite_myself_to_instance,
     ]
 }
 
@@ -45,6 +46,7 @@ pub(crate) fn export_ts() {
             get_raw_world_by_id,
             get_instance,
             get_user_by_id,
+            invite_myself_to_instance,
         ])
         .export(
             specta_typescript::Typescript::default()
@@ -404,4 +406,30 @@ async fn get_instance(worldid: &str, instanceid: &str) -> Result<String, RustErr
         .await?;
 
     handle_raw_response!(res)
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn invite_myself_to_instance(world_id: &str, instance_id: &str) -> Result<bool, RustError> {
+    #[cfg(debug_assertions)]
+    println!("Call invite_myself_to_instance {:?} {:?}", world_id, instance_id);
+
+    let client = CLIENT.clone();
+
+    let res = client
+        .post(format!(
+            "{VRCHAT_API_BASE_URL}/1/invite/myself/to/{world_id}:{instance_id}"
+        ))
+        .send()
+        .await?;
+
+    match res.status() {
+        reqwest::StatusCode::OK => {
+            Ok(true)
+        }
+        _ => {
+            error!("Failed to invite myself to instance {:?}", res,);
+            Err(res.status().into())
+        }
+    }
 }
