@@ -147,10 +147,51 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
                       {instance.ageGate ? 'あり' : 'なし'}
                     </span>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="card bg-base-200 shadow-sm">
+              <div className="card-body p-4">
+                <h3 className="card-title text-lg flex items-center">
+                  <FaLock className="mr-2" /> 権限情報
+                </h3>
+                <div className="divider my-1"></div>
+                <div className="space-y-2">
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">招待リクエスト:</span>
+                    <span className="font-semibold min-w-32">招待:</span>
                     <span className={`badge ${instance.canRequestInvite ? 'badge-success' : 'badge-error'}`}>
                       {instance.canRequestInvite ? '可能' : '不可'}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold min-w-32">ドローン:</span>
+                    <span className={`badge ${instance.contentSettings?.drones ? 'badge-success' : 'badge-error'}`}>
+                      {instance.contentSettings?.drones ? '許可' : '禁止'}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold min-w-32">絵文字:</span>
+                    <span className={`badge ${instance.contentSettings?.emoji ? 'badge-success' : 'badge-error'}`}>
+                      {instance.contentSettings?.emoji ? '許可' : '禁止'}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold min-w-32">ペデスタル:</span>
+                    <span className={`badge ${instance.contentSettings?.pedestals ? 'badge-success' : 'badge-error'}`}>
+                      {instance.contentSettings?.pedestals ? '許可' : '禁止'}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold min-w-32">プリント:</span>
+                    <span className={`badge ${instance.contentSettings?.prints ? 'badge-success' : 'badge-error'}`}>
+                      {instance.contentSettings?.prints ? '許可' : '禁止'}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold min-w-32">ステッカー:</span>
+                    <span className={`badge ${instance.contentSettings?.stickers ? 'badge-success' : 'badge-error'}`}>
+                      {instance.contentSettings?.stickers ? '許可' : '禁止'}
                     </span>
                   </div>
                 </div>
@@ -175,9 +216,9 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
                   <div className="flex items-center">
                     <span className="font-semibold min-w-32">プラットフォーム:</span>
                     <div className="flex gap-1">
-                      <span className="badge badge-sm">PC: {instance.platforms?.standalonewindows}</span>
-                      <span className="badge badge-sm">Android: {instance.platforms?.android}</span>
-                      <span className="badge badge-sm">iOS: {instance.platforms?.ios}</span>
+                      <span className="badge badge-sm">PC: {instance.platforms?.standalonewindows || 0}</span>
+                      <span className="badge badge-sm">Android: {instance.platforms?.android || 0}</span>
+                      <span className="badge badge-sm">iOS: {instance.platforms?.ios || 0}</span>
                     </div>
                   </div>
                 </div>
@@ -214,7 +255,7 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
             {isDev &&
               <button className="btn btn-secondary" onClick={async () => await getInstanceJson2Clipboard()}>JSONをコピー</button>
             }
-            <button className="btn btn-primary" onClick={async () => await inviteMyselfToInstance()}>招待リクエストを送信</button>
+            <button className="btn btn-primary" onClick={async () => await inviteMyselfToInstance()}>自分に招待を送る</button>
             <a title={instance.world.name} href={instanceLink} target="_blank" className="btn btn-primary">
               <FaGlobe className="mr-2" /> ブラウザで開く
             </a>

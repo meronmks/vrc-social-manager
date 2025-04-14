@@ -29,6 +29,13 @@ export interface InstanceDetailData {
     ios?: number;
     standalonewindows?: number;
   };
+  contentSettings?: {
+    drones?: boolean;
+    emoji?: boolean;
+    pedestals?: boolean;
+    prints?: boolean;
+    stickers?: boolean;
+  }
 }
 
 export interface World {
