@@ -5,6 +5,7 @@ import { commands } from "@/bindings.ts";
 import { FaUsers, FaGlobe, FaUser, FaServer, FaLock, FaMapMarkerAlt, FaQuestion } from 'react-icons/fa';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { toastNormal, toastError } from '@/components/toast';
+import { useTranslation } from 'react-i18next';
 
 interface Props { instance: InstanceDetailData, instanceLink: string }
 
@@ -14,6 +15,7 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
 
   const isDev = import.meta.env.DEV;
   const [instanceOwnerName, setInstanceOwnerName] = useState("Loading...");
+  const { t } = useTranslation();
 
   useEffect(() => {
     async function getInstanceOwnerDetail() {
@@ -77,9 +79,9 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
   const inviteMyselfToInstance = async () => {
     const res = await commands.inviteMyselfToInstance(instance.worldId, instance.instanceId);
     if (res.status == "ok") {
-      toastNormal("招待リクエストを送信しました");
+      toastNormal(t("toast.selfInviteSuccess"));
     } else {
-      toastError("招待リクエストを送信できませんでした");
+      toastError(t("toast.selfInviteFail"));
     }
 
   }
@@ -100,24 +102,24 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
             <div className="card bg-base-200 shadow-sm">
               <div className="card-body p-4">
                 <h3 className="card-title text-lg flex items-center">
-                  <FaGlobe className="mr-2" /> ワールド情報
+                  <FaGlobe className="mr-2" /> {t("instanceDetail.worldInfo")}
                 </h3>
                 <div className="divider my-1"></div>
                 <div className="space-y-2">
                   <div className="flex items-start">
-                    <span className="font-semibold min-w-32">説明:</span>
-                    <span className="text-sm">{instance.world.description || "説明なし"}</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.description")}:</span>
+                    <span className="text-sm">{instance.world.description || t("instanceDetail.noDescription")}</span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">作者:</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.authorName")}:</span>
                     <span className="text-sm">{instance.world.authorName || "不明"}</span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">人気度:</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.popularity")}:</span>
                     <span className="text-sm">{instance.world.popularity || 0}</span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">訪問者数:</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.visits")}:</span>
                     <span className="text-sm">{(instance.world.visits || 0).toLocaleString()}</span>
                   </div>
                 </div>
@@ -127,7 +129,7 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
             <div className="card bg-base-200 shadow-sm">
               <div className="card-body p-4">
                 <h3 className="card-title text-lg flex items-center">
-                  <FaServer className="mr-2" /> インスタンス情報
+                  <FaServer className="mr-2" /> {t("instanceDetail.instanceInfo")}
                 </h3>
                 <div className="divider my-1"></div>
                 <div className="space-y-2">
@@ -136,15 +138,15 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
                     <span className="text-sm font-mono">{instance.name}</span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">ステータス:</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.status")}:</span>
                     <span className={`badge ${instance.active ? 'badge-success' : 'badge-error'}`}>
-                      {instance.active ? 'アクティブ' : '非アクティブ'}
+                      {instance.active ? t("instanceDetail.active") : t("instanceDetail.inactive")}
                     </span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">年齢制限:</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.ageGate")}:</span>
                     <span className={`badge ${instance.ageGate ? 'badge-warning' : 'badge-success'}`}>
-                      {instance.ageGate ? 'あり' : 'なし'}
+                      {instance.ageGate ? t("instanceDetail.ageGateYes") : t("instanceDetail.ageGateNo")}
                     </span>
                   </div>
                 </div>
@@ -154,44 +156,38 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
             <div className="card bg-base-200 shadow-sm">
               <div className="card-body p-4">
                 <h3 className="card-title text-lg flex items-center">
-                  <FaLock className="mr-2" /> 権限情報
+                  <FaLock className="mr-2" /> {t("instanceDetail.permissionsInfo")}
                 </h3>
                 <div className="divider my-1"></div>
                 <div className="space-y-2">
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">招待:</span>
-                    <span className={`badge ${instance.canRequestInvite ? 'badge-success' : 'badge-error'}`}>
-                      {instance.canRequestInvite ? '可能' : '不可'}
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="font-semibold min-w-32">ドローン:</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.drones")}:</span>
                     <span className={`badge ${instance.contentSettings?.drones ? 'badge-success' : 'badge-error'}`}>
-                      {instance.contentSettings?.drones ? '許可' : '禁止'}
+                      {instance.contentSettings?.drones ? t("instanceDetail.allow") : t("instanceDetail.deny")}
                     </span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">絵文字:</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.emoji")}:</span>
                     <span className={`badge ${instance.contentSettings?.emoji ? 'badge-success' : 'badge-error'}`}>
-                      {instance.contentSettings?.emoji ? '許可' : '禁止'}
+                      {instance.contentSettings?.emoji ? t("instanceDetail.allow") : t("instanceDetail.deny")}
                     </span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">ペデスタル:</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.pedestals")}:</span>
                     <span className={`badge ${instance.contentSettings?.pedestals ? 'badge-success' : 'badge-error'}`}>
-                      {instance.contentSettings?.pedestals ? '許可' : '禁止'}
+                      {instance.contentSettings?.pedestals ? t("instanceDetail.allow") : t("instanceDetail.deny")}
                     </span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">プリント:</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.prints")}:</span>
                     <span className={`badge ${instance.contentSettings?.prints ? 'badge-success' : 'badge-error'}`}>
-                      {instance.contentSettings?.prints ? '許可' : '禁止'}
+                      {instance.contentSettings?.prints ? t("instanceDetail.allow") : t("instanceDetail.deny")}
                     </span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">ステッカー:</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.stickers")}:</span>
                     <span className={`badge ${instance.contentSettings?.stickers ? 'badge-success' : 'badge-error'}`}>
-                      {instance.contentSettings?.stickers ? '許可' : '禁止'}
+                      {instance.contentSettings?.stickers ? t("instanceDetail.allow") : t("instanceDetail.deny")}
                     </span>
                   </div>
                 </div>
@@ -201,20 +197,20 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
             <div className="card bg-base-200 shadow-sm">
               <div className="card-body p-4">
                 <h3 className="card-title text-lg flex items-center">
-                  <FaUsers className="mr-2" /> ユーザー情報
+                  <FaUsers className="mr-2" /> {t("instanceDetail.userInfo")}
                 </h3>
                 <div className="divider my-1"></div>
                 <div className="space-y-2">
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">インスタンス所有者:</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.instanceOwner")}:</span>
                     <span className="text-sm">{instanceOwnerName}</span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">ユーザー数:</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.userCount")}:</span>
                     <span className="badge badge-primary">{instance.userCount}/{instance.capacity}</span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">プラットフォーム:</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.platforms")}:</span>
                     <div className="flex gap-1">
                       <span className="badge badge-sm">PC: {instance.platforms?.standalonewindows || 0}</span>
                       <span className="badge badge-sm">Android: {instance.platforms?.android || 0}</span>
@@ -228,22 +224,22 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
             <div className="card bg-base-200 shadow-sm">
               <div className="card-body p-4">
                 <h3 className="card-title text-lg flex items-center">
-                  <FaMapMarkerAlt className="mr-2" /> その他情報
+                  <FaMapMarkerAlt className="mr-2" /> {t("instanceDetail.otherInfo")}
                 </h3>
                 <div className="divider my-1"></div>
                 <div className="space-y-2">
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">リージョン:</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.region")}:</span>
                     <span className="badge">{instance.region.toUpperCase()}</span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">Photon リージョン:</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.photonRegion")}:</span>
                     <span className="badge">{instance.photonRegion.toUpperCase()}</span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-semibold min-w-32">キュー:</span>
+                    <span className="font-semibold min-w-32">{t("instanceDetail.queue")}:</span>
                     <span className={`badge ${instance.queueEnabled ? 'badge-warning' : 'badge-success'}`}>
-                      {instance.queueEnabled ? `有効 (${instance.queueSize}人待機中)` : '無効'}
+                      {instance.queueEnabled ? `${t("instanceDetail.queueEnabled"),{"queueSize":instance.queueSize}}` : t("instanceDetail.queueDisabled")}
                     </span>
                   </div>
                 </div>
@@ -255,11 +251,11 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
             {isDev &&
               <button className="btn btn-secondary" onClick={async () => await getInstanceJson2Clipboard()}>JSONをコピー</button>
             }
-            <button className="btn btn-primary" onClick={async () => await inviteMyselfToInstance()}>自分に招待を送る</button>
+            <button className="btn btn-primary" onClick={async () => await inviteMyselfToInstance()}>{t("instanceDetail.inviteMe")}</button>
             <a title={instance.world.name} href={instanceLink} target="_blank" className="btn btn-primary">
-              <FaGlobe className="mr-2" /> ブラウザで開く
+              <FaGlobe className="mr-2" /> {t("instanceDetail.openInBrowser")}
             </a>
-            <button className="btn btn-primary" onClick={() => call.end()}>閉じる</button>
+            <button className="btn btn-primary" onClick={() => call.end()}>{t("close")}</button>
           </div>
         </div>
       </div>
