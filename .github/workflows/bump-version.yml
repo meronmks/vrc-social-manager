@@ -1,0 +1,166 @@
+# 使用例:
+#
+# 1. パッチバージョンを上げる (例: v1.0.0 → v1.0.1)
+#    - Version type: patch
+#    - Is prerelease: false
+#
+# 2. マイナーバージョンを上げる (例: v1.0.1 → v1.1.0)
+#    - Version type: minor
+#    - Is prerelease: false
+#
+# 3. メジャーバージョンを上げる (例: v1.1.0 → v2.0.0)
+#    - Version type: major
+#    - Is prerelease: false
+#
+# 4. ベータバージョンを進める (例: v1.0.0-beta.1 → v1.0.0-beta.2)
+#    - Version type: beta
+#    - Is prerelease: true
+#
+# 5. ベータから安定版にする (例: v1.0.0-beta.2 → v1.0.0)
+#    - Version type: beta
+#    - Is prerelease: false
+#    注: ベータ表記を削除し、そのまま安定版として採用します
+#
+# 6. 安定版から次のベータを開始する (例: v1.0.0 → v1.1.0-beta.1)
+#    - Version type: minor
+#    - Is prerelease: true
+#    注: マイナーバージョンを上げてベータ版として設定します。
+#    major を選択すると v2.0.0-beta.1 のように次のメジャーバージョンのベータが作成されます。
+#
+# 注意:
+# - すべてのタグは 'v' から始まり、Semverに準拠しています (例: v1.0.0, v1.0.0-beta.1)
+# - バージョンアップ後、自動的にタグが作成され、pushされます
+# - 不正なバージョン形式のタグは拒否されます
+
+name: 'bump-version'
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version type to bump (major/minor/patch/beta)'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - beta
+      is_prerelease:
+        description: 'Is this a pre-release version?'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  validate-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Validate tags
+        run: |
+          # 既存のタグをチェック
+          if git tag | grep -v '^v[0-9]\+\.[0-9]\+\.[0-9]\+\(-beta\.[0-9]\+\)\?$'; then
+            echo "Error: Found tags that don't match the required format (v{major}.{minor}.{patch} or v{major}.{minor}.{patch}-beta.{n})"
+            exit 1
+          fi
+
+  bump-version:
+    needs: validate-tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Get current version
+        id: get_version
+        run: |
+          CURRENT_VERSION=$(jq -r '.package.version' src-tauri/tauri.conf.json)
+          # ベータバージョンの場合は、ベース部分とベータ番号を分離
+          BASE_VERSION=$(echo $CURRENT_VERSION | sed -E 's/-beta\.[0-9]+$//')
+          BETA_NUM=$(echo $CURRENT_VERSION | grep -oP 'beta\.\K[0-9]+$' || echo "0")
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
+          echo "beta_num=$BETA_NUM" >> $GITHUB_OUTPUT
+
+      - name: Bump version
+        id: bump_version
+        run: |
+          CURRENT_VERSION=${{ steps.get_version.outputs.base_version }}
+          VERSION_TYPE=${{ inputs.version_type }}
+          BETA_NUM=${{ steps.get_version.outputs.beta_num }}
+          
+          # バージョン番号を分割
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          
+          # 指定された型に基づいてバージョンを上げる
+          case $VERSION_TYPE in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              if ${{ inputs.is_prerelease }}; then
+                NEW_VERSION="$MAJOR.$MINOR.$PATCH-beta.1"
+              else
+                NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+              fi
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+              ;;
+            beta)
+              # ベータバージョンの場合
+              if ${{ inputs.is_prerelease }}; then
+                BETA_NUM=$((BETA_NUM + 1))
+                NEW_VERSION="$MAJOR.$MINOR.$PATCH-beta.$BETA_NUM"
+              else
+                # プレリリースでない場合は、ベータ表記を削除して安定版に
+                NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+              fi
+              ;;
+          esac
+          
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          
+          # tauri.conf.jsonのバージョンを更新
+          jq --arg version "$NEW_VERSION" '.package.version = $version' src-tauri/tauri.conf.json > temp.json && mv temp.json src-tauri/tauri.conf.json
+
+      - name: Commit and tag
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          NEW_VERSION="${{ steps.bump_version.outputs.new_version }}"
+          
+          # バージョン形式の検証
+          if ! echo "$NEW_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$'; then
+            echo "Error: Invalid version format: $NEW_VERSION"
+            exit 1
+          fi
+          
+          git add src-tauri/tauri.conf.json
+          git commit -m "chore: bump version to $NEW_VERSION"
+          git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
+          
+          git push
+          git push --tags
