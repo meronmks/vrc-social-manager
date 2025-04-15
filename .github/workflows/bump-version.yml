@@ -89,7 +89,7 @@ jobs:
       - name: Get current version
         id: get_version
         run: |
-          CURRENT_VERSION=$(jq -r '.package.version' src-tauri/tauri.conf.json)
+          CURRENT_VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
           # ベータバージョンの場合は、ベース部分とベータ番号を分離
           BASE_VERSION=$(echo $CURRENT_VERSION | sed -E 's/-beta\.[0-9]+$//')
           BETA_NUM=$(echo $CURRENT_VERSION | grep -oP 'beta\.\K[0-9]+$' || echo "0")
@@ -143,7 +143,7 @@ jobs:
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           
           # tauri.conf.jsonのバージョンを更新
-          jq --arg version "$NEW_VERSION" '.package.version = $version' src-tauri/tauri.conf.json > temp.json && mv temp.json src-tauri/tauri.conf.json
+          jq --arg version "$NEW_VERSION" '.version = $version' src-tauri/tauri.conf.json > temp.json && mv temp.json src-tauri/tauri.conf.json
 
       - name: Commit and tag
         run: |
