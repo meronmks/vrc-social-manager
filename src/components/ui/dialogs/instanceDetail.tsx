@@ -239,7 +239,7 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
                   <div className="flex items-center">
                     <span className="font-semibold min-w-32">{t("instanceDetail.queue")}:</span>
                     <span className={`badge ${instance.queueEnabled ? 'badge-warning' : 'badge-success'}`}>
-                      {instance.queueEnabled ? `${t("instanceDetail.queueEnabled"),{"queueSize":instance.queueSize}}` : t("instanceDetail.queueDisabled")}
+                      {instance.queueEnabled ? `${t("instanceDetail.queueEnabled", {queueSize:instance.queueSize})}` : t("instanceDetail.queueDisabled")}
                     </span>
                   </div>
                 </div>
