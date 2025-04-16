@@ -26,25 +26,66 @@ export default function FriendScreen() {
   const [appVersion, setAppVersion] = useState("unknown");
   const { t } = useTranslation();
 
+  // データの保存
+  const saveInstancesData = async (data: Instance[]) => {
+    await store.set("instances-data", JSON.stringify(data));
+    await store.save();
+  };
+
+  // データの復元
+  const restoreInstancesData = async () => {
+    const savedData = await store.get<string>("instances-data");
+    if (savedData) {
+      setInstancesData(JSON.parse(savedData));
+    }
+  };
+
+  // userDataの保存
+  const saveUserData = async (data: any) => {
+    await store.set("user-data", JSON.stringify(data));
+  };
+
+  // userDataの復元
+  const restoreUserData = async () => {
+    const savedData = await store.get<string>("user-data");
+    if (savedData) {
+      setUserData(JSON.parse(savedData));
+    }
+  };
+
   useEffect(() => {
     async function init() {
       const version = await getVersion();
       setAppVersion(version);
+      await restoreInstancesData();
+      await restoreUserData();
     }
     async function checkAuthToken() {
       const res = await commands.verifyAuthToken();
       if (res.status == "ok") {
         const currentUser = await commands.getCurrentUserInfo();
         if (currentUser.status == "ok") {
-          setUserData(JSON.parse(currentUser.data));
+          const parsedUserData = JSON.parse(currentUser.data);
+          setUserData(parsedUserData);
+          await saveUserData(parsedUserData);
         }
       } else {
+        await store.delete("user-data");
+        await store.save();
+        setUserData(null);
         toastError(t(res.error.message));
       }
     }
     init();
     checkAuthToken();
   }, []);
+
+  // instancesDataが更新されたときに保存
+  useEffect(() => {
+    if (instancesData.length > 0) {
+      saveInstancesData(instancesData);
+    }
+  }, [instancesData]);
 
   const filteredInstances = useMemo(() =>
     instancesData.map((instance) => ({

@@ -53,6 +53,7 @@ export default function SettingsScreen() {
   const logout = () => {
     setIsLoggedIn(false);
     commands.cookieClear();
+    store.delete("user-data").then(() => store.save());
   };
 
   const langChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -62,10 +63,18 @@ export default function SettingsScreen() {
   }
 
   const getLoginUserName = async () => {
+    const savedData = await store.get<string>("user-data");
+    if (savedData) {
+      const parsedUserData = JSON.parse(savedData);
+      setLoginUserName(parsedUserData.displayName);
+      return;
+    }
     const res = await commands.getCurrentUserInfo();
     if (res.status == "ok") {
       const jsonData = JSON.parse(res.data);
       setLoginUserName(jsonData.displayName);
+      await store.set("user-data", jsonData);
+      await store.save();
     }
   }
 

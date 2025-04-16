@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::{fs, path::PathBuf};
 use tauri::Manager;
 use tokio::sync::{Mutex, RwLock};
+use tauri_plugin_store::StoreExt;
 
 mod commands;
 mod structs;
@@ -69,6 +70,9 @@ fn main() {
                 let window = app.get_webview_window("main").unwrap();
                 window.open_devtools();
                 window.close_devtools();
+
+                let store = app.store("store.json")?;
+                store.delete("instances-data");
             }
             Ok(())
         })
