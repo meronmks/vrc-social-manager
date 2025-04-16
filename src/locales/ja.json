@@ -80,6 +80,7 @@
     "loginFail": "ユーザ名またはパスワードが違います",
     "2faFail": "二要素認証のコードが違います",
     "unauthorized": "ログインされていません。",
-    "unknown": "不明なエラー"
+    "unknown": "不明なエラー",
+    "failedGetInstanceOwner": "インスタンスオーナーの取得に失敗しました"
   }
 }

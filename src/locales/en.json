@@ -80,6 +80,7 @@
     "loginFail": "Wrong username or password.",
     "2faFail": "Wrong 2FA code.",
     "unauthorized": "You are not authorized.",
-    "unknown": "Unknown Error."
+    "unknown": "Unknown Error.",
+    "failedGetInstanceOwner": "Failed to get instance owner."
   }
 }

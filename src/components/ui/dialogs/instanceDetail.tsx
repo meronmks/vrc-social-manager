@@ -33,6 +33,11 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
       if (res.status == "ok") {
         setInstanceOwnerName(JSON.parse(res.data).displayName);
       } else {
+        if (isDev) {
+          console.error(`Failed to get instance owner name`);
+          console.error(res);
+        }
+        toastError(t("errors.failedGetInstanceOwner"));
         setInstanceOwnerName("Unknown")
       }
     }

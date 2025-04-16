@@ -83,7 +83,6 @@ const showInstanceDetail = async (worldID: string, instanceID: string) => {
   const responce = await commands.getInstance(worldID, instanceID);
   const instanceLink: string = "https://vrchat.com/home/launch?worldId=" + worldID + "&instanceId=" + instanceID;
   if (responce.status == "ok") {
-    console.log(JSON.stringify(JSON.parse(responce.data), null, 2))
     const jsonData = JSON.parse(responce.data) as InstanceDetailData;
     InstanceDetail.call({instance: jsonData, instanceLink: instanceLink});
   } else {
