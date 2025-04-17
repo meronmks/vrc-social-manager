@@ -79,7 +79,7 @@
     "network": "Network error. Please try again.",
     "loginFail": "Wrong username or password.",
     "2faFail": "Wrong 2FA code.",
-    "unauthorized": "You are not authorized.",
+    "unauthorized": "Unauthorized. Please log in again.",
     "unknown": "Unknown Error.",
     "failedGetInstanceOwner": "Failed to get instance owner."
   }
