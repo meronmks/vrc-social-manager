@@ -1,24 +1,20 @@
 import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { IoClose } from "react-icons/io5";
-
-import { Avatar } from "@/components/ui/avatar";
-import { useNavigate } from 'react-router';
 import { Virtuoso } from "react-virtuoso";
 import { commands } from "@/bindings";
 import { LazyStore } from "@tauri-apps/plugin-store";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { getVersion } from "@tauri-apps/api/app";
 import { toastError } from "@/components/toast.tsx";
 import { Friend, Instance } from "@/libs/exportInterfaces.tsx";
 import InstanceView from "@/components/ui/instance.tsx";
 import { useTranslation } from "react-i18next";
+import { Sidebar } from "@/components/ui/Sidebar";
 
 export default function FriendScreen() {
   const isDev = import.meta.env.DEV;
   const [instancesData, setInstancesData] = useState<Instance[]>([]);
   const [search, setSearch] = useState("");
-  const navigate = useNavigate();
   const [userData, setUserData] = useState<any>(null);
   const [onlineUserCount, setOnlineUserCount] = useState(0);
   const store = new LazyStore('store.json');
@@ -218,30 +214,13 @@ export default function FriendScreen() {
 
   return (
     <div className="flex min-h-screen bg-base-300">
-      {/* Sidebar */}
-      <div className="w-64 p-4 shadow-lg flex flex-col h-screen">
-        <div className="flex items-center gap-2">
-          {userData ? <Avatar src={userData.currentAvatarThumbnailImageUrl} className="w-10" /> : <></>}
-          {userData ? <span className="text-lg font-semibold">{userData?.displayName}</span> : <span className="text-lg font-semibold">Not Login</span>}
-        </div>
-        <div className="mt-4 text-sm">
-          {userData ? <>{t("sidebar.online")}: <span className="font-bold">{onlineUserCount}</span> / {userData?.friends.length}</> : <>{t("sidebar.offline")}</>}
-        </div>
-        <nav className="mt-4">
-          <button className="btn btn-ghost w-full hover:bg-base-100" onClick={load}>{t("sidebar.reload")}</button>
-        </nav>
-        <nav className="mt-4">
-          <button className="btn btn-ghost w-full hover:bg-base-100" onClick={() => navigate("/settings")}>{t("settings")}</button>
-        </nav>
-        {isDev &&
-          <nav className="mt-4">
-            <button className="btn btn-ghost w-full hover:bg-base-100" onClick={() => navigate("/debug")}>Debug</button>
-          </nav>
-        }
-        <nav className="mt-4">
-          <button className="btn btn-ghost w-full hover:bg-base-100" onClick={() => writeText(appVersion)}>v{appVersion}</button>
-        </nav>
-      </div>
+      <Sidebar 
+        userData={userData}
+        onlineUserCount={onlineUserCount}
+        appVersion={appVersion}
+        load={load}
+        isDev={isDev}
+      />
 
       {/* Main Content */}
       <div className="flex-1 p-4 flex flex-col h-screen overflow-hidden">
