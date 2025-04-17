@@ -1,15 +1,13 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use crate::structs::AppState;
 use dirs::config_dir;
 use once_cell::sync::Lazy;
 use reqwest::Client;
 use reqwest_cookie_store::{CookieStore, CookieStoreMutex};
 use std::sync::Arc;
 use std::{fs, path::PathBuf};
-use tauri::Manager;
-use tokio::sync::{Mutex, RwLock};
+use tauri::{Manager, WindowEvent};
 use tauri_plugin_store::StoreExt;
 
 mod commands;
@@ -70,11 +68,17 @@ fn main() {
                 let window = app.get_webview_window("main").unwrap();
                 window.open_devtools();
                 window.close_devtools();
-
-                let store = app.store("store.json")?;
-                store.delete("instances-data");
             }
             Ok(())
+        })
+        .on_window_event(|window, event| match event {
+            WindowEvent::CloseRequested { api, .. } => {
+                let app = window.app_handle();
+                let store = app.store("store.json").unwrap();
+                store.delete("instances-data");
+                let _ = store.save();
+            }
+            _ => {}
         })
         .plugin(tauri_plugin_shell::init())
         .run(tauri::generate_context!())
