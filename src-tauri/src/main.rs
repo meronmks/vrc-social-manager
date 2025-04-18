@@ -58,7 +58,6 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(commands::handlers())
@@ -69,6 +68,8 @@ fn main() {
                 window.open_devtools();
                 window.close_devtools();
             }
+            #[cfg(desktop)]
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
             Ok(())
         })
         .on_window_event(|window, event| match event {
