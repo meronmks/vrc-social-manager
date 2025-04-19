@@ -11,8 +11,8 @@ import { FriendDetail } from "@/components/ui/dialogs/friendDetail";
 import { ToastContainer } from "react-toastify";
 import { InstanceDetail } from "@/components/ui/dialogs/instanceDetail.tsx";
 import { Login } from "@/components/ui/dialogs/login";
-import "@/libs/i18n";
 import { toastError } from "@/components/toast";
+import "@/libs/i18n";
 
 export default function App() {
   const isDev = import.meta.env.DEV;
@@ -26,7 +26,7 @@ export default function App() {
       if (autoCheckUpdates !== false) {
         try {
           const update = await check();
-          if (update) {
+          if (update?.available) {
             const mes = `App Update? \nUpdateVersion:${update.version}\nCurrentVersion:${update.currentVersion}`;
             const accepted = await Confirm.call({message: mes});
             if (accepted){
@@ -36,15 +36,6 @@ export default function App() {
           }
         } catch (error) {
           toastError("Update check failed: " + error);
-        }
-        const update = await check()
-        if (update) {
-          const mes = `App Update? \nUpdateVersion:${update.version}\nCurrentVersion:${update.currentVersion}`;
-          const accepted = await Confirm.call({message: mes});
-          if (accepted){
-            await update.downloadAndInstall()
-            await relaunch()
-          }
         }
       }
     }

@@ -23,7 +23,7 @@ export default function SettingsScreen() {
   const [loginUserName, setLoginUserName] = useState("unknown");
   const [currentVersion, setCurrentVersion] = useState("");
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
-  const [autoCheckUpdates, setAutoCheckUpdates] = useState(true);
+  const [autoCheckUpdates, setAutoCheckUpdates] = useState<boolean | null>(null);
   const [updateMessage, setUpdateMessage] = useState("");
 
   useEffect(() => {
@@ -38,6 +38,7 @@ export default function SettingsScreen() {
         setFetchFriendsCount(ffc);
       }
 
+      // 自動アップデートの設定を読み込む
       const autoUpdate = await store.get<boolean>("auto-check-updates");
       setAutoCheckUpdates(autoUpdate ?? true);
 
@@ -62,6 +63,7 @@ export default function SettingsScreen() {
   }, [theme]);
 
   useEffect(() => {
+    if (autoCheckUpdates === null) return;
     store.set('auto-check-updates', autoCheckUpdates).then(() => store.save());
   }, [autoCheckUpdates]);
 
@@ -107,7 +109,7 @@ export default function SettingsScreen() {
     setUpdateMessage("");
     try {
       const update = await check();
-      if (update) {
+      if (update?.available) {
         setUpdateMessage(t("settingScreen.updateAvailable", { version: update.version }));
         const mes = `App Update? \nUpdateVersion:${update.version}\nCurrentVersion:${update.currentVersion}`;
         const accepted = await Confirm.call({message: mes});
@@ -198,7 +200,7 @@ export default function SettingsScreen() {
             <input
               type="checkbox"
               className="toggle toggle-primary"
-              checked={autoCheckUpdates}
+              checked={autoCheckUpdates ?? true}
               onChange={(e) => setAutoCheckUpdates(e.target.checked)}
             />
           </div>
