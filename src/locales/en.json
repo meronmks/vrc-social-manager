@@ -16,7 +16,8 @@
   "sidebar": {
     "reload": "Reload",
     "online" : "Online",
-    "offline": "Offline"
+    "offline": "Offline",
+    "copiedToClipboardVersion": "Copied to app version {{version}}"
   },
   "settings": "Settings",
   "settingScreen": {

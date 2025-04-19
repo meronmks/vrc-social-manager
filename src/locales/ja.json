@@ -16,7 +16,8 @@
   "sidebar": {
     "reload": "更新",
     "online" : "オンライン",
-    "offline": "オフライン"
+    "offline": "オフライン",
+    "copiedToClipboardVersion": "アプリのバージョン {{version}} をコピーしました"
   },
   "settings": "設定",
   "settingScreen": {

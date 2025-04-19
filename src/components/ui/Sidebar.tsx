@@ -4,6 +4,7 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
 import { IoMenu, IoClose, IoReload, IoSettings, IoBuild, IoInformation } from "react-icons/io5";
+import { toastNormal } from "../toast";
 
 interface SidebarProps {
   userData: any;
@@ -26,6 +27,12 @@ export function Sidebar({ userData, onlineUserCount, appVersion, load, isDev }: 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const copyToClipboard = (text: string) => {
+    writeText(text).then(() => {
+      toastNormal(t("sidebar.copiedToClipboardVersion", { version: text }));
+    });
+  };
 
   return (
     <div className={`${isCollapsed ? 'w-16' : 'w-64'} transition-all duration-300 p-4 shadow-lg flex flex-col h-screen relative`}>
@@ -93,7 +100,7 @@ export function Sidebar({ userData, onlineUserCount, appVersion, load, isDev }: 
       <nav className="mt-4">
         <button 
           className={`btn btn-ghost w-full hover:bg-base-100 ${isCollapsed ? 'px-2' : ''} flex items-center justify-start gap-2`} 
-          onClick={() => writeText(appVersion)}
+          onClick={() => copyToClipboard(appVersion)}
           title={`v${appVersion}`}
         >
           <IoInformation size={20} />
