@@ -30,6 +30,13 @@
     "accountSettings" : "VRChat Account",
     "loggedIn": "Logged in {{user}}",
     "loggedOut": "Logged out",
+    "updateSettings": "Update Settings",
+    "checkForUpdatesNow": "Check for Updates Now",
+    "checkingForUpdates": "Checking for updates...",
+    "autoCheckUpdates": "Automatically check for updates on startup",
+    "updateAvailable": "New version {{version}} is available",
+    "currentVersion": "Current version: {{version}}",
+    "noUpdatesAvailable": "No updates available",
     "backToHome": "Back to Home"
   },
   "toast": {

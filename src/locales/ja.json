@@ -30,6 +30,13 @@
     "accountSettings" : "VRChatのアカウント",
     "loggedIn": "ログイン中：{{user}}",
     "loggedOut": "ログアウト中",
+    "updateSettings": "アップデート設定",
+    "checkForUpdatesNow": "今すぐアップデートを確認",
+    "checkingForUpdates": "アップデートを確認中...",
+    "autoCheckUpdates": "起動時に自動でアップデートを確認",
+    "updateAvailable": "新しいバージョン {{version}} が利用可能です",
+    "currentVersion": "現在のバージョン: {{version}}",
+    "noUpdatesAvailable": "利用可能なアップデートはありません",
     "backToHome": "ホームに戻る"
   },
   "toast": {

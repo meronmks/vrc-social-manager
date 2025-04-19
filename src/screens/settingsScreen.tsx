@@ -5,6 +5,11 @@ import { commands } from "@/bindings";
 import { useTranslation } from "react-i18next";
 import i18n, { resources } from "@/libs/i18n";
 import { Login } from "@/components/ui/dialogs/login";
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
+import { getVersion } from "@tauri-apps/api/app";
+import { Confirm } from "@/components/ui/dialogs/confirm";
+import { toastError } from "@/components/toast";
 
 export default function SettingsScreen() {
   const navigate = useNavigate();
@@ -16,9 +21,13 @@ export default function SettingsScreen() {
   const supportedLangs = Object.keys(resources);
   const currentLang = i18n.language;
   const [loginUserName, setLoginUserName] = useState("unknown");
+  const [currentVersion, setCurrentVersion] = useState("");
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [autoCheckUpdates, setAutoCheckUpdates] = useState(true);
+  const [updateMessage, setUpdateMessage] = useState("");
 
   useEffect(() => {
-    async function loadTheme() {
+    async function loadSettings() {
       const dataTheme = await store.get<string>("data-theme");
       if (dataTheme) {
         setTheme(dataTheme);
@@ -29,6 +38,9 @@ export default function SettingsScreen() {
         setFetchFriendsCount(ffc);
       }
 
+      const autoUpdate = await store.get<boolean>("auto-check-updates");
+      setAutoCheckUpdates(autoUpdate ?? true);
+
       const res = await commands.verifyAuthToken();
       if (res.status == "ok") {
         setIsLoggedIn(res.data);
@@ -36,8 +48,11 @@ export default function SettingsScreen() {
       } else {
         logout();
       }
+
+      const version = await getVersion();
+      setCurrentVersion(version);
     }
-    loadTheme();
+    loadSettings();
   }, []);
 
   useEffect(() => {
@@ -45,6 +60,10 @@ export default function SettingsScreen() {
     store.set('data-theme', theme).then(() => store.save());
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    store.set('auto-check-updates', autoCheckUpdates).then(() => store.save());
+  }, [autoCheckUpdates]);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
@@ -81,6 +100,29 @@ export default function SettingsScreen() {
   const handleLoginSuccess = () => {
     setIsLoggedIn(true);
     getLoginUserName();
+  };
+
+  const checkForUpdates = async () => {
+    setIsCheckingUpdate(true);
+    setUpdateMessage("");
+    try {
+      const update = await check();
+      if (update) {
+        setUpdateMessage(t("settingScreen.updateAvailable", { version: update.version }));
+        const mes = `App Update? \nUpdateVersion:${update.version}\nCurrentVersion:${update.currentVersion}`;
+        const accepted = await Confirm.call({message: mes});
+        if (accepted){
+          await update.downloadAndInstall()
+          await relaunch()
+        }
+      } else {
+        setUpdateMessage(t("settingScreen.noUpdatesAvailable"));
+      }
+    } catch (error) {
+      toastError("Update check failed: " + error);
+    } finally {
+      setIsCheckingUpdate(false);
+    }
   };
 
   return (
@@ -142,6 +184,43 @@ export default function SettingsScreen() {
           )}
         </li>
       </ul>
+
+      <h2 className="text-md font-semibold my-4">{t("settingScreen.updateSettings")}</h2>
+      <ul className="menu bg-base-100 p-2 rounded-box shadow-md w-full">
+        <li>
+          <div className="flex justify-between items-center w-full">
+            <span>{t("settingScreen.currentVersion", { version: currentVersion })}</span>
+          </div>
+        </li>
+        <li>
+          <div className="flex justify-between items-center w-full">
+            <span>{t("settingScreen.autoCheckUpdates")}</span>
+            <input
+              type="checkbox"
+              className="toggle toggle-primary"
+              checked={autoCheckUpdates}
+              onChange={(e) => setAutoCheckUpdates(e.target.checked)}
+            />
+          </div>
+        </li>
+        <li>
+          <div className="flex justify-between items-center w-full">
+            <div className="flex-1">
+              <button 
+                className="btn btn-sm btn-primary" 
+                onClick={checkForUpdates}
+                disabled={isCheckingUpdate}
+              >
+                {isCheckingUpdate ? t("settingScreen.checkingForUpdates") : t("settingScreen.checkForUpdatesNow")}
+              </button>
+              {updateMessage && (
+                <div className="text-sm mt-2">{updateMessage}</div>
+              )}
+            </div>
+          </div>
+        </li>
+      </ul>
+      
       <button className="btn btn-outline mt-4" onClick={() => navigate("/")}>{t("settingScreen.backToHome")}</button>
     </div>
   );
