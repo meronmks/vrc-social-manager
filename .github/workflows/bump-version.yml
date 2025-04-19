@@ -16,19 +16,27 @@
 #    - Version type: beta
 #    - Is prerelease: true
 #
-# 5. ベータから安定版にする (例: v1.0.0-beta.2 → v1.0.0)
+# 5. RCバージョンを進める (例: v1.0.0-rc.1 → v1.0.0-rc.2)
+#    - Version type: rc
+#    - Is prerelease: true
+#
+# 6. RCから安定版にする (例: v1.0.0-rc.2 → v1.0.0)
+#    - Version type: rc
+#    - Is prerelease: false
+#
+# 7. ベータから安定版にする (例: v1.0.0-beta.2 → v1.0.0)
 #    - Version type: beta
 #    - Is prerelease: false
 #    注: ベータ表記を削除し、そのまま安定版として採用します
 #
-# 6. 安定版から次のベータを開始する (例: v1.0.0 → v1.1.0-beta.1)
+# 8. 安定版から次のベータを開始する (例: v1.0.0 → v1.1.0-beta.1)
 #    - Version type: minor
 #    - Is prerelease: true
 #    注: マイナーバージョンを上げてベータ版として設定します。
 #    major を選択すると v2.0.0-beta.1 のように次のメジャーバージョンのベータが作成されます。
 #
 # 注意:
-# - すべてのタグは 'v' から始まり、Semverに準拠しています (例: v1.0.0, v1.0.0-beta.1)
+# - すべてのタグは 'v' から始まり、Semverに準拠しています (例: v1.0.0, v1.0.0-beta.1, v1.0.0-rc.1)
 # - バージョンアップ後、自動的にタグが作成され、pushされます
 # - 不正なバージョン形式のタグは拒否されます
 
@@ -38,7 +46,7 @@ on:
   workflow_dispatch:
     inputs:
       version_type:
-        description: 'Version type to bump (major/minor/patch/beta)'
+        description: 'Version type to bump (major/minor/patch/beta/rc)'
         required: true
         type: choice
         options:
@@ -46,6 +54,7 @@ on:
           - minor
           - major
           - beta
+          - rc
       is_prerelease:
         description: 'Is this a pre-release version?'
         required: false
@@ -63,8 +72,8 @@ jobs:
       - name: Validate tags
         run: |
           # 既存のタグをチェック
-          if git tag | grep -v '^v[0-9]\+\.[0-9]\+\.[0-9]\+\(-beta\.[0-9]\+\)\?$'; then
-            echo "Error: Found tags that don't match the required format (v{major}.{minor}.{patch} or v{major}.{minor}.{patch}-beta.{n})"
+          if git tag | grep -v '^v[0-9]\+\.[0-9]\+\.[0-9]\+\(-beta\.[0-9]\+\|-rc\.[0-9]\+\)\?$'; then
+            echo "Error: Found tags that don't match the required format (v{major}.{minor}.{patch}, v{major}.{minor}.{patch}-beta.{n}, or v{major}.{minor}.{patch}-rc.{n})"
             exit 1
           fi
 
@@ -73,6 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -90,19 +100,22 @@ jobs:
         id: get_version
         run: |
           CURRENT_VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
-          # ベータバージョンの場合は、ベース部分とベータ番号を分離
-          BASE_VERSION=$(echo $CURRENT_VERSION | sed -E 's/-beta\.[0-9]+$//')
-          BETA_NUM=$(echo $CURRENT_VERSION | grep -oP 'beta\.\K[0-9]+$' || echo "0")
+          # ベータバージョンまたはRCバージョンの場合は、ベース部分と番号を分離
+          BASE_VERSION=$(echo $CURRENT_VERSION | sed -E 's/-(beta|rc)\.[0-9]+$//')
+          PRERELEASE_NUM=$(echo $CURRENT_VERSION | grep -oP '(beta|rc)\.\K[0-9]+$' || echo "0")
+          PRERELEASE_TYPE=$(echo $CURRENT_VERSION | grep -oP '-(beta|rc)\.' | sed -E 's/[.-]//g' || echo "")
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
-          echo "beta_num=$BETA_NUM" >> $GITHUB_OUTPUT
+          echo "prerelease_num=$PRERELEASE_NUM" >> $GITHUB_OUTPUT
+          echo "prerelease_type=$PRERELEASE_TYPE" >> $GITHUB_OUTPUT
 
       - name: Bump version
         id: bump_version
         run: |
           CURRENT_VERSION=${{ steps.get_version.outputs.base_version }}
           VERSION_TYPE=${{ inputs.version_type }}
-          BETA_NUM=${{ steps.get_version.outputs.beta_num }}
+          PRERELEASE_NUM=${{ steps.get_version.outputs.prerelease_num }}
+          CURRENT_PRERELEASE_TYPE=${{ steps.get_version.outputs.prerelease_type }}
           
           # バージョン番号を分割
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
@@ -113,7 +126,11 @@ jobs:
               MAJOR=$((MAJOR + 1))
               MINOR=0
               PATCH=0
-              NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+              if ${{ inputs.is_prerelease }}; then
+                NEW_VERSION="$MAJOR.$MINOR.$PATCH-beta.1"
+              else
+                NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+              fi
               ;;
             minor)
               MINOR=$((MINOR + 1))
@@ -129,12 +146,29 @@ jobs:
               NEW_VERSION="$MAJOR.$MINOR.$PATCH"
               ;;
             beta)
-              # ベータバージョンの場合
               if ${{ inputs.is_prerelease }}; then
-                BETA_NUM=$((BETA_NUM + 1))
-                NEW_VERSION="$MAJOR.$MINOR.$PATCH-beta.$BETA_NUM"
+                # ベータバージョンの進行
+                PRERELEASE_NUM=$((PRERELEASE_NUM + 1))
+                NEW_VERSION="$MAJOR.$MINOR.$PATCH-beta.$PRERELEASE_NUM"
               else
-                # プレリリースでない場合は、ベータ表記を削除して安定版に
+                # ベータから安定版またはRCへの移行
+                if [ "$VERSION_TYPE" = "rc" ]; then
+                  NEW_VERSION="$MAJOR.$MINOR.$PATCH-rc.1"
+                else
+                  NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+                fi
+              fi
+              ;;
+            rc)
+              if [ "$CURRENT_PRERELEASE_TYPE" = "beta" ] && ${{ inputs.is_prerelease }}; then
+                # ベータからRCへの移行
+                NEW_VERSION="$MAJOR.$MINOR.$PATCH-rc.1"
+              elif ${{ inputs.is_prerelease }}; then
+                # RCバージョンの進行
+                PRERELEASE_NUM=$((PRERELEASE_NUM + 1))
+                NEW_VERSION="$MAJOR.$MINOR.$PATCH-rc.$PRERELEASE_NUM"
+              else
+                # RCから安定版への移行
                 NEW_VERSION="$MAJOR.$MINOR.$PATCH"
               fi
               ;;
@@ -153,7 +187,7 @@ jobs:
           NEW_VERSION="${{ steps.bump_version.outputs.new_version }}"
           
           # バージョン形式の検証
-          if ! echo "$NEW_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$'; then
+          if ! echo "$NEW_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+|-rc\.[0-9]+)?$'; then
             echo "Error: Invalid version format: $NEW_VERSION"
             exit 1
           fi
@@ -164,3 +198,10 @@ jobs:
           
           git push
           git push origin "v$NEW_VERSION"
+
+      - name: Trigger Publish Workflow
+        if: success()
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          event-type: trigger-publish
+          token: ${{ secrets.GITHUB_TOKEN }}
