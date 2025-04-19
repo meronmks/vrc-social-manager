@@ -198,10 +198,3 @@ jobs:
           
           git push
           git push origin "v$NEW_VERSION"
-
-      - name: Trigger Publish Workflow
-        if: success()
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          event-type: trigger-publish
-          token: ${{ secrets.GITHUB_TOKEN }}
