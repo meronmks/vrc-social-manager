@@ -8,8 +8,8 @@ use std::sync::Arc;
 use std::time;
 use once_cell::sync::Lazy;
 use tauri::ipc::Invoke;
-use tauri::{generate_handler, State};
-use tokio::sync::{Mutex, RwLock};
+use tauri::{generate_handler};
+use tokio::sync::{RwLock};
 use log::error;
 
 const VRCHAT_API_BASE_URL: &str = "https://api.vrchat.cloud/api";
@@ -271,11 +271,11 @@ async fn get_current_user_friends(offset: i32, n: i32, offline: bool) -> Result<
 
 #[tauri::command]
 #[specta::specta]
-async fn get_user_by_id(userId: &str) -> Result<String, RustError> {
+async fn get_user_by_id(user_id: &str) -> Result<String, RustError> {
     let clinet = CLIENT.clone();
 
     let res = clinet
-        .get(format!("{VRCHAT_API_BASE_URL}/1/users/{userId}"))
+        .get(format!("{VRCHAT_API_BASE_URL}/1/users/{user_id}"))
         .send()
         .await?;
 

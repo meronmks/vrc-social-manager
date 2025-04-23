@@ -73,7 +73,7 @@ fn main() {
             Ok(())
         })
         .on_window_event(|window, event| match event {
-            WindowEvent::CloseRequested { api, .. } => {
+            WindowEvent::CloseRequested { .. } => {
                 let app = window.app_handle();
                 let store = app.store("store.json").unwrap();
                 store.delete("instances-data");
