@@ -83,6 +83,7 @@
   },
   "close": "Close",
   "searchPlaceholder": "Search instances or friendsName...",
+  "loading": "Loading...",
   "errors": {
     "network": "Network error. Please try again.",
     "loginFail": "Wrong username or password.",

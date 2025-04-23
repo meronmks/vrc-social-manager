@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { IoClose } from "react-icons/io5";
 import { Virtuoso } from "react-virtuoso";
@@ -21,6 +21,7 @@ export default function FriendScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [appVersion, setAppVersion] = useState("unknown");
   const { t } = useTranslation();
+  const abortControllerRef = useRef<AbortController>();
 
   // データの保存
   const saveInstancesData = async (data: Instance[]) => {
@@ -76,6 +77,15 @@ export default function FriendScreen() {
     checkAuthToken();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      // コンポーネントのアンマウント時に実行中の処理を中断
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   // instancesDataが更新されたときに保存
   useEffect(() => {
     if (instancesData.length > 0) {
@@ -110,41 +120,70 @@ export default function FriendScreen() {
     [search, instancesData, onlineUserCount]);
 
   const load = async () => {
+    // 既存の処理が実行中の場合は中断
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // 新しいAbortControllerを作成
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
     setInstancesData([]);
     setOnlineUserCount(0);
     setIsLoading(true);
-    let getMaxCount = await store.get<number>("fetch-friends-count");
-    if (!getMaxCount) {
-      getMaxCount = 50;
-    }
-    for (let i: number = 0; ; i++) {
-      const friends = await commands.getCurrentUserFriends(getMaxCount * i, getMaxCount, false);
-      if (friends.status == "ok") {
-        await loadInstances(friends.data);
-        const friendNum: number = JSON.parse(friends.data).length;
 
-        setOnlineUserCount((prev) => prev + friendNum)
-        if (friendNum < getMaxCount) break;
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      } else {
-        break;
+    try {
+      let getMaxCount = await store.get<number>("fetch-friends-count");
+      if (!getMaxCount) {
+        getMaxCount = 50;
+      }
+
+      // オンラインユーザーの取得
+      for (let i: number = 0; ; i++) {
+        if (signal.aborted) {
+          return;
+        }
+
+        const friends = await commands.getCurrentUserFriends(getMaxCount * i, getMaxCount, false);
+        if (friends.status == "ok") {
+          await loadInstances(friends.data);
+          const friendNum: number = JSON.parse(friends.data).length;
+
+          setOnlineUserCount((prev) => prev + friendNum);
+          if (friendNum < getMaxCount) break;
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        } else {
+          break;
+        }
+      }
+
+      // オフラインユーザーの取得
+      for (let i: number = 0; ; i++) {
+        if (signal.aborted) {
+          return;
+        }
+
+        const friends = await commands.getCurrentUserFriends(getMaxCount * i, getMaxCount, true);
+        if (friends.status == "ok") {
+          await loadInstances(friends.data);
+          const friendNum: number = JSON.parse(friends.data).length;
+
+          if (friendNum < getMaxCount) break;
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        } else {
+          break;
+        }
+      }
+    } catch (error) {
+      if (!signal.aborted) {
+        console.error("Error loading data:", error);
+      }
+    } finally {
+      if (!signal.aborted) {
+        setIsLoading(false);
       }
     }
-
-    for (let i: number = 0; ; i++) {
-      const friends = await commands.getCurrentUserFriends(getMaxCount * i, getMaxCount, true);
-      if (friends.status == "ok") {
-        await loadInstances(friends.data);
-        const friendNum: number = JSON.parse(friends.data).length;
-
-        if (friendNum < getMaxCount) break;
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      } else {
-        break;
-      }
-    }
-
-    setIsLoading(false);
   };
 
   const loadInstances = async (data: string) => {
@@ -220,6 +259,7 @@ export default function FriendScreen() {
         appVersion={appVersion}
         load={load}
         isDev={isDev}
+        isLoading={isLoading}
       />
 
       {/* Main Content */}
@@ -241,9 +281,6 @@ export default function FriendScreen() {
             </button>
           )}
         </div>
-
-        <progress className={`progress progress-info w-full ${!isLoading && "invisible"}`}></progress>
-
         {/* Friend List by Instance */}
         <div className="flex-1 overflow-y-auto">
           <Virtuoso

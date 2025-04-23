@@ -12,9 +12,10 @@ interface SidebarProps {
   appVersion: string;
   load: () => void;
   isDev?: boolean;
+  isLoading: boolean;
 }
 
-export function Sidebar({ userData, onlineUserCount, appVersion, load, isDev }: SidebarProps) {
+export function Sidebar({ userData, onlineUserCount, appVersion, load, isDev, isLoading }: SidebarProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(window.innerWidth < 768);
@@ -67,9 +68,13 @@ export function Sidebar({ userData, onlineUserCount, appVersion, load, isDev }: 
           className={`btn btn-ghost w-full hover:bg-base-100 ${isCollapsed ? 'px-2' : ''} flex items-center justify-start gap-2`} 
           onClick={load}
           title={t("sidebar.reload")}
+          disabled={isLoading}
         >
-          <IoReload size={20} />
-          {!isCollapsed && <span>{t("sidebar.reload")}</span>}
+          {!isLoading && <IoReload size={20} />}
+          {isLoading && <div className="loading loading-spinner loading-sm"></div>}
+          
+          {!isCollapsed && !isLoading && <span>{t("sidebar.reload")}</span>}
+          {!isCollapsed && isLoading && <span>{t("loading")}</span>}
         </button>
       </nav>
 
