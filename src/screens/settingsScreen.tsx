@@ -128,7 +128,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-base-200 p-4">
+    <div className="flex flex-col h-screen bg-base-200 p-4 overflow-y-auto">
       <h1 className="text-xl font-semibold mb-4">{t("settings")}</h1>
       <h2 className="text-md font-semibold mb-4">{t("settingScreen.generalSettings")}</h2>
       <ul className="menu bg-base-100 p-2 rounded-box shadow-md w-full">
