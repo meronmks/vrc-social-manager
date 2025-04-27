@@ -21,7 +21,7 @@ export default function FriendScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [appVersion, setAppVersion] = useState("unknown");
   const { t } = useTranslation();
-  const abortControllerRef = useRef<AbortController>();
+  const abortControllerRef = useRef<AbortController>(null);
 
   // データの保存
   const saveInstancesData = async (data: Instance[]) => {
@@ -144,38 +144,46 @@ export default function FriendScreen() {
       }
 
       // オンラインユーザーの取得
+      let onlineOffset = 0;
       for (let i: number = 0; ; i++) {
         if (signal.aborted) {
           return;
         }
 
-        const friends = await commands.getCurrentUserFriends(getMaxCount * i, getMaxCount, false);
+        const friends = await commands.getCurrentUserFriends(onlineOffset, getMaxCount, false);
         if (friends.status == "ok") {
           await loadInstances(friends.data);
           const friendNum: number = JSON.parse(friends.data).length;
 
           setOnlineUserCount((prev) => prev + friendNum);
-          if (friendNum < getMaxCount) break;
+          onlineOffset += friendNum;
+          // ページングが絶妙に壊れてて完全に0が返ってくるまで続きのページが存在する可能性がある（は？）
+          if (friendNum === 0) break;
           await new Promise((resolve) => setTimeout(resolve, 1000));
         } else {
+          console.error("Error fetching online friends:", friends.error);
           break;
         }
       }
 
       // オフラインユーザーの取得
+      let offlineOffset = 0;
       for (let i: number = 0; ; i++) {
         if (signal.aborted) {
           return;
         }
 
-        const friends = await commands.getCurrentUserFriends(getMaxCount * i, getMaxCount, true);
+        const friends = await commands.getCurrentUserFriends(offlineOffset, getMaxCount, true);
         if (friends.status == "ok") {
           await loadInstances(friends.data);
           const friendNum: number = JSON.parse(friends.data).length;
 
-          if (friendNum < getMaxCount) break;
+          offlineOffset += friendNum;
+          // ページングが絶妙に壊れてて完全に0が返ってくるまで続きのページが存在する可能性がある（は？）
+          if (friendNum === 0) break;
           await new Promise((resolve) => setTimeout(resolve, 1000));
         } else {
+          console.error("Error fetching offline friends:", friends.error);
           break;
         }
       }
