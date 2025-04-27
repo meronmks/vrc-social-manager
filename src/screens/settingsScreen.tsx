@@ -94,7 +94,7 @@ export default function SettingsScreen() {
     if (res.status == "ok") {
       const jsonData = JSON.parse(res.data);
       setLoginUserName(jsonData.displayName);
-      await store.set("user-data", jsonData);
+      await store.set("user-data", res.data);
       await store.save();
     }
   }
