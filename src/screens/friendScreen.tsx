@@ -43,11 +43,13 @@ export default function FriendScreen() {
   };
 
   // userDataの復元
-  const restoreUserData = async () => {
+  const restoreUserData = async (): Promise<boolean> => {
     const savedData = await store.get<string>("user-data");
     if (savedData) {
       setUserData(JSON.parse(savedData));
+      return true;
     }
+    return false;
   };
 
   useEffect(() => {
@@ -55,7 +57,10 @@ export default function FriendScreen() {
       const version = await getVersion();
       setAppVersion(version);
       await restoreInstancesData();
-      await restoreUserData();
+      const result = await restoreUserData();
+      if (result) {
+        await checkAuthToken();
+      }
     }
     async function checkAuthToken() {
       const res = await commands.verifyAuthToken();
@@ -74,7 +79,6 @@ export default function FriendScreen() {
       }
     }
     init();
-    checkAuthToken();
   }, []);
 
   useEffect(() => {
