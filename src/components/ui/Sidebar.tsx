@@ -9,13 +9,14 @@ import { toastNormal } from "../toast";
 interface SidebarProps {
   userData: any;
   onlineUserCount: number;
+  offlineUserCount: number;
   appVersion: string;
   load: () => void;
   isDev?: boolean;
   isLoading: boolean;
 }
 
-export function Sidebar({ userData, onlineUserCount, appVersion, load, isDev, isLoading }: SidebarProps) {
+export function Sidebar({ userData, onlineUserCount, offlineUserCount, appVersion, load, isDev, isLoading }: SidebarProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(window.innerWidth < 768);
@@ -74,7 +75,7 @@ export function Sidebar({ userData, onlineUserCount, appVersion, load, isDev, is
           {isLoading && <div className="loading loading-spinner loading-sm"></div>}
           
           {!isCollapsed && !isLoading && <span>{t("sidebar.reload")}</span>}
-          {!isCollapsed && isLoading && <span>{t("loading")}</span>}
+          {!isCollapsed && isLoading && <span>{t("loading")} : {onlineUserCount + offlineUserCount}</span>}
         </button>
       </nav>
 

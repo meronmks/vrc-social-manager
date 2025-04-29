@@ -17,6 +17,7 @@ export default function FriendScreen() {
   const [search, setSearch] = useState("");
   const [userData, setUserData] = useState<any>(null);
   const [onlineUserCount, setOnlineUserCount] = useState(0);
+  const [offlineUserCount, setOfflineUserCount] = useState(0);
   const store = new LazyStore('store.json');
   const [isLoading, setIsLoading] = useState(false);
   const [appVersion, setAppVersion] = useState("unknown");
@@ -135,6 +136,7 @@ export default function FriendScreen() {
 
     setInstancesData([]);
     setOnlineUserCount(0);
+    setOfflineUserCount(0);
     setIsLoading(true);
 
     try {
@@ -178,6 +180,7 @@ export default function FriendScreen() {
           await loadInstances(friends.data);
           const friendNum: number = JSON.parse(friends.data).length;
 
+          setOfflineUserCount((prev) => prev + friendNum);
           offlineOffset += friendNum;
           // ページングが絶妙に壊れてて完全に0が返ってくるまで続きのページが存在する可能性がある（は？）
           if (friendNum === 0) break;
@@ -268,6 +271,7 @@ export default function FriendScreen() {
       <Sidebar 
         userData={userData}
         onlineUserCount={onlineUserCount}
+        offlineUserCount={offlineUserCount}
         appVersion={appVersion}
         load={load}
         isDev={isDev}
