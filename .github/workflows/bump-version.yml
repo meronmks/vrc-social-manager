@@ -179,7 +179,7 @@ jobs:
           # tauri.conf.jsonのバージョンを更新
           jq --arg version "$NEW_VERSION" '.version = $version' src-tauri/tauri.conf.json > temp.json && mv temp.json src-tauri/tauri.conf.json
 
-      - name: Commit and tag
+      - name: Create branch and commit changes
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
@@ -192,9 +192,28 @@ jobs:
             exit 1
           fi
           
+          # 新しいブランチを作成
+          BRANCH_NAME="release/v${NEW_VERSION}"
+          git checkout -b "$BRANCH_NAME"
+          
           git add src-tauri/tauri.conf.json
           git commit -m "chore: bump version to $NEW_VERSION"
           git tag -a "v$NEW_VERSION" -m "Version $NEW_VERSION"
           
-          git push
+          # ブランチとタグをプッシュ
+          git push origin "$BRANCH_NAME"
           git push origin "v$NEW_VERSION"
+          
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NEW_VERSION="${{ steps.bump_version.outputs.new_version }}"
+          BRANCH_NAME="release/v${NEW_VERSION}"
+          
+          # PRを作成
+          gh pr create \
+            --base main \
+            --head "$BRANCH_NAME" \
+            --title "chore: release v${NEW_VERSION}" \
+            --body "このPRはバージョン v${NEW_VERSION} へのアップデートを含みます。\n\n## 変更内容\n- \`tauri.conf.json\` のバージョンを v${NEW_VERSION} に更新\n- バージョンタグ v${NEW_VERSION} の作成\n\nマージ後、このバージョンタグが有効になります。"
