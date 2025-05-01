@@ -95,6 +95,14 @@ async inviteMyselfToInstance(worldId: string, instanceId: string) : Promise<Resu
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async getLicenses() : Promise<Result<ApiResponse, RustError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_licenses") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -108,6 +116,7 @@ async inviteMyselfToInstance(worldId: string, instanceId: string) : Promise<Resu
 
 /** user-defined types **/
 
+export type ApiResponse = { status: string; data: string }
 export type RustError = { type: "Unrecoverable"; message: string }
 
 /** tauri-specta globals **/

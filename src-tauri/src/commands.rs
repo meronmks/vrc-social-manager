@@ -1,15 +1,16 @@
-use crate::structs::{AppState, World};
+use crate::structs::{AppState, World, ApiResponse};
 use crate::{save_cookies, CLIENT, COOKIE_STORE};
 use reqwest::Response;
 use serde::Serialize;
 use serde_json::json;
+use tauri::path::BaseDirectory;
 use std::fmt::Display;
 use std::sync::Arc;
 use std::time;
 use once_cell::sync::Lazy;
 use tauri::ipc::Invoke;
-use tauri::{generate_handler};
-use tokio::sync::{RwLock};
+use tauri::{generate_handler, Manager};
+use tokio::sync::RwLock;
 use log::error;
 
 const VRCHAT_API_BASE_URL: &str = "https://api.vrchat.cloud/api";
@@ -28,6 +29,7 @@ pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         get_instance,
         get_user_by_id,
         invite_myself_to_instance,
+        get_licenses,
     ]
 }
 
@@ -47,6 +49,7 @@ pub(crate) fn export_ts() {
             get_instance,
             get_user_by_id,
             invite_myself_to_instance,
+            get_licenses,
         ])
         .export(
             specta_typescript::Typescript::default()
@@ -431,5 +434,24 @@ async fn invite_myself_to_instance(world_id: &str, instance_id: &str) -> Result<
             error!("Failed to invite myself to instance {:?}", res,);
             Err(res.status().into())
         }
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_licenses(app_handle: tauri::AppHandle) -> Result<ApiResponse, RustError> {
+    let license_path = app_handle
+        .path()
+        .resolve("licenses.json", BaseDirectory::Resource)?;
+
+    match std::fs::read_to_string(license_path) {
+        Ok(content) => Ok(ApiResponse {
+            status: "ok".to_string(),
+            data: content,
+        }),
+        Err(e) => Ok(ApiResponse {
+            status: "error".to_string(),
+            data: format!("Failed to read licenses file: {}", e),
+        }),
     }
 }

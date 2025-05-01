@@ -22,7 +22,10 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "createUpdaterArtifacts": true
+    "createUpdaterArtifacts": true,
+    "resources": {
+      "../src/assets/licenses.json": "licenses.json"
+    }
   },
   "productName": "vrc-social-manager",
   "mainBinaryName": "vrc-social-manager",
