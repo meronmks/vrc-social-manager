@@ -10,6 +10,7 @@ import { relaunch } from '@tauri-apps/plugin-process';
 import { getVersion } from "@tauri-apps/api/app";
 import { Confirm } from "@/components/ui/dialogs/confirm";
 import { toastError } from "@/components/toast";
+import { ThirdPartyLicenses } from "@/components/ui/dialogs/license";
 
 export default function SettingsScreen() {
   const navigate = useNavigate();
@@ -222,6 +223,11 @@ export default function SettingsScreen() {
           </div>
         </li>
       </ul>
+      
+      <h2 className="text-md font-semibold my-4">{t("settingScreen.thirdPartyLicenses")}</h2>
+      <div className="bg-base-100 p-2 rounded-box shadow-md w-full">
+        <ThirdPartyLicenses />
+      </div>
       
       <button className="btn btn-outline mt-4" onClick={() => navigate("/")}>{t("settingScreen.backToHome")}</button>
     </div>

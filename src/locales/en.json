@@ -37,6 +37,9 @@
     "updateAvailable": "New version {{version}} is available",
     "currentVersion": "Current version: {{version}}",
     "noUpdatesAvailable": "No updates available",
+    "thirdPartyLicenses": "Third-Party Licenses",
+    "npmPackages": "NPM Packages",
+    "cargoPackages": "Cargo Crates",
     "backToHome": "Back to Home"
   },
   "toast": {

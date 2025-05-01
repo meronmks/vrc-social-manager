@@ -1,6 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[derive(Serialize, Deserialize, specta::Type)]
+#[specta(export)]
+pub struct ApiResponse {
+    pub status: String,
+    pub data: String,
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 #[allow(non_snake_case)]
 pub(crate) struct World {

@@ -4,12 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "npm install && npm run build:vite",
+    "dev": "npm run collect-licenses && vite",
+    "build": "npm run collect-licenses && npm install && npm run build:vite",
     "build:vite": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "lint": "tsc"
+    "lint": "tsc",
+    "collect-licenses": "node scripts/collect-licenses.js"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.0.12",
@@ -38,6 +39,7 @@
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.2.1",
     "daisyui": "^5.0.27",
+    "license-checker": "^25.0.1",
     "typescript": "^5.0.2",
     "vite": "^6.3.3"
   }

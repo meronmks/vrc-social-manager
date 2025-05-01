@@ -37,6 +37,9 @@
     "updateAvailable": "新しいバージョン {{version}} が利用可能です",
     "currentVersion": "現在のバージョン: {{version}}",
     "noUpdatesAvailable": "利用可能なアップデートはありません",
+    "thirdPartyLicenses": "サードパーティライセンス",
+    "npmPackages": "NPMパッケージ",
+    "cargoPackages": "Cargoクレート",
     "backToHome": "ホームに戻る"
   },
   "toast": {
