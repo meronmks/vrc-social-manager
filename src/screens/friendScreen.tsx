@@ -130,7 +130,6 @@ export default function FriendScreen() {
       abortControllerRef.current.abort();
     }
 
-    // 新しいAbortControllerを作成
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
 
@@ -159,7 +158,7 @@ export default function FriendScreen() {
 
           setOnlineUserCount((prev) => prev + friendNum);
           onlineOffset += friendNum;
-          // ページングが絶妙に壊れてて完全に0が返ってくるまで続きのページが存在する可能性がある（は？）
+          // ページングが絶妙に壊れてる？仕様？なのか完全に0が返ってくるまで続きのページが存在する可能性がある
           if (friendNum === 0) break;
           await new Promise((resolve) => setTimeout(resolve, 1000));
         } else {
@@ -182,7 +181,7 @@ export default function FriendScreen() {
 
           setOfflineUserCount((prev) => prev + friendNum);
           offlineOffset += friendNum;
-          // ページングが絶妙に壊れてて完全に0が返ってくるまで続きのページが存在する可能性がある（は？）
+          // ページングが絶妙に壊れてる？仕様？なのか完全に0が返ってくるまで続きのページが存在する可能性がある
           if (friendNum === 0) break;
           await new Promise((resolve) => setTimeout(resolve, 1000));
         } else {
