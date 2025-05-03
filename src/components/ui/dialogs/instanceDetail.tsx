@@ -6,6 +6,8 @@ import { FaUsers, FaGlobe, FaUser, FaServer, FaLock, FaMapMarkerAlt, FaQuestion 
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { toastNormal, toastError } from '@/components/toast';
 import { useTranslation } from 'react-i18next';
+import { dayjs } from '@/libs/dayjsToolbox';
+import i18n from '@/libs/i18n';
 
 interface Props { instance: InstanceDetailData, instanceLink: string }
 
@@ -153,6 +155,19 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
                     <span className={`badge ${instance.ageGate ? 'badge-warning' : 'badge-success'}`}>
                       {instance.ageGate ? t("instanceDetail.ageGateYes") : t("instanceDetail.ageGateNo")}
                     </span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold min-w-32">{t("instanceDetail.instanceClose")}:</span>
+                    <div className="flex gap-2 items-center">
+                      <span className={`badge ${instance.closedAt ? 'badge-error' : 'badge-success'}`}>
+                        {instance.closedAt ? t("instanceDetail.instanceClosed") : t("instanceDetail.instanceOpen")}
+                      </span>
+                      {instance.closedAt && (
+                        <span className="text-sm opacity-75">
+                          {dayjs(instance.closedAt).locale(i18n.language).tz().fromNow()}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

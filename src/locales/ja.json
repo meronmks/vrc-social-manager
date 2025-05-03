@@ -82,7 +82,10 @@
     "inviteYes": "招待可能",
     "inviteNo": "招待不可",
     "inviteMe": "自分に招待を送る",
-    "openInBrowser": "ブラウザで開く"
+    "openInBrowser": "ブラウザで開く",
+    "instanceClose": "インスタンスの閉鎖",
+    "instanceOpen": "開いています",
+    "instanceClosed": "閉じています"
   },
   "close": "閉じる",
   "searchPlaceholder": "インスタンス名かフレンド名で検索",
