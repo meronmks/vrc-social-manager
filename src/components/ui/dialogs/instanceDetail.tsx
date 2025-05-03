@@ -126,6 +126,10 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
                     <span className="text-sm">{instance.world.popularity || 0}</span>
                   </div>
                   <div className="flex items-center">
+                    <span className="font-semibold min-w-32">{t("instanceDetail.recommendedCapacity")}:</span>
+                    <span className="text-sm font-mono">{instance.world.recommendedCapacity}</span>
+                  </div>
+                  <div className="flex items-center">
                     <span className="font-semibold min-w-32">{t("instanceDetail.visits")}:</span>
                     <span className="text-sm">{(instance.world.visits || 0).toLocaleString()}</span>
                   </div>
