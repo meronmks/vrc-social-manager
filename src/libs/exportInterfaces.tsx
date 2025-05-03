@@ -47,6 +47,7 @@ export interface World {
   authorName?: string;
   popularity?: number;
   visits?: number;
+  recommendedCapacity: number;
 }
 
 export interface Friend {

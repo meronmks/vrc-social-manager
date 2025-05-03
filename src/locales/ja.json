@@ -85,7 +85,8 @@
     "openInBrowser": "ブラウザで開く",
     "instanceClose": "インスタンスの閉鎖",
     "instanceOpen": "開いています",
-    "instanceClosed": "閉じています"
+    "instanceClosed": "閉じています",
+    "recommendedCapacity": "推奨人数"
   },
   "close": "閉じる",
   "searchPlaceholder": "インスタンス名かフレンド名で検索",

@@ -85,7 +85,8 @@
     "openInBrowser": "Open in Browser",
     "instanceClose": "Instance Close",
     "instanceOpen": "Open",
-    "instanceClosed": "Closed"
+    "instanceClosed": "Closed",
+    "recommendedCapacity": "Recommended Capacity"
   },
   "close": "Close",
   "searchPlaceholder": "Search instances or friendsName...",
