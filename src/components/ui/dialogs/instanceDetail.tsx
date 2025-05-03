@@ -93,6 +93,16 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
 
   }
 
+  const isPermissionAllowedByDefault = (permissionName: string): boolean => {
+    const declineTag = `feature_${permissionName}_disabled`;
+    return !instance.world.tags?.includes(declineTag);
+  };
+
+  const isPermissionEnabled = (permissionName: string): boolean => {
+    const setting = instance.contentSettings?.[permissionName as keyof typeof instance.contentSettings];
+    return setting === null || setting === undefined ? isPermissionAllowedByDefault(permissionName) : setting;
+  };
+
   return (
     <div className="fixed inset-0 flex z-20 items-center justify-center" role="dialog">
       <div className={`modal modal-open ${call.ended ? 'exit-animation' : ''}`}>
@@ -186,32 +196,32 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <span className="font-semibold min-w-32">{t("instanceDetail.drones")}:</span>
-                    <span className={`badge ${instance.contentSettings?.drones ? 'badge-success' : 'badge-error'}`}>
-                      {instance.contentSettings?.drones ? t("instanceDetail.allow") : t("instanceDetail.deny")}
+                    <span className={`badge ${isPermissionEnabled('drones') ? 'badge-success' : 'badge-error'}`}>
+                      {isPermissionEnabled('drones') ? t("instanceDetail.allow") : t("instanceDetail.deny")}
                     </span>
                   </div>
                   <div className="flex items-center">
                     <span className="font-semibold min-w-32">{t("instanceDetail.emoji")}:</span>
-                    <span className={`badge ${instance.contentSettings?.emoji ? 'badge-success' : 'badge-error'}`}>
-                      {instance.contentSettings?.emoji ? t("instanceDetail.allow") : t("instanceDetail.deny")}
+                    <span className={`badge ${isPermissionEnabled('emoji') ? 'badge-success' : 'badge-error'}`}>
+                      {isPermissionEnabled('emoji') ? t("instanceDetail.allow") : t("instanceDetail.deny")}
                     </span>
                   </div>
                   <div className="flex items-center">
                     <span className="font-semibold min-w-32">{t("instanceDetail.pedestals")}:</span>
-                    <span className={`badge ${instance.contentSettings?.pedestals ? 'badge-success' : 'badge-error'}`}>
-                      {instance.contentSettings?.pedestals ? t("instanceDetail.allow") : t("instanceDetail.deny")}
+                    <span className={`badge ${isPermissionEnabled('pedestals') ? 'badge-success' : 'badge-error'}`}>
+                      {isPermissionEnabled('pedestals') ? t("instanceDetail.allow") : t("instanceDetail.deny")}
                     </span>
                   </div>
                   <div className="flex items-center">
                     <span className="font-semibold min-w-32">{t("instanceDetail.prints")}:</span>
-                    <span className={`badge ${instance.contentSettings?.prints ? 'badge-success' : 'badge-error'}`}>
-                      {instance.contentSettings?.prints ? t("instanceDetail.allow") : t("instanceDetail.deny")}
+                    <span className={`badge ${isPermissionEnabled('prints') ? 'badge-success' : 'badge-error'}`}>
+                      {isPermissionEnabled('prints') ? t("instanceDetail.allow") : t("instanceDetail.deny")}
                     </span>
                   </div>
                   <div className="flex items-center">
                     <span className="font-semibold min-w-32">{t("instanceDetail.stickers")}:</span>
-                    <span className={`badge ${instance.contentSettings?.stickers ? 'badge-success' : 'badge-error'}`}>
-                      {instance.contentSettings?.stickers ? t("instanceDetail.allow") : t("instanceDetail.deny")}
+                    <span className={`badge ${isPermissionEnabled('stickers') ? 'badge-success' : 'badge-error'}`}>
+                      {isPermissionEnabled('stickers') ? t("instanceDetail.allow") : t("instanceDetail.deny")}
                     </span>
                   </div>
                 </div>
