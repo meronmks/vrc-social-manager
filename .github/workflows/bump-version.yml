@@ -206,13 +206,14 @@ jobs:
           git push origin "v$NEW_VERSION"
           
       - name: Create Pull Request
-        run: |
-          NEW_VERSION="${{ steps.bump_version.outputs.new_version }}"
-          BRANCH_NAME="release/v${NEW_VERSION}"
-          
-          # PRを作成
-          gh pr create \
-            --base main \
-            --head "$BRANCH_NAME" \
-            --title "chore: release v${NEW_VERSION}" \
-            --body "このPRはバージョン v${NEW_VERSION} へのアップデートを含みます。\n\n## 変更内容\n- \`tauri.conf.json\` のバージョンを v${NEW_VERSION} に更新\n- バージョンタグ v${NEW_VERSION} の作成\n\nマージ後、このバージョンタグが有効になります。"
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: release/v${{ steps.bump_version.outputs.new_version }}
+          base: main
+          title: "chore: release v${{ steps.bump_version.outputs.new_version }}"
+          body: |
+            このPRはバージョン v${{ steps.bump_version.outputs.new_version }} へのアップデートを含みます。
+            
+            ## 変更内容
+            - \`tauri.conf.json\` のバージョンを v${{ steps.bump_version.outputs.new_version }} に更新
+            - バージョンタグ v${{ steps.bump_version.outputs.new_version }} の作成
