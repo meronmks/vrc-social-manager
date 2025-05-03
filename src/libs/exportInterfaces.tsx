@@ -36,6 +36,7 @@ export interface InstanceDetailData {
     prints?: boolean;
     stickers?: boolean;
   }
+  tags: string[];
 }
 
 export interface World {
@@ -48,6 +49,7 @@ export interface World {
   popularity?: number;
   visits?: number;
   recommendedCapacity: number;
+  tags: string[];
 }
 
 export interface Friend {
