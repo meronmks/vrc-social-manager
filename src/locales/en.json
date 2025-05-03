@@ -82,7 +82,10 @@
     "inviteYes": "OK",
     "inviteNo": "NG",
     "inviteMe": "Invite me",
-    "openInBrowser": "Open in Browser"
+    "openInBrowser": "Open in Browser",
+    "instanceClose": "Instance Close",
+    "instanceOpen": "Open",
+    "instanceClosed": "Closed"
   },
   "close": "Close",
   "searchPlaceholder": "Search instances or friendsName...",
