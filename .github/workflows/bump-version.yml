@@ -206,8 +206,6 @@ jobs:
           git push origin "v$NEW_VERSION"
           
       - name: Create Pull Request
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           NEW_VERSION="${{ steps.bump_version.outputs.new_version }}"
           BRANCH_NAME="release/v${NEW_VERSION}"
