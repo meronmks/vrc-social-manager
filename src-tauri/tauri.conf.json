@@ -1,4 +1,5 @@
 {
+  "$schema": "https://schema.tauri.app/config/2",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
@@ -44,6 +45,7 @@
     }
   },
   "app": {
+    "withGlobalTauri": true,
     "security": {
       "csp": null,
       "capabilities": [
@@ -55,8 +57,7 @@
       {
         "title": "vrc-social-manager",
         "width": 800,
-        "height": 600,
-        "useHttpsScheme": true
+        "height": 600
       }
     ]
   }
