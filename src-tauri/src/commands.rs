@@ -1,17 +1,17 @@
-use crate::structs::{AppState, World, ApiResponse};
+use crate::structs::{ApiResponse, AppState, World};
 use crate::{save_cookies, CLIENT, COOKIE_STORE};
+use log::error;
+use once_cell::sync::Lazy;
 use reqwest::Response;
 use serde::Serialize;
 use serde_json::json;
-use tauri::path::BaseDirectory;
 use std::fmt::Display;
 use std::sync::Arc;
 use std::time;
-use once_cell::sync::Lazy;
 use tauri::ipc::Invoke;
+use tauri::path::BaseDirectory;
 use tauri::{generate_handler, Manager};
 use tokio::sync::RwLock;
-use log::error;
 
 const VRCHAT_API_BASE_URL: &str = "https://api.vrchat.cloud/api";
 
@@ -75,7 +75,8 @@ macro_rules! handle_raw_response {
     }};
 }
 
-static APP_STATE: Lazy<Arc<RwLock<AppState>>> = Lazy::new(|| Arc::new(RwLock::new(AppState::default())));
+static APP_STATE: Lazy<Arc<RwLock<AppState>>> =
+    Lazy::new(|| Arc::new(RwLock::new(AppState::default())));
 
 pub async fn insert_world(world_id: String, world: World) {
     let mut state = APP_STATE.write().await;
@@ -90,7 +91,7 @@ pub async fn get_world(world_id: String) -> Option<World> {
 #[derive(Debug, Clone, Serialize, specta::Type)]
 #[specta(export)]
 #[serde(tag = "type")]
-enum RustError {
+pub enum RustError {
     Unrecoverable { message: String },
 }
 
@@ -111,15 +112,15 @@ impl<E: Display> From<E> for RustError {
 
 #[tauri::command]
 #[specta::specta]
-async fn cookie_clear() {
+async fn cookie_clear(app_handle: tauri::AppHandle) {
     let cookie_store = COOKIE_STORE.clone();
     cookie_store.lock().unwrap().clear();
-    let _ = save_cookies().await;
+    let _ = save_cookies(&app_handle).await;
 }
 
 #[tauri::command]
 #[specta::specta]
-async fn login(user_name: &str, password: &str) -> Result<String, RustError> {
+async fn login(app_handle: tauri::AppHandle, user_name: &str, password: &str) -> Result<String, RustError> {
     let client = CLIENT.clone();
 
     let res = client
@@ -130,7 +131,7 @@ async fn login(user_name: &str, password: &str) -> Result<String, RustError> {
 
     match res.status() {
         reqwest::StatusCode::OK => {
-            save_cookies().await?;
+            save_cookies(&app_handle).await?;
             let res_text = res.error_for_status()?.text().await?;
             let res_json: serde_json::Value = serde_json::from_str(&res_text).unwrap();
             if res_json["requiresTwoFactorAuth"].is_array() {
@@ -147,16 +148,14 @@ async fn login(user_name: &str, password: &str) -> Result<String, RustError> {
                 Ok(res_text)
             }
         }
-        reqwest::StatusCode::UNAUTHORIZED => {
-            Err("errors.loginFail".into())
-        }
+        reqwest::StatusCode::UNAUTHORIZED => Err("errors.loginFail".into()),
         _ => Err(res.status().into()),
     }
 }
 
 #[tauri::command]
 #[specta::specta]
-async fn email_otp(otp: &str) -> Result<bool, RustError> {
+async fn email_otp(app_handle: tauri::AppHandle, otp: &str) -> Result<bool, RustError> {
     #[cfg(debug_assertions)]
     println!("Call email_otp {:?}", otp);
 
@@ -170,12 +169,12 @@ async fn email_otp(otp: &str) -> Result<bool, RustError> {
         .send()
         .await?;
 
-    otp_verified_check(res).await
+    otp_verified_check(app_handle, res).await
 }
 
 #[tauri::command]
 #[specta::specta]
-async fn two_factor_auth(otp: &str) -> Result<bool, RustError> {
+async fn two_factor_auth(app_handle: tauri::AppHandle, otp: &str) -> Result<bool, RustError> {
     #[cfg(debug_assertions)]
     println!("Call two_factor_auth {:?}", otp);
 
@@ -189,28 +188,24 @@ async fn two_factor_auth(otp: &str) -> Result<bool, RustError> {
         .send()
         .await?;
 
-    otp_verified_check(res).await
+    otp_verified_check(app_handle, res).await
 }
 
-async fn otp_verified_check(r: Response) -> Result<bool, RustError> {
+async fn otp_verified_check(app_handle: tauri::AppHandle, r: Response) -> Result<bool, RustError> {
     match r.status() {
         reqwest::StatusCode::OK => {
             let res_text = r.error_for_status()?.text().await?;
             let res_json: serde_json::Value = serde_json::from_str(&res_text).unwrap();
             if res_json["verified"].is_boolean() {
                 if res_json["verified"].as_bool().unwrap() {
-                    save_cookies().await?;
+                    save_cookies(&app_handle).await?;
                     return Ok(true);
                 }
             }
             Ok(false)
         }
-        reqwest::StatusCode::UNAUTHORIZED => {
-            Err("errors.2faFail".into())
-        }
-        reqwest::StatusCode::BAD_REQUEST => {
-            Err("errors.2faFail".into())
-        }
+        reqwest::StatusCode::UNAUTHORIZED => Err("errors.2faFail".into()),
+        reqwest::StatusCode::BAD_REQUEST => Err("errors.2faFail".into()),
         _ => Err(r.status().into()),
     }
 }
@@ -237,9 +232,7 @@ async fn verify_auth_token() -> Result<bool, RustError> {
             }
             Ok(false)
         }
-        reqwest::StatusCode::UNAUTHORIZED => {
-            Err("errors.unauthorized".into())
-        }
+        reqwest::StatusCode::UNAUTHORIZED => Err("errors.unauthorized".into()),
         _ => Err(res.status().into()),
     }
 }
@@ -287,9 +280,7 @@ async fn get_user_by_id(user_id: &str) -> Result<String, RustError> {
 
 #[tauri::command]
 #[specta::specta]
-async fn get_world_by_id(
-    worldid: &str,
-) -> Result<String, RustError> {
+async fn get_world_by_id(worldid: &str) -> Result<String, RustError> {
     #[cfg(debug_assertions)]
     println!("Call get_world_by_id {:?}", worldid);
 
@@ -298,7 +289,7 @@ async fn get_world_by_id(
             id: "private".to_string(),
             name: "In a private world".to_string(),
             thumbnailImageUrl:
-            "https://assets.vrchat.com/www/images/user-location-private-world.png".to_string(),
+                "https://assets.vrchat.com/www/images/user-location-private-world.png".to_string(),
         };
         return Ok(serde_json::to_string(&w).unwrap());
     } else if worldid == "web_or_mobile" {
@@ -306,15 +297,15 @@ async fn get_world_by_id(
             id: "web_or_mobile".to_string(),
             name: "On Web or Mobile".to_string(),
             thumbnailImageUrl:
-            "https://assets.vrchat.com/www/images/user-location-private-world.png".to_string(),
+                "https://assets.vrchat.com/www/images/user-location-private-world.png".to_string(),
         };
         return Ok(serde_json::to_string(&w).unwrap());
     } else if worldid == "offline" {
         let w = World {
             id: "offline".to_string(),
             name: "Offline".to_string(),
-            thumbnailImageUrl:
-                "https://assets.vrchat.com/www/images/user-location-offline.png".to_string(),
+            thumbnailImageUrl: "https://assets.vrchat.com/www/images/user-location-offline.png"
+                .to_string(),
         };
         return Ok(serde_json::to_string(&w).unwrap());
     } else if worldid == "traveling" {
@@ -404,7 +395,9 @@ async fn get_instance(worldid: &str, instanceid: &str) -> Result<String, RustErr
     let client = CLIENT.clone();
 
     let res = client
-        .get(format!("{VRCHAT_API_BASE_URL}/1/instances/{worldid}:{instanceid}"))
+        .get(format!(
+            "{VRCHAT_API_BASE_URL}/1/instances/{worldid}:{instanceid}"
+        ))
         .send()
         .await?;
 
@@ -415,7 +408,10 @@ async fn get_instance(worldid: &str, instanceid: &str) -> Result<String, RustErr
 #[specta::specta]
 async fn invite_myself_to_instance(world_id: &str, instance_id: &str) -> Result<bool, RustError> {
     #[cfg(debug_assertions)]
-    println!("Call invite_myself_to_instance {:?} {:?}", world_id, instance_id);
+    println!(
+        "Call invite_myself_to_instance {:?} {:?}",
+        world_id, instance_id
+    );
 
     let client = CLIENT.clone();
 
@@ -427,9 +423,7 @@ async fn invite_myself_to_instance(world_id: &str, instance_id: &str) -> Result<
         .await?;
 
     match res.status() {
-        reqwest::StatusCode::OK => {
-            Ok(true)
-        }
+        reqwest::StatusCode::OK => Ok(true),
         _ => {
             error!("Failed to invite myself to instance {:?}", res,);
             Err(res.status().into())
