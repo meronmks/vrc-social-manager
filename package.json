@@ -42,6 +42,6 @@
     "daisyui": "^5.0.27",
     "license-checker": "^25.0.1",
     "typescript": "^5.0.2",
-    "vite": "^6.3.3"
+    "vite": "^6.3.5"
   }
 }
