@@ -40,4 +40,4 @@ log = "0.4.26"
 custom-protocol = ["tauri/custom-protocol"]
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-updater = "=2.6.1"
+tauri-plugin-updater = "2"
