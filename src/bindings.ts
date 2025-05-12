@@ -103,6 +103,14 @@ async getLicenses() : Promise<Result<ApiResponse, RustError>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async getGroupById(groupId: string) : Promise<Result<string, RustError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_group_by_id", { groupId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 

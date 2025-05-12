@@ -30,6 +30,7 @@ pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         get_user_by_id,
         invite_myself_to_instance,
         get_licenses,
+        get_group_by_id,
     ]
 }
 
@@ -50,6 +51,7 @@ pub(crate) fn export_ts() {
             get_user_by_id,
             invite_myself_to_instance,
             get_licenses,
+            get_group_by_id,
         ])
         .export(
             specta_typescript::Typescript::default()
@@ -272,6 +274,19 @@ async fn get_user_by_id(user_id: &str) -> Result<String, RustError> {
 
     let res = clinet
         .get(format!("{VRCHAT_API_BASE_URL}/1/users/{user_id}"))
+        .send()
+        .await?;
+
+    handle_raw_response!(res)
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn get_group_by_id(group_id: &str) -> Result<String, RustError> {
+    let clinet = CLIENT.clone();
+
+    let res = clinet
+        .get(format!("{VRCHAT_API_BASE_URL}/1/groups/{group_id}"))
         .send()
         .await?;
 
