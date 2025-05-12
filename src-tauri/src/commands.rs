@@ -3,7 +3,7 @@ use crate::{save_cookies, CLIENT, COOKIE_STORE};
 use log::error;
 use once_cell::sync::Lazy;
 use reqwest::Response;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use serde_json::json;
 use std::fmt::Display;
 use std::sync::Arc;
@@ -30,6 +30,7 @@ pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         get_user_by_id,
         invite_myself_to_instance,
         get_licenses,
+        debug_api_request,
         get_group_by_id,
     ]
 }
@@ -51,6 +52,7 @@ pub(crate) fn export_ts() {
             get_user_by_id,
             invite_myself_to_instance,
             get_licenses,
+            debug_api_request,
             get_group_by_id,
         ])
         .export(
@@ -461,6 +463,56 @@ pub async fn get_licenses(app_handle: tauri::AppHandle) -> Result<ApiResponse, R
         Err(e) => Ok(ApiResponse {
             status: "error".to_string(),
             data: format!("Failed to read licenses file: {}", e),
+        }),
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
+#[specta(export)]
+pub struct DebugApiRequest {
+    pub method: String,
+    pub endpoint: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<String>,
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn debug_api_request(request: DebugApiRequest) -> Result<ApiResponse, RustError> {
+    let client = CLIENT.clone();
+    
+    let mut req = match request.method.to_uppercase().as_str() {
+        "GET" => client.get(format!("{VRCHAT_API_BASE_URL}{}", request.endpoint)),
+        "POST" => client.post(format!("{VRCHAT_API_BASE_URL}{}", request.endpoint)),
+        "PUT" => client.put(format!("{VRCHAT_API_BASE_URL}{}", request.endpoint)),
+        "DELETE" => client.delete(format!("{VRCHAT_API_BASE_URL}{}", request.endpoint)),
+        "PATCH" => client.patch(format!("{VRCHAT_API_BASE_URL}{}", request.endpoint)),
+        _ => return Err("Unsupported HTTP method".into()),
+    };
+
+    if let Some(data) = request.data {
+        // Parse the JSON string to ensure it's valid
+        let json_data: serde_json::Value = serde_json::from_str(&data)
+            .map_err(|e| format!("Invalid JSON data: {}", e))?;
+        req = req.json(&json_data);
+    }
+
+    let res = req.send().await?;
+    match res.status() {
+        reqwest::StatusCode::OK => {
+            let res_text = res
+                .error_for_status()?
+                .text()
+                .await
+                .map_err(|e| e.to_string())?;
+            Ok(ApiResponse {
+                status: "ok".to_string(),
+                data: res_text,
+            })
+        }
+        _ => Ok(ApiResponse {
+            status: "error".to_string(),
+            data: format!("Request failed with status: {}", res.status()),
         }),
     }
 }
