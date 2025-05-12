@@ -104,6 +104,14 @@ async getLicenses() : Promise<Result<ApiResponse, RustError>> {
     else return { status: "error", error: e  as any };
 }
 },
+async debugApiRequest(request: DebugApiRequest) : Promise<Result<ApiResponse, RustError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("debug_api_request", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getGroupById(groupId: string) : Promise<Result<string, RustError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_group_by_id", { groupId }) };
@@ -125,6 +133,7 @@ async getGroupById(groupId: string) : Promise<Result<string, RustError>> {
 /** user-defined types **/
 
 export type ApiResponse = { status: string; data: string }
+export type DebugApiRequest = { method: string; endpoint: string; data?: string | null }
 export type RustError = { type: "Unrecoverable"; message: string }
 
 /** tauri-specta globals **/
