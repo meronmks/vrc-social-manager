@@ -21,26 +21,32 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
 
   useEffect(() => {
     async function getInstanceOwnerDetail() {
-      let userid = "";
-      if (instance.hidden) {
-        userid = instance.hidden;
-      } else if (instance.friends) {
-        userid = instance.friends;
-      } else if (instance.private) {
-        userid = instance.private;
-      } else {
-        userid = instance.world.authorId;
-      }
-      const res = await commands.getUserById(userid);
-      if (res.status == "ok") {
-        setInstanceOwnerName(JSON.parse(res.data).displayName);
-      } else {
-        if (isDev) {
-          console.error(`Failed to get instance owner name`);
-          console.error(res);
+      if (instance.ownerId?.startsWith("usr_")) {
+        const res = await commands.getUserById(instance.ownerId);
+        if (res.status == "ok") {
+          setInstanceOwnerName(JSON.parse(res.data).displayName);
+        } else {
+          if (isDev) {
+            console.error(`Failed to get instance owner name`);
+            console.error(res);
+          }
+          toastError(t("errors.failedGetInstanceOwner"));
+          setInstanceOwnerName("Unknown")
         }
-        toastError(t("errors.failedGetInstanceOwner"));
-        setInstanceOwnerName("Unknown")
+      } else if (instance.ownerId?.startsWith("grp_")) {
+        const res = await commands.getGroupById(instance.ownerId);
+        if (res.status == "ok") {
+          setInstanceOwnerName(JSON.parse(res.data).name);
+        } else {
+          if (isDev) {
+            console.error(`Failed to get instance owner name`);
+            console.error(res);
+          }
+          toastError(t("errors.failedGetInstanceOwner"));
+          setInstanceOwnerName("Unknown")
+        }
+      } else {
+        setInstanceOwnerName("Unknown Type");
       }
     }
 
