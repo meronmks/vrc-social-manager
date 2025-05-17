@@ -15,6 +15,7 @@
     "core:default",
     "shell:allow-open",
     "shell:default",
-    "store:default"
+    "store:default",
+    "log:default"
   ]
 }

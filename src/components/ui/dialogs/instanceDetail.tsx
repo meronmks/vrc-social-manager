@@ -8,6 +8,7 @@ import { toastNormal, toastError } from '@/components/toast';
 import { useTranslation } from 'react-i18next';
 import { dayjs } from '@/libs/dayjsToolbox';
 import i18n from '@/libs/i18n';
+import {logging} from "@/libs/logging.tsx";
 
 interface Props { instance: InstanceDetailData, instanceLink: string }
 
@@ -26,10 +27,7 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
         if (res.status == "ok") {
           setInstanceOwnerName(JSON.parse(res.data).displayName);
         } else {
-          if (isDev) {
-            console.error(`Failed to get instance owner name`);
-            console.error(res);
-          }
+          await logging.error(`Faild to get instance owner name ${res}`)
           toastError(t("errors.failedGetInstanceOwner"));
           setInstanceOwnerName("Unknown")
         }
@@ -38,10 +36,7 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
         if (res.status == "ok") {
           setInstanceOwnerName(JSON.parse(res.data).name);
         } else {
-          if (isDev) {
-            console.error(`Failed to get instance owner name`);
-            console.error(res);
-          }
+          await logging.error(`Failed to get instance group owner name &{res}`)
           toastError(t("errors.failedGetInstanceOwner"));
           setInstanceOwnerName("Unknown")
         }

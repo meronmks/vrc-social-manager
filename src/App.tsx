@@ -13,6 +13,7 @@ import { InstanceDetail } from "@/components/ui/dialogs/instanceDetail.tsx";
 import { Login } from "@/components/ui/dialogs/login";
 import { toastError } from "@/components/toast";
 import "@/libs/i18n";
+import {logging} from "@/libs/logging.tsx";
 
 export default function App() {
   const isDev = import.meta.env.DEV;
@@ -25,6 +26,7 @@ export default function App() {
       // 設定が未定義の場合はデフォルトでtrue
       if (autoCheckUpdates !== false) {
         try {
+          await logging.info("Check for updates")
           const update = await check();
           if (update?.available) {
             const mes = `App Update? \nUpdateVersion:${update.version}\nCurrentVersion:${update.currentVersion}`;
@@ -33,6 +35,8 @@ export default function App() {
               await update.downloadAndInstall()
               await relaunch()
             }
+          } else {
+            await logging.info("No updates available")
           }
         } catch (error) {
           toastError("Update check failed: " + error);

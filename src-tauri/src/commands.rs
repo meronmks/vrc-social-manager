@@ -1,9 +1,9 @@
 use crate::structs::{ApiResponse, AppState, World};
 use crate::{save_cookies, CLIENT, COOKIE_STORE};
-use log::error;
+use log::{debug, error, trace};
 use once_cell::sync::Lazy;
 use reqwest::Response;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fmt::Display;
 use std::sync::Arc;
@@ -74,7 +74,10 @@ macro_rules! handle_raw_response {
                     .map_err(|e| e.to_string())?;
                 Ok(res_text)
             }
-            _ => Err($res.status().into()),
+            _ => {
+                error!("Failed to get response {:?}", $res);
+                Err($res.status().into())
+            },
         }
     }};
 }
@@ -117,6 +120,8 @@ impl<E: Display> From<E> for RustError {
 #[tauri::command]
 #[specta::specta]
 async fn cookie_clear(app_handle: tauri::AppHandle) {
+    debug!("Call cookie_clear");
+    
     let cookie_store = COOKIE_STORE.clone();
     cookie_store.lock().unwrap().clear();
     let _ = save_cookies(&app_handle).await;
@@ -124,7 +129,13 @@ async fn cookie_clear(app_handle: tauri::AppHandle) {
 
 #[tauri::command]
 #[specta::specta]
-async fn login(app_handle: tauri::AppHandle, user_name: &str, password: &str) -> Result<String, RustError> {
+async fn login(
+    app_handle: tauri::AppHandle,
+    user_name: &str,
+    password: &str,
+) -> Result<String, RustError> {
+    debug!("Call login {:?} {:?}", user_name, password);
+
     let client = CLIENT.clone();
 
     let res = client
@@ -152,16 +163,21 @@ async fn login(app_handle: tauri::AppHandle, user_name: &str, password: &str) ->
                 Ok(res_text)
             }
         }
-        reqwest::StatusCode::UNAUTHORIZED => Err("errors.loginFail".into()),
-        _ => Err(res.status().into()),
+        reqwest::StatusCode::UNAUTHORIZED => {
+            error!("Login failed: {:?}", res);
+            Err("errors.loginFail".into())
+        },
+        _ => {
+            error!("Login failed: {:?}", res);
+            Err(res.status().into())
+        },
     }
 }
 
 #[tauri::command]
 #[specta::specta]
 async fn email_otp(app_handle: tauri::AppHandle, otp: &str) -> Result<bool, RustError> {
-    #[cfg(debug_assertions)]
-    println!("Call email_otp {:?}", otp);
+    debug!("Call email_otp {:?}", otp);
 
     let client = CLIENT.clone();
 
@@ -179,8 +195,7 @@ async fn email_otp(app_handle: tauri::AppHandle, otp: &str) -> Result<bool, Rust
 #[tauri::command]
 #[specta::specta]
 async fn two_factor_auth(app_handle: tauri::AppHandle, otp: &str) -> Result<bool, RustError> {
-    #[cfg(debug_assertions)]
-    println!("Call two_factor_auth {:?}", otp);
+    debug!("Call two_factor_auth {:?}", otp);
 
     let client = CLIENT.clone();
 
@@ -208,15 +223,26 @@ async fn otp_verified_check(app_handle: tauri::AppHandle, r: Response) -> Result
             }
             Ok(false)
         }
-        reqwest::StatusCode::UNAUTHORIZED => Err("errors.2faFail".into()),
-        reqwest::StatusCode::BAD_REQUEST => Err("errors.2faFail".into()),
-        _ => Err(r.status().into()),
+        reqwest::StatusCode::UNAUTHORIZED => {
+            error!("2FA failed: {:?}", r);
+            Err("errors.2faFail".into())
+        },
+        reqwest::StatusCode::BAD_REQUEST => {
+            error!("2FA failed: {:?}", r);
+            Err("errors.2faFail".into())
+        },
+        _ => {
+            error!("2FA failed: {:?}", r);
+            Err(r.status().into())
+        },
     }
 }
 
 #[tauri::command]
 #[specta::specta]
 async fn verify_auth_token() -> Result<bool, RustError> {
+    debug!("Call verify_auth_token");
+
     let client = CLIENT.clone();
 
     let res = client
@@ -236,14 +262,22 @@ async fn verify_auth_token() -> Result<bool, RustError> {
             }
             Ok(false)
         }
-        reqwest::StatusCode::UNAUTHORIZED => Err("errors.unauthorized".into()),
-        _ => Err(res.status().into()),
+        reqwest::StatusCode::UNAUTHORIZED => {
+            error!("Verify auth token failed: {:?}", res);
+            Err("errors.unauthorized".into())
+        },
+        _ => {
+            error!("Verify auth token failed: {:?}", res);
+            Err(res.status().into())
+        },
     }
 }
 
 #[tauri::command]
 #[specta::specta]
 async fn get_current_user_info() -> Result<String, RustError> {
+    debug!("Call get_current_user_info");
+
     let client = CLIENT.clone();
 
     let res = client
@@ -257,6 +291,11 @@ async fn get_current_user_info() -> Result<String, RustError> {
 #[tauri::command]
 #[specta::specta]
 async fn get_current_user_friends(offset: i32, n: i32, offline: bool) -> Result<String, RustError> {
+    debug!(
+        "Call get_current_user_friends {:?} {:?} {:?}",
+        offset, n, offline
+    );
+
     let client = CLIENT.clone();
 
     let res = client
@@ -272,6 +311,8 @@ async fn get_current_user_friends(offset: i32, n: i32, offline: bool) -> Result<
 #[tauri::command]
 #[specta::specta]
 async fn get_user_by_id(user_id: &str) -> Result<String, RustError> {
+    debug!("Call get_user_by_id {:?}", user_id);
+
     let clinet = CLIENT.clone();
 
     let res = clinet
@@ -285,6 +326,8 @@ async fn get_user_by_id(user_id: &str) -> Result<String, RustError> {
 #[tauri::command]
 #[specta::specta]
 async fn get_group_by_id(group_id: &str) -> Result<String, RustError> {
+    debug!("Call get_group_by_id {:?}", group_id);
+
     let clinet = CLIENT.clone();
 
     let res = clinet
@@ -298,8 +341,7 @@ async fn get_group_by_id(group_id: &str) -> Result<String, RustError> {
 #[tauri::command]
 #[specta::specta]
 async fn get_world_by_id(worldid: &str) -> Result<String, RustError> {
-    #[cfg(debug_assertions)]
-    println!("Call get_world_by_id {:?}", worldid);
+    debug!("Call get_world_by_id {:?}", worldid);
 
     if worldid == "private" {
         let w = World {
@@ -340,7 +382,7 @@ async fn get_world_by_id(worldid: &str) -> Result<String, RustError> {
 
     match world {
         Some(result) => {
-            println!(
+            trace!(
                 "Receive cached get_world_by_id {:?} time: {:?}",
                 worldid,
                 now.elapsed()
@@ -368,11 +410,10 @@ async fn get_world_by_id(worldid: &str) -> Result<String, RustError> {
                             insert_world((&worldid).to_string(), o).await;
                         }
                         Err(_e) => {
-                            println!("Failed to perse World")
+                            error!("Failed to parse World {:?}", _e);
                         }
                     }
-                    #[cfg(debug_assertions)]
-                    println!(
+                    trace!(
                         "Receive get_world_by_id {:?} time: {:?}",
                         worldid,
                         now.elapsed()
@@ -380,8 +421,7 @@ async fn get_world_by_id(worldid: &str) -> Result<String, RustError> {
                     Ok(res_text)
                 }
                 _ => {
-                    #[cfg(debug_assertions)]
-                    println!(
+                    error!(
                         "Receive Error get_world_by_id {:?} time: {:?}",
                         worldid,
                         now.elapsed()
@@ -396,6 +436,8 @@ async fn get_world_by_id(worldid: &str) -> Result<String, RustError> {
 #[tauri::command]
 #[specta::specta]
 async fn get_raw_world_by_id(worldid: &str) -> Result<String, RustError> {
+    debug!("Call get_raw_world_by_id {:?}", worldid);
+
     let client = CLIENT.clone();
 
     let res = client
@@ -409,6 +451,11 @@ async fn get_raw_world_by_id(worldid: &str) -> Result<String, RustError> {
 #[tauri::command]
 #[specta::specta]
 async fn get_instance(worldid: &str, instanceid: &str) -> Result<String, RustError> {
+    debug!(
+        "Call get_instance {:?} {:?}",
+        worldid, instanceid
+    );
+
     let client = CLIENT.clone();
 
     let res = client
@@ -424,8 +471,7 @@ async fn get_instance(worldid: &str, instanceid: &str) -> Result<String, RustErr
 #[tauri::command]
 #[specta::specta]
 async fn invite_myself_to_instance(world_id: &str, instance_id: &str) -> Result<bool, RustError> {
-    #[cfg(debug_assertions)]
-    println!(
+    debug!(
         "Call invite_myself_to_instance {:?} {:?}",
         world_id, instance_id
     );
@@ -480,7 +526,7 @@ pub struct DebugApiRequest {
 #[specta::specta]
 async fn debug_api_request(request: DebugApiRequest) -> Result<ApiResponse, RustError> {
     let client = CLIENT.clone();
-    
+
     let mut req = match request.method.to_uppercase().as_str() {
         "GET" => client.get(format!("{VRCHAT_API_BASE_URL}{}", request.endpoint)),
         "POST" => client.post(format!("{VRCHAT_API_BASE_URL}{}", request.endpoint)),
@@ -492,8 +538,8 @@ async fn debug_api_request(request: DebugApiRequest) -> Result<ApiResponse, Rust
 
     if let Some(data) = request.data {
         // Parse the JSON string to ensure it's valid
-        let json_data: serde_json::Value = serde_json::from_str(&data)
-            .map_err(|e| format!("Invalid JSON data: {}", e))?;
+        let json_data: serde_json::Value =
+            serde_json::from_str(&data).map_err(|e| format!("Invalid JSON data: {}", e))?;
         req = req.json(&json_data);
     }
 

@@ -11,6 +11,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { Confirm } from "@/components/ui/dialogs/confirm";
 import { toastError } from "@/components/toast";
 import { ThirdPartyLicenses } from "@/components/ui/dialogs/license";
+import {logging} from "@/libs/logging.tsx";
 
 export default function SettingsScreen() {
   const navigate = useNavigate();
@@ -109,6 +110,7 @@ export default function SettingsScreen() {
     setIsCheckingUpdate(true);
     setUpdateMessage("");
     try {
+      await logging.info("Check for updates")
       const update = await check();
       if (update?.available) {
         setUpdateMessage(t("settingScreen.updateAvailable", { version: update.version }));
@@ -119,6 +121,7 @@ export default function SettingsScreen() {
           await relaunch()
         }
       } else {
+        await logging.info("No updates available")
         setUpdateMessage(t("settingScreen.noUpdatesAvailable"));
       }
     } catch (error) {
