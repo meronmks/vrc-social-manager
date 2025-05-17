@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { commands } from "@/bindings";
 import { useTranslation } from "react-i18next";
+import {logging} from "@/libs/logging.tsx";
 
 interface License {
   name: string;
@@ -66,7 +67,7 @@ export function ThirdPartyLicenses() {
             const jsonData = JSON.parse(result.data.data) as LicenseData;
           
             // NPMライセンスの処理
-            const npmLicenses = Object.entries(jsonData.npm || {}).map(([packageId, info]) => ({
+            const npmLicenses = Object.entries(jsonData.npm || {}).map(([, info]) => ({
               name: info.name,
               version: info.version,
               licenses: info.licenses || "Unknown",
@@ -98,12 +99,12 @@ export function ThirdPartyLicenses() {
               cargo: filteredCargoLicenses
             });
           } catch (parseError) {
-            console.error("Failed to parse license data:", parseError);
+            await logging.error(`Failed to parse license data:${parseError}`);
             setLicenses({ npm: [], cargo: [] });
           }
         }
       } catch (error) {
-        console.error("Failed to fetch licenses:", error);
+        await logging.error(`Failed to fetch licenses:${error}`);
         setLicenses({ npm: [], cargo: [] });
       } finally {
         setIsLoading(false);

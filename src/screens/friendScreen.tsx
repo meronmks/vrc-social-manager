@@ -10,6 +10,7 @@ import { Friend, Instance } from "@/libs/exportInterfaces.tsx";
 import InstanceView from "@/components/ui/instance.tsx";
 import { useTranslation } from "react-i18next";
 import { Sidebar } from "@/components/ui/Sidebar";
+import {logging} from "@/libs/logging.tsx";
 
 export default function FriendScreen() {
   const isDev = import.meta.env.DEV;
@@ -162,7 +163,7 @@ export default function FriendScreen() {
           if (friendNum === 0) break;
           await new Promise((resolve) => setTimeout(resolve, 1000));
         } else {
-          console.error("Error fetching online friends:", friends.error);
+          await logging.error(`Error fetching online friends:${friends.error}`);
           break;
         }
       }
@@ -185,13 +186,13 @@ export default function FriendScreen() {
           if (friendNum === 0) break;
           await new Promise((resolve) => setTimeout(resolve, 1000));
         } else {
-          console.error("Error fetching offline friends:", friends.error);
+          await logging.error(`Error fetching offline friends:${friends.error}`);
           break;
         }
       }
     } catch (error) {
       if (!signal.aborted) {
-        console.error("Error loading data:", error);
+        await logging.error(`Error loading data:${error}`);
       }
     } finally {
       if (!signal.aborted) {

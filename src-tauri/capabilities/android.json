@@ -1,15 +1,12 @@
 {
-  "identifier": "desktop-capability",
+  "identifier": "android-capability",
   "platforms": [
-    "macOS",
-    "windows",
-    "linux"
+    "android"
   ],
   "windows": [
     "main"
   ],
   "permissions": [
-    "updater:default",
     "clipboard-manager:allow-write-text",
     "process:default",
     "core:default",

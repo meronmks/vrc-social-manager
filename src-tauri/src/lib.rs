@@ -2,6 +2,7 @@ use once_cell::sync::Lazy;
 use reqwest::Client;
 use reqwest_cookie_store::{CookieStore, CookieStoreMutex};
 use std::sync::Arc;
+use log::LevelFilter;
 use tauri::{Manager, WindowEvent};
 use tauri_plugin_store::StoreExt;
 
@@ -54,6 +55,29 @@ pub fn run() {
     commands::export_ts();
 
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .clear_targets()
+                .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
+                .level(
+                    #[cfg(debug_assertions)]
+                    LevelFilter::Debug,
+                    #[cfg(not(debug_assertions))]
+                    LevelFilter::Info
+                )
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+                .targets([
+                     tauri_plugin_log::Target::new(
+                         tauri_plugin_log::TargetKind::LogDir {
+                             file_name: Some("app".to_string()),
+                         },
+                     ),
+                     tauri_plugin_log::Target::new(
+                         tauri_plugin_log::TargetKind::Stdout,
+                     ),
+                ])
+                .build()
+        )
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::default().build())
