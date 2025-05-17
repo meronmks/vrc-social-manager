@@ -14,6 +14,7 @@ import { Login } from "@/components/ui/dialogs/login";
 import { toastError } from "@/components/toast";
 import "@/libs/i18n";
 import {logging} from "@/libs/logging.tsx";
+import { UpdateConfirm } from "@/components/ui/dialogs/updateConfirm";
 
 export default function App() {
   const isDev = import.meta.env.DEV;
@@ -28,10 +29,12 @@ export default function App() {
         try {
           await logging.info("Check for updates")
           const update = await check();
-          if (update?.available) {
-            const mes = `App Update? \nUpdateVersion:${update.version}\nCurrentVersion:${update.currentVersion}`;
-            const accepted = await Confirm.call({message: mes});
-            if (accepted){
+          if (update) {
+            const result = await UpdateConfirm.call({
+              version: update.version,
+              releaseNotes: update.body,
+            });
+            if (result){
               await update.downloadAndInstall()
               await relaunch()
             }
@@ -64,6 +67,7 @@ export default function App() {
       <FriendDetail.Root />
       <InstanceDetail.Root />
       <Login.Root />
+      <UpdateConfirm.Root />
       {/* 理由がよくわからんがメインコンテンツをw-screenで覆わないとダイアログ表示時になんかズレる */}
       <div className="w-screen">
         <Router>

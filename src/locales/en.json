@@ -98,5 +98,13 @@
     "unauthorized": "Unauthorized. Please log in again.",
     "unknown": "Unknown Error.",
     "failedGetInstanceOwner": "Failed to get instance owner."
+  },
+  "updateConfirm": {
+    "title": "Update Available",
+    "newVersion": "New version v{{version}} is available",
+    "releaseNotes": "Release Notes:",
+    "restartMessage": "The application will restart to apply the update",
+    "updateNow": "Update Now",
+    "later": "Later"
   }
 }

@@ -8,10 +8,10 @@ import { Login } from "@/components/ui/dialogs/login";
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { getVersion } from "@tauri-apps/api/app";
-import { Confirm } from "@/components/ui/dialogs/confirm";
 import { toastError } from "@/components/toast";
 import { ThirdPartyLicenses } from "@/components/ui/dialogs/license";
 import {logging} from "@/libs/logging.tsx";
+import { UpdateConfirm } from "@/components/ui/dialogs/updateConfirm";
 
 export default function SettingsScreen() {
   const navigate = useNavigate();
@@ -112,11 +112,13 @@ export default function SettingsScreen() {
     try {
       await logging.info("Check for updates")
       const update = await check();
-      if (update?.available) {
+      if (update) {
         setUpdateMessage(t("settingScreen.updateAvailable", { version: update.version }));
-        const mes = `App Update? \nUpdateVersion:${update.version}\nCurrentVersion:${update.currentVersion}`;
-        const accepted = await Confirm.call({message: mes});
-        if (accepted){
+        const result = await UpdateConfirm.call({
+          version: update.version,
+          releaseNotes: update.body,
+        });
+        if (result){
           await update.downloadAndInstall()
           await relaunch()
         }

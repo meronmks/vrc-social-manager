@@ -98,5 +98,13 @@
     "unauthorized": "再度ログインしてください",
     "unknown": "不明なエラー",
     "failedGetInstanceOwner": "インスタンスオーナーの取得に失敗しました"
+  },
+  "updateConfirm": {
+    "title": "アップデートが利用可能です",
+    "newVersion": "新しいバージョン v{{version}} が利用可能です",
+    "releaseNotes": "リリースノート：",
+    "restartMessage": "アプリケーションを再起動してアップデートを適用します",
+    "updateNow": "アップデートする",
+    "later": "後で"
   }
 }
