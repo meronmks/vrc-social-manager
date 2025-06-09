@@ -3,7 +3,6 @@ import { Input } from "@/components/ui/input";
 import { IoClose } from "react-icons/io5";
 import { Virtuoso } from "react-virtuoso";
 import { commands } from "@/bindings";
-import { LazyStore } from "@tauri-apps/plugin-store";
 import { getVersion } from "@tauri-apps/api/app";
 import { toastError } from "@/components/toast.tsx";
 import { Friend, Instance } from "@/libs/exportInterfaces.tsx";
@@ -11,6 +10,7 @@ import InstanceView from "@/components/ui/instance.tsx";
 import { useTranslation } from "react-i18next";
 import { Sidebar } from "@/components/ui/Sidebar";
 import {logging} from "@/libs/logging.tsx";
+import { userDataStore, UserData } from "@/libs/userDataStore";
 
 export default function FriendScreen() {
   const isDev = import.meta.env.DEV;
@@ -19,7 +19,6 @@ export default function FriendScreen() {
   const [userData, setUserData] = useState<any>(null);
   const [onlineUserCount, setOnlineUserCount] = useState(0);
   const [offlineUserCount, setOfflineUserCount] = useState(0);
-  const store = new LazyStore('store.json');
   const [isLoading, setIsLoading] = useState(false);
   const [appVersion, setAppVersion] = useState("unknown");
   const { t } = useTranslation();
@@ -27,13 +26,12 @@ export default function FriendScreen() {
 
   // データの保存
   const saveInstancesData = async (data: Instance[]) => {
-    await store.set("instances-data", JSON.stringify(data));
-    await store.save();
+    await userDataStore.setInstancesData(JSON.stringify(data));
   };
 
   // データの復元
   const restoreInstancesData = async () => {
-    const savedData = await store.get<string>("instances-data");
+    const savedData = await userDataStore.getInstancesData();
     if (savedData) {
       setInstancesData(JSON.parse(savedData));
     }
@@ -41,15 +39,25 @@ export default function FriendScreen() {
 
   // userDataの保存
   const saveUserData = async (data: any) => {
-    await store.set("user-data", JSON.stringify(data));
+    await userDataStore.addOrUpdateUser(data.id, data.displayName, data);
+    await userDataStore.setCurrentUser(data.id);
   };
 
   // userDataの復元
   const restoreUserData = async (): Promise<boolean> => {
-    const savedData = await store.get<string>("user-data");
-    if (savedData) {
-      setUserData(JSON.parse(savedData));
-      return true;
+    try {
+      const savedData = await userDataStore.getCurrentUser();
+      if (savedData) {
+        // savedData.userDataが文字列の場合はパース、オブジェクトの場合はそのまま使用
+        const parsedData = typeof savedData.userData === 'string' 
+          ? JSON.parse(savedData.userData) 
+          : savedData.userData;
+        setUserData(parsedData);
+        return true;
+      }
+    } catch (error) {
+      await logging.error(`Failed to restore user data: ${error}`);
+      setUserData(null);
     }
     return false;
   };
@@ -74,8 +82,7 @@ export default function FriendScreen() {
           await saveUserData(parsedUserData);
         }
       } else {
-        await store.delete("user-data");
-        await store.save();
+        await userDataStore.removeUser(await userDataStore.getCurrentUserId() || "");
         setUserData(null);
         toastError(t(res.error.message));
       }
@@ -140,7 +147,7 @@ export default function FriendScreen() {
     setIsLoading(true);
 
     try {
-      let getMaxCount = await store.get<number>("fetch-friends-count");
+      let getMaxCount = await userDataStore.getFetchFriendsCount();
       if (!getMaxCount) {
         getMaxCount = 50;
       }

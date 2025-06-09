@@ -119,6 +119,9 @@ async getGroupById(groupId: string) : Promise<Result<string, RustError>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async switchUser(userId: string) : Promise<void> {
+    await TAURI_INVOKE("switch_user", { userId });
 }
 }
 
