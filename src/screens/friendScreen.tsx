@@ -10,7 +10,7 @@ import InstanceView from "@/components/ui/instance.tsx";
 import { useTranslation } from "react-i18next";
 import { Sidebar } from "@/components/ui/Sidebar";
 import {logging} from "@/libs/logging.tsx";
-import { userDataStore, UserData } from "@/libs/userDataStore";
+import { userDataStore } from "@/libs/userDataStore";
 
 export default function FriendScreen() {
   const isDev = import.meta.env.DEV;

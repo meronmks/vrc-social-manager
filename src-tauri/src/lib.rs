@@ -1,7 +1,6 @@
 use once_cell::sync::Lazy;
 use reqwest::Client;
 use reqwest_cookie_store::{CookieStore, CookieStoreMutex};
-use serde::de;
 use std::sync::Arc;
 use log::{debug, error, warn, LevelFilter};
 use tauri::{Manager, WindowEvent};
