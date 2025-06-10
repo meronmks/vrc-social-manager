@@ -1,5 +1,5 @@
 use crate::structs::{ApiResponse, AppState, World};
-use crate::{save_cookies, CLIENT, COOKIE_STORE};
+use crate::{load_cookies, save_cookies, CLIENT, COOKIE_STORE};
 use log::{debug, error, trace};
 use once_cell::sync::Lazy;
 use reqwest::Response;
@@ -32,6 +32,7 @@ pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         get_licenses,
         debug_api_request,
         get_group_by_id,
+        switch_user,
     ]
 }
 
@@ -54,6 +55,7 @@ pub(crate) fn export_ts() {
             get_licenses,
             debug_api_request,
             get_group_by_id,
+            switch_user,
         ])
         .export(
             specta_typescript::Typescript::default()
@@ -119,18 +121,25 @@ impl<E: Display> From<E> for RustError {
 
 #[tauri::command]
 #[specta::specta]
-async fn cookie_clear(app_handle: tauri::AppHandle) {
+async fn cookie_clear(_app_handle: tauri::AppHandle) {
     debug!("Call cookie_clear");
     
     let cookie_store = COOKIE_STORE.clone();
     cookie_store.lock().unwrap().clear();
-    let _ = save_cookies(&app_handle).await;
+}
+
+#[tauri::command]
+#[specta::specta]
+fn switch_user(app_handle: tauri::AppHandle, user_id: &str) {
+    debug!("Switch user to {:?}", user_id);
+
+    let _ = load_cookies(&app_handle, user_id);
 }
 
 #[tauri::command]
 #[specta::specta]
 async fn login(
-    app_handle: tauri::AppHandle,
+    _app_handle: tauri::AppHandle,
     user_name: &str,
     password: &str,
 ) -> Result<String, RustError> {
@@ -146,7 +155,6 @@ async fn login(
 
     match res.status() {
         reqwest::StatusCode::OK => {
-            save_cookies(&app_handle).await?;
             let res_text = res.error_for_status()?.text().await?;
             let res_json: serde_json::Value = serde_json::from_str(&res_text).unwrap();
             if res_json["requiresTwoFactorAuth"].is_array() {
@@ -217,8 +225,19 @@ async fn otp_verified_check(app_handle: tauri::AppHandle, r: Response) -> Result
             let res_json: serde_json::Value = serde_json::from_str(&res_text).unwrap();
             if res_json["verified"].is_boolean() {
                 if res_json["verified"].as_bool().unwrap() {
-                    save_cookies(&app_handle).await?;
-                    return Ok(true);
+                    let res = get_current_user_info_inner().await;
+                    match res.status() {
+                        reqwest::StatusCode::OK => {
+                            let rt = res.error_for_status()?.text().await?;
+                            let rj: serde_json::Value = serde_json::from_str(&rt).unwrap();
+                            save_cookies(&app_handle, rj["id"].as_str().unwrap()).await?;
+                            return Ok(true);
+                        },
+                        _ => {
+                            error!("Failed to get current user info after 2FA: {:?}", res);
+                            return Err("errors.2faFail".into());
+                        }
+                    }
                 }
             }
             Ok(false)
@@ -278,14 +297,20 @@ async fn verify_auth_token() -> Result<bool, RustError> {
 async fn get_current_user_info() -> Result<String, RustError> {
     debug!("Call get_current_user_info");
 
+    let res = get_current_user_info_inner().await;
+
+    handle_raw_response!(res)
+}
+
+async fn get_current_user_info_inner() -> Response {
     let client = CLIENT.clone();
 
     let res = client
         .get(format!("{VRCHAT_API_BASE_URL}/1/auth/user"))
         .send()
-        .await?;
+        .await.unwrap();
 
-    handle_raw_response!(res)
+    res
 }
 
 #[tauri::command]

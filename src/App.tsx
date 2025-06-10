@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router";
 import FriendScreen from "@/screens/friendScreen";
 import SettingsScreen from "@/screens/settingsScreen";
-import { LazyStore } from '@tauri-apps/plugin-store';
 import DebugScreen from "@/screens/debugScreen";
 import { check } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
@@ -15,15 +14,15 @@ import { toastError } from "@/components/toast";
 import "@/libs/i18n";
 import {logging} from "@/libs/logging.tsx";
 import { UpdateConfirm } from "@/components/ui/dialogs/updateConfirm";
+import { userDataStore } from "./libs/userDataStore";
 
 export default function App() {
   const isDev = import.meta.env.DEV;
-  const store = new LazyStore('store.json');
 
   useEffect(() => {
     async function init() {
       // アップデートチェックの設定を読み込む
-      const autoCheckUpdates = await store.get<boolean>("auto-check-updates");
+      const autoCheckUpdates = await userDataStore.getAutoCheckUpdates();
       // 設定が未定義の場合はデフォルトでtrue
       if (autoCheckUpdates !== false) {
         try {
@@ -48,12 +47,9 @@ export default function App() {
     }
 
     async function loadTheme() {
-      const theme = await store.get<string>("data-theme");
+      const theme = await userDataStore.getTheme();
       if (theme) {
         document.documentElement.setAttribute("data-theme", theme);
-      } else {
-        document.documentElement.setAttribute("data-theme", "light");
-        store.set('data-theme', "light").then(() => store.save());
       }
     }
     loadTheme();
