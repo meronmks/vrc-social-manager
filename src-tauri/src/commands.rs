@@ -121,12 +121,11 @@ impl<E: Display> From<E> for RustError {
 
 #[tauri::command]
 #[specta::specta]
-async fn cookie_clear(app_handle: tauri::AppHandle) {
+async fn cookie_clear(_app_handle: tauri::AppHandle) {
     debug!("Call cookie_clear");
     
     let cookie_store = COOKIE_STORE.clone();
     cookie_store.lock().unwrap().clear();
-    // let _ = save_cookies(&app_handle).await;
 }
 
 #[tauri::command]
@@ -134,7 +133,7 @@ async fn cookie_clear(app_handle: tauri::AppHandle) {
 fn switch_user(app_handle: tauri::AppHandle, user_id: &str) {
     debug!("Switch user to {:?}", user_id);
 
-    load_cookies(&app_handle, user_id);
+    let _ = load_cookies(&app_handle, user_id);
 }
 
 #[tauri::command]
