@@ -4,8 +4,8 @@ import LanguageDetector from "i18next-browser-languagedetector";
 
 import en from "@/locales/en.json";
 import ja from "@/locales/ja.json";
-import { LazyStore } from "@tauri-apps/plugin-store";
 import {logging} from "@/libs/logging.tsx";
+import { userDataStore } from "./userDataStore";
 
 export const resources = {
   en: { translation: en },
@@ -22,8 +22,7 @@ i18n
     interpolation: { escapeValue: false },
   });
 
-const store = new LazyStore('store.json');
-store.get<string>("lang")
+userDataStore.getLanguage()
   .then((userLang) => {
     i18n.changeLanguage(userLang ?? i18n.language);
   })
