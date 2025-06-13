@@ -99,9 +99,14 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
     return !instance.world.tags?.includes(declineTag);
   };
 
+  const isPermissionAllowedBydefaultContentSettings = (permissionName: string): boolean => {
+    const setting = instance.world.defaultContentSettings?.[permissionName as keyof typeof instance.world.defaultContentSettings];
+    return setting === null || setting === undefined ? isPermissionAllowedByDefault(permissionName) : setting;
+  };
+
   const isPermissionEnabled = (permissionName: string): boolean => {
     const setting = instance.contentSettings?.[permissionName as keyof typeof instance.contentSettings];
-    return setting === null || setting === undefined ? isPermissionAllowedByDefault(permissionName) : setting;
+    return setting === null || setting === undefined ? isPermissionAllowedBydefaultContentSettings(permissionName) : setting;
   };
 
   return (
@@ -196,6 +201,12 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
                 <div className="divider my-1"></div>
                 <div className="space-y-2">
                   <div className="flex items-center">
+                    <span className="font-semibold min-w-32">{t("instanceDetail.avatar_scaling")}:</span>
+                    <span className={`badge ${isPermissionEnabled('avatar_scaling') ? 'badge-success' : 'badge-error'}`}>
+                      {isPermissionEnabled('avatar_scaling') ? t("instanceDetail.allow") : t("instanceDetail.deny")}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
                     <span className="font-semibold min-w-32">{t("instanceDetail.drones")}:</span>
                     <span className={`badge ${isPermissionEnabled('drones') ? 'badge-success' : 'badge-error'}`}>
                       {isPermissionEnabled('drones') ? t("instanceDetail.allow") : t("instanceDetail.deny")}
@@ -223,6 +234,18 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
                     <span className="font-semibold min-w-32">{t("instanceDetail.stickers")}:</span>
                     <span className={`badge ${isPermissionEnabled('stickers') ? 'badge-success' : 'badge-error'}`}>
                       {isPermissionEnabled('stickers') ? t("instanceDetail.allow") : t("instanceDetail.deny")}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold min-w-32">{t("instanceDetail.props")}:</span>
+                    <span className={`badge ${isPermissionEnabled('props') ? 'badge-success' : 'badge-error'}`}>
+                      {isPermissionEnabled('props') ? t("instanceDetail.allow") : t("instanceDetail.deny")}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold min-w-32">{t("instanceDetail.focus_view")}:</span>
+                    <span className={`badge ${isPermissionEnabled('focus_view') ? 'badge-success' : 'badge-error'}`}>
+                      {isPermissionEnabled('focus_view') ? t("instanceDetail.allow") : t("instanceDetail.deny")}
                     </span>
                   </div>
                 </div>
