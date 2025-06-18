@@ -33,6 +33,7 @@ pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         debug_api_request,
         get_group_by_id,
         switch_user,
+        get_release_note,
     ]
 }
 
@@ -56,6 +57,7 @@ pub(crate) fn export_ts() {
             debug_api_request,
             get_group_by_id,
             switch_user,
+            get_release_note,
         ])
         .export(
             specta_typescript::Typescript::default()
@@ -536,6 +538,22 @@ pub async fn get_licenses(app_handle: tauri::AppHandle) -> Result<ApiResponse, R
             data: format!("Failed to read licenses file: {}", e),
         }),
     }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_release_note(tag_name: &str) -> Result<String, RustError> {
+    debug!("Call get_release_note {:?}", tag_name);
+    let client = CLIENT.clone();
+
+    let res = client
+        .get(format!(
+            "https://api.github.com/repos/meronmks/vrc-social-manager/releases/tags/v{tag_name}"
+        ))
+        .send()
+        .await?;
+
+    handle_raw_response!(res)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
