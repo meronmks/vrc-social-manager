@@ -1,3 +1,4 @@
+import { MarkdownViewer } from '@/libs/markdownviewer'
 import { createCallable } from 'react-call'
 import { useTranslation } from 'react-i18next'
 
@@ -23,7 +24,7 @@ export const UpdateConfirm = createCallable<Props, Response>(({ call, version, r
             {releaseNotes && (
               <div className="bg-base-200 p-4 rounded-lg">
                 <h4 className="font-semibold mb-2">{t('updateConfirm.releaseNotes')}</h4>
-                <p className="whitespace-pre-wrap text-sm">{releaseNotes}</p>
+                <MarkdownViewer content={releaseNotes} />
               </div>
             )}
             <p className="text-sm opacity-75">{t('updateConfirm.restartMessage')}</p>

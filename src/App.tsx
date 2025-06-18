@@ -15,6 +15,7 @@ import "@/libs/i18n";
 import {logging} from "@/libs/logging.tsx";
 import { UpdateConfirm } from "@/components/ui/dialogs/updateConfirm";
 import { userDataStore } from "./libs/userDataStore";
+import { commands } from "./bindings";
 
 export default function App() {
   const isDev = import.meta.env.DEV;
@@ -29,9 +30,10 @@ export default function App() {
           await logging.info("Check for updates")
           const update = await check();
           if (update) {
+            const releaseNote = await commands.getReleaseNote(update.version);
             const result = await UpdateConfirm.call({
               version: update.version,
-              releaseNotes: update.body,
+              releaseNotes: releaseNote.status === "ok" ? JSON.parse(releaseNote.data).body : undefined,
             });
             if (result){
               await update.downloadAndInstall()
