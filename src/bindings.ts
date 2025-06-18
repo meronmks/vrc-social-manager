@@ -122,6 +122,14 @@ async getGroupById(groupId: string) : Promise<Result<string, RustError>> {
 },
 async switchUser(userId: string) : Promise<void> {
     await TAURI_INVOKE("switch_user", { userId });
+},
+async getReleaseNote(tagName: string) : Promise<Result<string, RustError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_release_note", { tagName }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 

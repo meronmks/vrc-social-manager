@@ -35,6 +35,7 @@ export interface InstanceDetailData {
     pedestals?: boolean;
     prints?: boolean;
     stickers?: boolean;
+    props?: boolean;
   }
   tags: string[];
 }
@@ -50,6 +51,14 @@ export interface World {
   visits?: number;
   recommendedCapacity: number;
   tags: string[];
+  defaultContentSettings?: {
+    drones?: boolean;
+    emoji?: boolean;
+    pedestals?: boolean;
+    prints?: boolean;
+    stickers?: boolean;
+    props?: boolean;
+  };
 }
 
 export interface Friend {

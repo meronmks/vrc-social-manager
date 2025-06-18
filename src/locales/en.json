@@ -87,7 +87,10 @@
     "instanceClose": "Instance Close",
     "instanceOpen": "Open",
     "instanceClosed": "Closed",
-    "recommendedCapacity": "Recommended Capacity"
+    "recommendedCapacity": "Recommended Capacity",
+    "props": "Items",
+    "avatar_scaling": "Avatar Scaling",
+    "focus_view": "Focus View (Mobile)"
   },
   "close": "Close",
   "searchPlaceholder": "Search instances or friendsName...",

@@ -87,7 +87,10 @@
     "instanceClose": "インスタンスの閉鎖",
     "instanceOpen": "開いています",
     "instanceClosed": "閉じています",
-    "recommendedCapacity": "推奨人数"
+    "recommendedCapacity": "推奨人数",
+    "props": "アイテム",
+    "avatar_scaling": "アバターのサイズ変更",
+    "focus_view": "フォーカスビュー（モバイル用）"
   },
   "close": "閉じる",
   "searchPlaceholder": "インスタンス名かフレンド名で検索",

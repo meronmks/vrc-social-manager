@@ -148,9 +148,10 @@ export default function SettingsScreen() {
       const update = await check();
       if (update) {
         setUpdateMessage(t("settingScreen.updateAvailable", { version: update.version }));
+        const releaseNote = await commands.getReleaseNote(update.version);
         const result = await UpdateConfirm.call({
           version: update.version,
-          releaseNotes: update.body,
+          releaseNotes: releaseNote.status === "ok" ? JSON.parse(releaseNote.data).body : undefined,
         });
         if (result) {
           await update.downloadAndInstall()
