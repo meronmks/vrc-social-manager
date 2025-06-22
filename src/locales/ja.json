@@ -7,11 +7,14 @@
   },
   "welcome": "ようこそ！",
   "login": {
-    "title": "ログインしてください",
+    "title": "VRChatにログイン",
     "username": "ユーザー名またはメールアドレス",
     "password": "パスワード",
     "submit": "ログイン",
-    "submit2FA": "ログイン"
+    "submit2FA": "ログイン",
+    "warnmes1": "認証情報はPC上に保管され、vrc-social-managerでの操作の中で認証を必要とする場合にVRChatのサーバーに送信されます。",
+    "warnmes2": "vrc-social-managerは、VRChatが承認したアプリケーションではなく非公式です。VRChatのアカウント情報を入力する前に、ご自身でリスクを理解した上でご利用ください。",
+    "warnmes3": "VRChatは、VRChat Inc.の商標です。 VRChat © VRChat Inc."
   },
   "sidebar": {
     "reload": "更新",
