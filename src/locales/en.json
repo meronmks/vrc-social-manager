@@ -7,11 +7,14 @@
   },
   "welcome": "Welcome!",
   "login": {
-    "title": "Please log in",
+    "title": "VRChat log in",
     "username": "Username or Email",
     "password": "Password",
     "submit": "Login",
-    "submit2FA": "Verify 2FA"
+    "submit2FA": "Verify 2FA",
+    "warnmes1": "Your credentials are stored on your PC and sent to the VRChat server when needed for operations in vrc-social-manager.",
+    "warnmes2": "vrc-social-manager is not an official application approved by VRChat. Please use it at your own risk before entering your VRChat account information.",
+    "warnmes3": "VRChat is a trademark of VRChat Inc. VRChat"
   },
   "sidebar": {
     "reload": "Reload",
