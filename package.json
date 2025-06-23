@@ -20,7 +20,7 @@
     "@tauri-apps/plugin-process": "^2.2.1",
     "@tauri-apps/plugin-shell": "^2.2.2",
     "@tauri-apps/plugin-store": "^2.2.0",
-    "@tauri-apps/plugin-updater": "^2.7.1",
+    "@tauri-apps/plugin-updater": "^2.8.1",
     "dayjs": "^1.11.13",
     "i18next": "^25.2.1",
     "i18next-browser-languagedetector": "^8.2.0",
