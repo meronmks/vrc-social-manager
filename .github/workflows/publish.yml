@@ -19,6 +19,8 @@ jobs:
             args: ''
           - platform: 'windows-latest'
             args: ''
+    env:
+      TAURI_BUNDLER_DMG_IGNORE_CI: false
 
     runs-on: ${{ matrix.platform }}
     steps:
