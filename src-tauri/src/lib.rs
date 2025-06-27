@@ -5,6 +5,7 @@ use std::sync::Arc;
 use log::{debug, error, warn, LevelFilter};
 use tauri::{Manager, WindowEvent};
 use tauri_plugin_store::StoreExt;
+use keyring::Entry;
 
 mod commands;
 mod structs;
@@ -26,24 +27,21 @@ static CLIENT: Lazy<Arc<Client>> = Lazy::new(|| {
 });
 
 async fn save_cookies(app_handle: &tauri::AppHandle, user_id: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let store = app_handle.store(format!("cookies_{}.json",user_id))?;
-    let cookie_store = COOKIE_STORE.lock().unwrap();
-    let json_value = serde_json::to_value(&*cookie_store)?;
-    // ignoring the result of set since it can't fail
-    let _ = store.set("cookies", json_value);
-    store.save()?;
+    let cookie_store = COOKIE_STORE.lock()?;
+    let json_value = serde_json::to_string(&*cookie_store)?;
+    let entry = Entry::new(&app_handle.config().identifier, user_id)?;
+    entry.set_password(&json_value)?;
     Ok(())
 }
 
 fn load_cookies(app_handle: &tauri::AppHandle, user_id: &str) -> Result<(), Box<dyn std::error::Error>> {
     debug!("Loading cookies for user: {}", user_id);
-    let store = app_handle.store(format!("cookies_{}.json",user_id))?;
-    if let Some(cookies) = store.get("cookies") {
-        if let Ok(cookie_store) = serde_json::from_value::<CookieStore>(cookies) {
-            let mut current_store = COOKIE_STORE.lock().unwrap();
-            *current_store = cookie_store;
-        }
-    }
+    let entry = Entry::new(&app_handle.config().identifier, user_id)?;
+    let cookie = entry.get_password()?;
+    let cookie_store = serde_json::from_str(&cookie)?;
+    let mut current_store = COOKIE_STORE.lock()?;
+    *current_store = cookie_store;
+
     Ok(())
 }
 
