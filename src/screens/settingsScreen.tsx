@@ -244,9 +244,28 @@ export default function SettingsScreen() {
                 </div>
               )}
             </div>) : (
-            <div className="flex justify-between items-center w-full">
-              <span>{t("settingScreen.loggedOut")}</span>
-              <button className="btn btn-sm btn-primary" onClick={handleNewAccountLogin}>{t("settingScreen.login")}</button>
+            <div className="flex flex-col w-full gap-2">
+              <div className="flex justify-between items-center w-full">
+                <span>{t("settingScreen.loggedOut")}</span>
+                <button className="btn btn-sm btn-primary" onClick={handleNewAccountLogin}>{t("settingScreen.login")}</button>
+              </div>
+              {users.length > 0 && (
+                <div className="flex justify-between items-center w-full">
+                  <span>{t("settingScreen.switchToAccount")}</span>
+                  <select
+                      className="select select-bordered"
+                      value=""
+                      onChange={(e) => switchUser(e.target.value)}
+                    >
+                      <option value="" disabled>{t("settingScreen.selectAccount")}</option>
+                      {users.map(user => (
+                        <option key={user.id} value={user.id}>
+                          {user.displayName}
+                        </option>
+                      ))}
+                    </select>
+                </div>
+              )}
             </div>
           )}
         </li>
