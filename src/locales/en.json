@@ -34,6 +34,7 @@
     "loggedOut": "Logged out",
     "addAccount": "Add Account",
     "switchToAccount": "Switch Account",
+    "selectAccount": "Select an account",
     "updateSettings": "Update Settings",
     "checkForUpdatesNow": "Check for Updates Now",
     "checkingForUpdates": "Checking for updates...",
