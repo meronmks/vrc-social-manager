@@ -150,7 +150,7 @@ export default function InstanceView({ instance }: { instance: Instance }) {
       <CardContent>
         <div className="space-y-2">
           <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-8 gap-2">
-            {instance.friends.map((friend) => (
+            {(instance.friends || []).map((friend) => (
               <div key={friend.id} className="flex flex-col items-center p-2 hover:bg-base-300 rounded-lg cursor-pointer" onClick={() => FriendDetail.call({ friend: friend })}>
                 <div className="indicator">
                   <span className={`indicator-item ${getStatusColor(friend.status)}`}>●</span>

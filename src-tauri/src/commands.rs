@@ -32,6 +32,7 @@ pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         get_licenses,
         debug_api_request,
         get_group_by_id,
+        get_user_group_instances,
         switch_user,
         get_release_note,
     ]
@@ -56,6 +57,7 @@ pub(crate) fn export_ts() {
             get_licenses,
             debug_api_request,
             get_group_by_id,
+            get_user_group_instances,
             switch_user,
             get_release_note,
         ])
@@ -603,5 +605,42 @@ async fn debug_api_request(request: DebugApiRequest) -> Result<ApiResponse, Rust
             status: "error".to_string(),
             data: format!("Request failed with status: {}", res.status()),
         }),
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn get_user_group_instances() -> Result<String, RustError> {
+    debug!("Call get_user_group_instances");
+
+    // 現在のユーザー情報を取得してIDを抽出
+    let current_user_res = get_current_user_info_inner().await;
+    
+    match current_user_res.status() {
+        reqwest::StatusCode::OK => {
+            let user_text = current_user_res.error_for_status()?.text().await?;
+            let user_json: serde_json::Value = serde_json::from_str(&user_text)
+                .map_err(|e| format!("Failed to parse user info: {}", e))?;
+            
+            let user_id = user_json["id"].as_str()
+                .ok_or("User ID not found in response")?;
+            
+            // ユーザーのグループインスタンスを取得
+            let client = CLIENT.clone();
+            let res = client
+                .get(format!("{VRCHAT_API_BASE_URL}/1/users/{user_id}/instances/groups"))
+                .send()
+                .await?;
+            
+            handle_raw_response!(res)
+        }
+        reqwest::StatusCode::UNAUTHORIZED => {
+            error!("Unauthorized access when getting user group instances");
+            Err("errors.unauthorized".into())
+        }
+        _ => {
+            error!("Failed to get current user info for group instances: {:?}", current_user_res);
+            Err(current_user_res.status().into())
+        }
     }
 }

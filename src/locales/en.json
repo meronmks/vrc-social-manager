@@ -99,6 +99,11 @@
   "close": "Close",
   "searchPlaceholder": "Search instances or friendsName...",
   "loading": "Loading...",
+  "filter": {
+    "all": "All",
+    "groups": "Groups",
+    "nonGroups": "Non-Groups"
+  },
   "errors": {
     "network": "Network error. Please try again.",
     "loginFail": "Wrong username or password.",
