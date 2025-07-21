@@ -179,8 +179,11 @@ jobs:
           
           # tauri.conf.jsonのバージョンを更新
           jq --arg version "$NEW_VERSION" '.version = $version' src-tauri/tauri.conf.json > temp.json && mv temp.json src-tauri/tauri.conf.json
+          
+          # CHANGELOGを更新
+          node scripts/generate-changelog.js "$NEW_VERSION"
 
-      - name: Create commit changes
+      - name: Create release branch and PR
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
@@ -193,11 +196,63 @@ jobs:
             exit 1
           fi
           
-          # devブランチに切り替え
-          git checkout dev
+          # リリースブランチ作成
+          BRANCH_NAME="release/v$NEW_VERSION"
+          git checkout -b "$BRANCH_NAME"
           
-          git add src-tauri/tauri.conf.json
+          git add src-tauri/tauri.conf.json CHANGELOG.md
           git commit -m "chore: bump version to $NEW_VERSION"
           
-          # コミットをプッシュ
-          git push origin dev
+          # ブランチをプッシュ
+          git push origin "$BRANCH_NAME"
+          
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+        id: create_branch
+
+      - name: Create Pull Request
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const newVersion = '${{ steps.create_branch.outputs.new_version }}';
+            const branchName = '${{ steps.create_branch.outputs.branch_name }}';
+            const isPrerelease = ${{ inputs.is_prerelease }};
+            
+            const prTitle = `Release v${newVersion}`;
+            let prBody = `## リリース準備\n\n`;
+            prBody += `バージョン: **v${newVersion}**\n`;
+            prBody += `タイプ: ${isPrerelease ? 'プレリリース' : '正式リリース'}\n\n`;
+            prBody += `### 変更内容\n`;
+            prBody += `- バージョンを v${newVersion} に更新\n`;
+            prBody += `- CHANGELOG.md を自動更新\n\n`;
+            prBody += `### チェックリスト\n`;
+            prBody += `- [ ] CHANGELOG.md の内容確認・必要に応じて手動修正\n`;
+            prBody += `- [ ] リリースノートの確認\n`;
+            prBody += `- [ ] 破壊的変更の有無確認\n\n`;
+            prBody += `### マージ後の動作\n`;
+            prBody += `このPRがマージされると以下が自動実行されます：\n`;
+            prBody += `1. mainブランチにマージ\n`;
+            prBody += `2. v${newVersion} タグの作成\n`;
+            prBody += `3. 各プラットフォーム用ビルドの実行\n`;
+            prBody += `4. GitHub Releasesにドラフトリリースの作成\n`;
+            
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: prTitle,
+              head: branchName,
+              base: 'main',
+              body: prBody,
+              draft: false
+            });
+            
+            console.log(`プルリクエストを作成しました: ${pr.html_url}`);
+            
+            // PRにラベルを追加
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: isPrerelease ? ['release', 'prerelease'] : ['release']
+            });
