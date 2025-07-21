@@ -16,6 +16,7 @@ export default function FriendScreen() {
   const isDev = import.meta.env.DEV;
   const [instancesData, setInstancesData] = useState<Instance[]>([]);
   const [search, setSearch] = useState("");
+  const [groupFilter, setGroupFilter] = useState<'all' | 'groups' | 'non-groups'>('all');
   const [userData, setUserData] = useState<any>(null);
   const [onlineUserCount, setOnlineUserCount] = useState(0);
   const [offlineUserCount, setOfflineUserCount] = useState(0);
@@ -29,6 +30,7 @@ export default function FriendScreen() {
     await userDataStore.setInstancesData(JSON.stringify(data));
   };
 
+
   // データの復元
   const restoreInstancesData = async () => {
     const savedData = await userDataStore.getInstancesData();
@@ -36,6 +38,7 @@ export default function FriendScreen() {
       setInstancesData(JSON.parse(savedData));
     }
   };
+
 
   // userDataの保存
   const saveUserData = async (data: any) => {
@@ -106,14 +109,40 @@ export default function FriendScreen() {
     }
   }, [instancesData]);
 
-  const filteredInstances = useMemo(() =>
-    instancesData.map((instance) => ({
+
+  const filteredInstances = useMemo(() => {
+    let filtered = instancesData.map((instance) => ({
       ...instance,
-      friends: instance.friends.filter((friend) =>
+      friends: instance.friends?.filter((friend) =>
         friend.name.toLowerCase().includes(search.toLowerCase()) ||
         instance.name.toLowerCase().includes(search.toLowerCase())
-      ),
-    })).filter(instance => instance.friends.length > 0)
+      ) || [],
+    })).filter(instance => {
+      // friendsがundefinedの場合でも、インスタンス名がマッチすれば表示
+      if (!instance.friends || instance.friends.length === 0) {
+        return instance.name.toLowerCase().includes(search.toLowerCase()) || search === "";
+      }
+      return instance.friends.length > 0;
+    });
+
+    // グループフィルターの適用
+    if (groupFilter === 'groups') {
+      filtered = filtered.filter(instance => 
+        instance.worldId.startsWith('group_') || 
+        instance.id.includes('group') ||
+        instance.name.toLowerCase().includes('group') ||
+        instance.friends?.some(f => f.id.startsWith('group_'))
+      );
+    } else if (groupFilter === 'non-groups') {
+      filtered = filtered.filter(instance => 
+        !instance.worldId.startsWith('group_') && 
+        !instance.id.includes('group') &&
+        !instance.name.toLowerCase().includes('group') &&
+        !instance.friends?.some(f => f.id.startsWith('group_'))
+      );
+    }
+
+    return filtered
       .sort((a, b) => {
         // APIでオンラインユーザだけ取得を試みてもofflineで帰ってくるやつらがいる（Webだけ見てるとかの判定用と思われる）
         if (a.id.toLowerCase() === "offline") return 1;
@@ -128,9 +157,11 @@ export default function FriendScreen() {
         if (a.id.toLowerCase() === "traveling") return 1;
         if (b.id.toLowerCase() === "traveling") return -1;
 
-        return b.friends.length - a.friends.length;
-      }),
-    [search, instancesData, onlineUserCount]);
+        const aRealFriendsCount = a.friends?.length || 0;
+        const bRealFriendsCount = b.friends?.length || 0;
+        return bRealFriendsCount - aRealFriendsCount;
+      });
+  }, [search, instancesData, onlineUserCount, groupFilter]);
 
   const load = async () => {
     // 既存の処理が実行中の場合は中断
@@ -150,6 +181,18 @@ export default function FriendScreen() {
       let getMaxCount = await userDataStore.getFetchFriendsCount();
       if (!getMaxCount) {
         getMaxCount = 50;
+      }
+
+      // グループインスタンスの取得
+      try {
+        const groupInstances = await commands.getUserGroupInstances();
+        if (groupInstances.status === "ok") {
+          await loadGroupInstances(groupInstances.data);
+        } else {
+          await logging.error(`Error fetching group instances: ${groupInstances.error}`);
+        }
+      } catch (error) {
+        await logging.error(`Error fetching group instances: ${error}`);
       }
 
       // オンラインユーザーの取得
@@ -259,8 +302,9 @@ export default function FriendScreen() {
         let existingInstance = updatedInstances.find(i => i.id === newInstance.id);
 
         if (existingInstance) {
-          newInstance.friends.forEach((newFriend: Friend) => {
-            if (!existingInstance!.friends.some(f => f.id === newFriend.id)) {
+          newInstance.friends?.forEach((newFriend: Friend) => {
+            if (!existingInstance!.friends?.some(f => f.id === newFriend.id)) {
+              existingInstance!.friends = existingInstance!.friends || [];
               existingInstance!.friends.push(newFriend);
             }
           });
@@ -271,6 +315,25 @@ export default function FriendScreen() {
 
       return updatedInstances;
     });
+  };
+
+  const loadGroupInstances = async (data: string) => {
+    try {
+      const groupResponse = JSON.parse(data);
+      const instances = groupResponse.instances || [];
+      
+      const groupInstances: Instance[] = instances.map((instance: any) => ({
+        id: instance.id,
+        worldId: instance.worldId,
+        instanceId: instance.instanceId,
+        name: instance.world?.name || instance.name || t('groupInstance.unknownWorld'),
+        thumbnail: instance.world?.thumbnailImageUrl || "",
+      }));
+      
+      setInstancesData(prev => [...prev, ...groupInstances]);
+    } catch (error) {
+      await logging.error(`Error parsing group instances: ${error}`);
+    }
   };
 
   return (
@@ -287,22 +350,59 @@ export default function FriendScreen() {
 
       {/* Main Content */}
       <div className="flex-1 p-4 flex flex-col h-screen overflow-hidden">
-        {/* Search Bar */}
-        <div className="relative w-full mb-4">
-          <Input
-            className="w-full pr-10"
-            placeholder={t("searchPlaceholder")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && (
+        {/* Search Bar and Filters */}
+        <div className="space-y-4 mb-4">
+          {/* Search Bar */}
+          <div className="relative w-full">
+            <Input
+              className="w-full pr-10"
+              placeholder={t("searchPlaceholder")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-secondary-content cursor-pointer p-1 rounded-full hover:bg-secondary transition-colors"
+                onClick={() => setSearch("")}
+              >
+                <IoClose size={20} />
+              </button>
+            )}
+          </div>
+          
+          {/* Group Filter */}
+          <div className="flex gap-2">
             <button
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-secondary-content cursor-pointer p-1 rounded-full hover:bg-secondary transition-colors"
-              onClick={() => setSearch("")}
+              className={`px-3 py-1 rounded-md transition-colors ${
+                groupFilter === 'all' 
+                  ? 'bg-primary text-primary-content' 
+                  : 'bg-base-200 hover:bg-base-300'
+              }`}
+              onClick={() => setGroupFilter('all')}
             >
-              <IoClose size={20} />
+              {t('filter.all', '全て')}
             </button>
-          )}
+            <button
+              className={`px-3 py-1 rounded-md transition-colors ${
+                groupFilter === 'groups' 
+                  ? 'bg-primary text-primary-content' 
+                  : 'bg-base-200 hover:bg-base-300'
+              }`}
+              onClick={() => setGroupFilter('groups')}
+            >
+              {t('filter.groups', 'グループ')}
+            </button>
+            <button
+              className={`px-3 py-1 rounded-md transition-colors ${
+                groupFilter === 'non-groups' 
+                  ? 'bg-primary text-primary-content' 
+                  : 'bg-base-200 hover:bg-base-300'
+              }`}
+              onClick={() => setGroupFilter('non-groups')}
+            >
+              {t('filter.nonGroups', '非グループ')}
+            </button>
+          </div>
         </div>
         {/* Friend List by Instance */}
         <div className="flex-1 overflow-y-auto">

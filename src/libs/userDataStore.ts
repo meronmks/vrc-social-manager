@@ -74,6 +74,7 @@ class UserDataStore {
         }
     }
 
+
     async getUsers(): Promise<UserData[]> {
         const savedUsers = await this.store.get<string>("users");
         if (savedUsers) {
@@ -114,6 +115,7 @@ class UserDataStore {
         await this.store.set("instances-data", data);
         await this.store.save();
     }
+
 
     async addOrUpdateUser(id: string, displayName: string, userData: string): Promise<void> {
         const users = await this.getUsers();

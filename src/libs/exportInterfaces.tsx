@@ -79,5 +79,6 @@ export interface Instance {
   instanceId: string;
   name: string;
   thumbnail: string;
-  friends: Friend[];
+  friends?: Friend[];
 }
+
