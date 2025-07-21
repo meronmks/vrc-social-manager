@@ -99,6 +99,11 @@
   "close": "閉じる",
   "searchPlaceholder": "インスタンス名かフレンド名で検索",
   "loading": "読み込み中...",
+  "filter": {
+    "all": "全て",
+    "groups": "グループ",
+    "nonGroups": "非グループ"
+  },
   "errors": {
     "network": "ネットワークエラー。もう一度お試しください。",
     "loginFail": "ユーザ名またはパスワードが違います",

@@ -6,8 +6,93 @@ on:
     branches: [main]
 
 jobs:
-  release:
+  prepare:
     if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.extract_version.outputs.version }}
+      tag_name: ${{ steps.extract_version.outputs.tag_name }}
+      release_body_file: ${{ steps.release_body.outputs.release_body_file }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Extract version from branch name
+        id: extract_version
+        shell: bash
+        run: |
+          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+          VERSION=$(echo "$BRANCH_NAME" | sed 's/release\/v//')
+          
+          # バージョン形式の検証
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+|-rc\.[0-9]+)?$'; then
+            echo "Error: Invalid version format: $VERSION"
+            exit 1
+          fi
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag_name=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Verify version matches tauri.conf.json
+        shell: bash
+        run: |
+          EXPECTED_VERSION="${{ steps.extract_version.outputs.version }}"
+          ACTUAL_VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
+          
+          if [ "$EXPECTED_VERSION" != "$ACTUAL_VERSION" ]; then
+            echo "Error: Version mismatch!"
+            echo "Expected: $EXPECTED_VERSION"
+            echo "Actual: $ACTUAL_VERSION"
+            exit 1
+          fi
+          
+          echo "Version verified: $ACTUAL_VERSION"
+
+      - name: Create tag
+        shell: bash
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
+          
+          # タグを作成（ローカルのみ、pushしない）
+          git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+          
+          echo "Created tag: $TAG_NAME"
+
+      - name: Generate release body
+        id: release_body
+        shell: bash
+        run: |
+          VERSION="${{ steps.extract_version.outputs.version }}"
+          
+          # リリースボディファイルが存在するかチェック
+          if [ -f ".release-body-${VERSION}.md" ]; then
+            RELEASE_BODY_FILE=".release-body-${VERSION}.md"
+          else
+            # フォールバック: CHANGELOGから該当バージョンを抽出
+            echo "## Changes in v${VERSION}" > ".release-body-${VERSION}.md"
+            echo "" >> ".release-body-${VERSION}.md"
+            
+            # CHANGELOGから該当バージョンのセクションを抽出
+            awk "/^## \[${VERSION}\]/, /^## \[/{
+              if (/^## \[${VERSION}\]/) next
+              if (/^## \[/ && !/^## \[${VERSION}\]/) exit
+              if (!/^$/ && !/^\[.*\]:/) print
+            }" CHANGELOG.md >> ".release-body-${VERSION}.md"
+            
+            RELEASE_BODY_FILE=".release-body-${VERSION}.md"
+          fi
+          
+          echo "release_body_file=${RELEASE_BODY_FILE}" >> $GITHUB_OUTPUT
+
+  release:
+    needs: prepare
     permissions:
       contents: write
     strategy:
@@ -29,48 +114,6 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
-
-      - name: Extract version from branch name
-        id: extract_version
-        run: |
-          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
-          VERSION=$(echo "$BRANCH_NAME" | sed 's/release\/v//')
-          
-          # バージョン形式の検証
-          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+|-rc\.[0-9]+)?$'; then
-            echo "Error: Invalid version format: $VERSION"
-            exit 1
-          fi
-          
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag_name=v$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Verify version matches tauri.conf.json
-        run: |
-          EXPECTED_VERSION="${{ steps.extract_version.outputs.version }}"
-          ACTUAL_VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
-          
-          if [ "$EXPECTED_VERSION" != "$ACTUAL_VERSION" ]; then
-            echo "Error: Version mismatch!"
-            echo "Expected: $EXPECTED_VERSION"
-            echo "Actual: $ACTUAL_VERSION"
-            exit 1
-          fi
-          
-          echo "Version verified: $ACTUAL_VERSION"
-
-      - name: Create tag (first job only)
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          
-          TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
-          
-          # タグを作成（ローカルのみ、pushしない）
-          git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
-          
-          echo "Created tag: $TAG_NAME"
 
       - name: install dependencies (Ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
@@ -100,32 +143,6 @@ jobs:
       - name: install bundle-licenses
         run: cargo install cargo-bundle-licenses
 
-      - name: Generate release body
-        if: matrix.platform == 'ubuntu-22.04'
-        id: release_body
-        run: |
-          VERSION="${{ steps.extract_version.outputs.version }}"
-          
-          # リリースボディファイルが存在するかチェック
-          if [ -f ".release-body-${VERSION}.md" ]; then
-            RELEASE_BODY_FILE=".release-body-${VERSION}.md"
-          else
-            # フォールバック: CHANGELOGから該当バージョンを抽出
-            echo "## Changes in v${VERSION}" > ".release-body-${VERSION}.md"
-            echo "" >> ".release-body-${VERSION}.md"
-            
-            # CHANGELOGから該当バージョンのセクションを抽出
-            awk "/^## \[${VERSION}\]/, /^## \[/{
-              if (/^## \[${VERSION}\]/) next
-              if (/^## \[/ && !/^## \[${VERSION}\]/) exit
-              if (!/^$/ && !/^\[.*\]:/) print
-            }" CHANGELOG.md >> ".release-body-${VERSION}.md"
-            
-            RELEASE_BODY_FILE=".release-body-${VERSION}.md"
-          fi
-          
-          echo "release_body_file=${RELEASE_BODY_FILE}" >> $GITHUB_OUTPUT
-
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -133,9 +150,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ steps.extract_version.outputs.tag_name }}
-          releaseName: ${{ steps.extract_version.outputs.tag_name }}
-          releaseBody: ${{ matrix.platform == 'ubuntu-22.04' && format('file:{0}', steps.release_body.outputs.release_body_file) || '' }}
+          tagName: ${{ needs.prepare.outputs.tag_name }}
+          releaseName: ${{ needs.prepare.outputs.tag_name }}
+          releaseBody: ${{ matrix.platform == 'ubuntu-22.04' && format('file:{0}', needs.prepare.outputs.release_body_file) || '' }}
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
@@ -150,6 +167,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Delete release branch
+        shell: bash
         run: |
           BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
           git push origin --delete "$BRANCH_NAME"

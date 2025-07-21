@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const { execSync } = require('child_process');
+import fs from 'fs';
+import { execSync } from 'child_process';
 
 /**
  * CHANGELOGのUnreleasedセクションから指定バージョンの変更履歴を生成
@@ -241,7 +241,7 @@ function generateFromGitLog(fromTag, toTag = 'HEAD') {
 }
 
 // CLI実行
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   const version = args[0];
   const releaseDate = args[1];
@@ -255,4 +255,4 @@ if (require.main === module) {
   generateChangelog(version, releaseDate);
 }
 
-module.exports = { generateChangelog, generateFromGitLog };
+export { generateChangelog, generateFromGitLog };
