@@ -249,10 +249,15 @@ jobs:
             
             console.log(`プルリクエストを作成しました: ${pr.html_url}`);
             
-            // PRにラベルを追加
-            await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: pr.number,
-              labels: isPrerelease ? ['release', 'prerelease'] : ['release']
-            });
+            // PRにラベルを追加（エラーが発生しても処理を継続）
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: isPrerelease ? ['release', 'prerelease'] : ['release']
+              });
+              console.log('ラベルを追加しました');
+            } catch (error) {
+              console.log('ラベル追加をスキップしました（権限不足）:', error.message);
+            }
