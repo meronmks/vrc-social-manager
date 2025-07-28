@@ -27,21 +27,32 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
         if (res.status == "ok") {
           setInstanceOwnerName(JSON.parse(res.data).displayName);
         } else {
-          await logging.error(`Faild to get instance owner name ${res}`)
+          await logging.error(`Failed to get user instance owner name ${res}`)
           toastError(t("errors.failedGetInstanceOwner"));
-          setInstanceOwnerName("Unknown")
+          setInstanceOwnerName("Unknown Owner");
         }
       } else if (instance.ownerId?.startsWith("grp_")) {
         const res = await commands.getGroupById(instance.ownerId);
         if (res.status == "ok") {
           setInstanceOwnerName(JSON.parse(res.data).name);
         } else {
-          await logging.error(`Failed to get instance group owner name &{res}`)
+          await logging.error(`Failed to get group instance group owner name ${res}`)
           toastError(t("errors.failedGetInstanceOwner"));
-          setInstanceOwnerName("Unknown")
+          setInstanceOwnerName("Unknown Owner");
+        }
+      } else if (instance.type === 'public'){
+        const res = await commands.getUserById(instance.world.authorId);
+        if (res.status == "ok") {
+          setInstanceOwnerName(JSON.parse(res.data).displayName);
+        } else {
+          await logging.error(`Failed to get public instance owner name ${res}`)
+          toastError(t("errors.failedGetInstanceOwner"));
+          setInstanceOwnerName("Unknown Owner");
         }
       } else {
-        setInstanceOwnerName("Unknown Type");
+        await logging.error(`Unknown Type of instance ownerId: ${instance.ownerId} Type: ${instance.type}`);
+        toastError(t("errors.failedGetInstanceOwner"));
+        setInstanceOwnerName("Unknown Owner");
       }
     }
 
