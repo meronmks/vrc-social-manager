@@ -16,9 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Fixed
-- publicのインスタンスのインスタンスオーナーが正しく表示されないのを修正
 
 ### Security
+
+## [0.7.1] - 2025-07-28
+
+### Fixed
+- publicのインスタンスのインスタンスオーナーが正しく表示されないのを修正
 
 ## [0.7.0] - 2025-06-28
 
@@ -31,5 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - CI設定の改善（TAURI_BUNDLER_DMG_IGNORE_CI設定追加）
 
-[Unreleased]: https://github.com/meronmks/vrc-social-manager/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/meronmks/vrc-social-manager/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/meronmks/vrc-social-manager/releases/tag/v0.7.1
 [0.7.0]: https://github.com/meronmks/vrc-social-manager/releases/tag/v0.7.0
