@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.8.0] - 2025-07-21
+
+### Added
+- 所属しているグループのインスタンスを取得するように
+
 ## [0.7.0] - 2025-06-28
 
 ### Added
@@ -31,5 +36,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - CI設定の改善（TAURI_BUNDLER_DMG_IGNORE_CI設定追加）
 
-[Unreleased]: https://github.com/meronmks/vrc-social-manager/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/meronmks/vrc-social-manager/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/meronmks/vrc-social-manager/releases/tag/v0.8.0
 [0.7.0]: https://github.com/meronmks/vrc-social-manager/releases/tag/v0.7.0
