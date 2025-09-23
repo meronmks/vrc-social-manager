@@ -60,9 +60,9 @@ jobs:
           
           TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
           
-          # タグを作成（ローカルのみ、pushしない）
           git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
           
+          git push origin "$TAG_NAME"
           echo "Created tag: $TAG_NAME"
 
       - name: Generate release body

@@ -3,6 +3,7 @@ export interface InstanceDetailData {
   instanceId: string;
   ownerId: string | null;
   name: string;
+  displayName: string;
   location: string;
   active: boolean;
   ageGate: boolean | null;
