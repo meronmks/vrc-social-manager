@@ -172,6 +172,12 @@ export const InstanceDetail = createCallable<Props, void>(({ call, instance, ins
                 <div className="divider my-1"></div>
                 <div className="space-y-2">
                   <div className="flex items-center">
+                    <span className="font-semibold min-w-32">Name:</span>
+                    <span className={`${instance.displayName ? 'text-sm font-mono' : 'badge badge-warning'}`}>
+                      {instance.displayName ? instance.displayName : t("instanceDetail.instanceNameNull")}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
                     <span className="font-semibold min-w-32">ID:</span>
                     <span className="text-sm font-mono">{instance.name}</span>
                   </div>

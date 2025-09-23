@@ -94,7 +94,8 @@
     "recommendedCapacity": "Recommended Capacity",
     "props": "Items",
     "avatar_scaling": "Avatar Scaling",
-    "focus_view": "Focus View (Mobile)"
+    "focus_view": "Focus View (Mobile)",
+    "instanceNameNull": "None"
   },
   "close": "Close",
   "searchPlaceholder": "Search instances or friendsName...",

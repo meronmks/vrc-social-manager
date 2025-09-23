@@ -94,7 +94,8 @@
     "recommendedCapacity": "推奨人数",
     "props": "アイテム",
     "avatar_scaling": "アバターのサイズ変更",
-    "focus_view": "フォーカスビュー（モバイル用）"
+    "focus_view": "フォーカスビュー（モバイル用）",
+    "instanceNameNull": "なし"
   },
   "close": "閉じる",
   "searchPlaceholder": "インスタンス名かフレンド名で検索",
