@@ -65,6 +65,18 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
+      - name: Node.jsセットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: フロントエンド依存関係インストール
+        run: npm install
+
+      - name: ライセンス情報生成
+        run: npm run collect-licenses
+
       - name: Rustビルドチェック
         working-directory: src-tauri
         run: cargo check --all-targets
