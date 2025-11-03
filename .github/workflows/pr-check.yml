@@ -116,4 +116,4 @@ jobs:
         run: npm install
 
       - name: Tauriビルド（成果物なし）
-        run: npm run tauri build -- --bundles none
+        run: npm run tauri build -- --no-bundle
