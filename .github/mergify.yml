@@ -11,9 +11,9 @@ pull_request_rules:
       - author=dependabot[bot]
       - dependabot-update-type = version-update:semver-minor
       - check-success=frontend-check
-      - check-success=rust-check (ubuntu-22.04, )
-      - check-success=rust-check (windows-latest, )
-      - check-success=rust-check (macos-latest, )
+      - check-success=rust-check (ubuntu-22.04)
+      - check-success=rust-check (windows-latest)
+      - check-success=rust-check (macos-latest)
       - check-success=tauri-build
     actions:
       queue:
@@ -23,9 +23,9 @@ pull_request_rules:
       - author=dependabot[bot]
       - dependabot-update-type = version-update:semver-patch
       - check-success=frontend-check
-      - check-success=rust-check (ubuntu-22.04, )
-      - check-success=rust-check (windows-latest, )
-      - check-success=rust-check (macos-latest, )
+      - check-success=rust-check (ubuntu-22.04)
+      - check-success=rust-check (windows-latest)
+      - check-success=rust-check (macos-latest)
       - check-success=tauri-build
     actions:
       queue:
