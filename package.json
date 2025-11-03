@@ -9,7 +9,7 @@
     "build:vite": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "lint": "tsc",
+    "lint": "node scripts/lint.js",
     "collect-licenses": "node scripts/collect-licenses.js"
   },
   "dependencies": {
