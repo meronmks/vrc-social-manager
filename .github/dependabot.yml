@@ -6,15 +6,18 @@ updates:
       interval: "weekly"
     labels:
       - "dependencies"
+      - "npm"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     labels:
       - "dependencies"
+      - "GithubActions"
   - package-ecosystem: "cargo"
     directory: "/src-tauri"
     schedule:
       interval: "weekly"
     labels:
       - "dependencies"
+      - "cargo"
