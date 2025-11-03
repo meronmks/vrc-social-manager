@@ -1,26 +1,9 @@
 queue_rules:
-  - name: dep-update (semver:minor)
+  - name: dep-update 
     batch_size: 10
     batch_max_wait_time: 30 min
     queue_conditions:
       - author=dependabot[bot]
-      - dependabot-update-type = version-update:semver-minor
-      - check-success=frontend-check
-      - check-success=rust-check (ubuntu-22.04)
-      - check-success=rust-check (windows-latest)
-      - check-success=rust-check (macos-latest)
-      - check-success=tauri-build
-  - name: dep-update (semver:patch)
-    batch_size: 5
-    batch_max_wait_time: 10 min
-    queue_conditions:
-      - author=dependabot[bot]
-      - dependabot-update-type = version-update:semver-patch
-      - check-success=frontend-check
-      - check-success=rust-check (ubuntu-22.04)
-      - check-success=rust-check (windows-latest)
-      - check-success=rust-check (macos-latest)
-      - check-success=tauri-build
 
 pull_request_rules:
   - name: Auto merge - Dependabot (semver:minor)
@@ -34,6 +17,7 @@ pull_request_rules:
       - check-success=tauri-build
     actions:
       queue:
+        name: dep-update
 
   - name: Auto merge - Dependabot (semver:patch)
     conditions:
@@ -46,3 +30,4 @@ pull_request_rules:
       - check-success=tauri-build
     actions:
       queue:
+        name: dep-update
