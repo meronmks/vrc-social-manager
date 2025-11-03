@@ -1,0 +1,119 @@
+name: 'PR Build Check'
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+    types: [opened, synchronize, reopened]
+
+# PRからの同時実行を防ぎ、最新のみを実行
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # TypeScriptの型チェックとLint
+  frontend-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node.jsセットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: フロントエンド依存関係インストール
+        run: npm install
+
+      - name: TypeScript型チェック
+        run: npm run lint
+
+      - name: フロントエンドビルド
+        run: npm run build
+
+  # Rustのビルドチェック（複数プラットフォーム）
+  rust-check:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - os: ubuntu-22.04
+            target: ''
+          - os: windows-latest
+            target: ''
+          - os: macos-latest
+            target: ''
+
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 依存関係インストール (Ubuntu)
+        if: matrix.platform.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Rust安定版インストール
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rustキャッシュ
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Node.jsセットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: フロントエンド依存関係インストール
+        run: npm install
+
+      - name: ライセンス情報生成
+        run: npm run collect-licenses
+
+      - name: Rustビルドチェック
+        working-directory: src-tauri
+        run: cargo check --all-targets
+
+      - name: Rustテスト（存在する場合）
+        working-directory: src-tauri
+        run: cargo test --no-fail-fast
+        continue-on-error: true
+
+  # 統合ビルドチェック（Tauri全体）
+  tauri-build:
+    runs-on: ubuntu-22.04
+    needs: [frontend-check, rust-check]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 依存関係インストール
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Node.jsセットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: Rust安定版インストール
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rustキャッシュ
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: フロントエンド依存関係インストール
+        run: npm install
+
+      - name: Tauriビルド（成果物なし）
+        run: npm run tauri build -- --no-bundle
