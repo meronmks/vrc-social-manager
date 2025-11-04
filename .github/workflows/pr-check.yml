@@ -17,7 +17,7 @@ jobs:
   frontend-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Node.jsセットアップ
         uses: actions/setup-node@v6
@@ -49,7 +49,7 @@ jobs:
 
     runs-on: ${{ matrix.platform.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: 依存関係インストール (Ubuntu)
         if: matrix.platform.os == 'ubuntu-22.04'
@@ -91,7 +91,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs: [frontend-check, rust-check]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: 依存関係インストール
         run: |
