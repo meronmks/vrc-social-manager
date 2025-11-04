@@ -16,7 +16,7 @@ jobs:
       tag_name: ${{ steps.extract_version.outputs.tag_name }}
       release_body_file: ${{ steps.release_body.outputs.release_body_file }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: main
@@ -110,7 +110,7 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: main
@@ -164,7 +164,7 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Delete release branch
         shell: bash
