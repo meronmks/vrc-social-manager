@@ -4,6 +4,12 @@ queue_rules:
     batch_max_wait_time: 30 min
     queue_conditions:
       - author=dependabot[bot]
+    merge_conditions:
+      - check-success=frontend-check
+      - check-success=rust-check (ubuntu-22.04)
+      - check-success=rust-check (windows-latest)
+      - check-success=rust-check (macos-latest)
+      - check-success=tauri-build
 
 pull_request_rules:
   - name: Auto merge - Dependabot (semver:minor)
