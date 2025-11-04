@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Node.jsセットアップ
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: lts/*
           cache: 'npm'
@@ -66,7 +66,7 @@ jobs:
           workspaces: './src-tauri -> target'
 
       - name: Node.jsセットアップ
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: lts/*
           cache: 'npm'
@@ -99,7 +99,7 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Node.jsセットアップ
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: lts/*
           cache: 'npm'
