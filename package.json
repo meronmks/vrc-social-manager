@@ -22,7 +22,7 @@
     "@tauri-apps/plugin-store": "^2.2.0",
     "@tauri-apps/plugin-updater": "^2.8.1",
     "dayjs": "^1.11.13",
-    "i18next": "^25.2.1",
+    "i18next": "^25.6.2",
     "i18next-browser-languagedetector": "^8.2.0",
     "react": "^19.1.0",
     "react-call": "^1.8.1",
