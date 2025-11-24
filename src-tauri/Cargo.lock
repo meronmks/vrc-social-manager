@@ -814,7 +814,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4417,9 +4417,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-store"
-version = "2.2.1"
+version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ada7e7aeea472dec9b8d09d25301e59fe3e8330dc11dbcf903d6388126cb3722"
+checksum = "59a77036340a97eb5bbe1b3209c31e5f27f75e6f92a52fd9dd4b211ef08bf310"
 dependencies = [
  "dunce",
  "serde",
