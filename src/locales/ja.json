@@ -45,6 +45,8 @@
     "thirdPartyLicenses": "サードパーティライセンス",
     "npmPackages": "NPMパッケージ",
     "cargoPackages": "Cargoクレート",
+    "viewOpenSourceLicenses": "オープンソースライセンスを表示",
+    "viewLicenses": "ライセンスを表示",
     "backToHome": "ホームに戻る"
   },
   "toast": {

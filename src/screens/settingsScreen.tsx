@@ -12,6 +12,7 @@ import { ThirdPartyLicenses } from "@/components/ui/dialogs/license";
 import { logging } from "@/libs/logging.tsx";
 import { UpdateConfirm } from "@/components/ui/dialogs/updateConfirm";
 import { userDataStore, UserData } from "@/libs/userDataStore";
+import { FaArrowLeft } from 'react-icons/fa';
 
 export default function SettingsScreen() {
   const navigate = useNavigate();
@@ -169,9 +170,22 @@ export default function SettingsScreen() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-base-200 p-4 overflow-y-auto">
-      <h1 className="text-xl font-semibold mb-4">{t("settings")}</h1>
-      <h2 className="text-md font-semibold mb-4">{t("settingScreen.generalSettings")}</h2>
+    <div className="flex flex-col h-screen bg-base-200">
+      {/* ヘッダー: 戻るボタン + タイトル（常に上部に固定） */}
+      <div className="sticky top-0 z-10 flex items-center gap-4 p-4 bg-base-200/80 backdrop-blur-sm border-b border-base-300">
+        <button
+          className="btn btn-sm btn-ghost bg-base-300 gap-2"
+          onClick={() => navigate("/")}
+        >
+          <FaArrowLeft className="w-4 h-4" />
+          {t("settingScreen.backToHome")}
+        </button>
+        <h1 className="text-xl font-semibold">{t("settings")}</h1>
+      </div>
+
+      {/* スクロール可能なコンテンツエリア */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <h2 className="text-md font-semibold mb-4">{t("settingScreen.generalSettings")}</h2>
       <ul className="menu bg-base-100 p-2 rounded-box shadow-md w-full">
         <li>
           <div className="flex justify-between items-center w-full">
@@ -308,11 +322,20 @@ export default function SettingsScreen() {
       </ul>
 
       <h2 className="text-md font-semibold my-4">{t("settingScreen.thirdPartyLicenses")}</h2>
-      <div className="bg-base-100 p-2 rounded-box shadow-md w-full">
-        <ThirdPartyLicenses />
+      <ul className="menu bg-base-100 p-2 rounded-box shadow-md w-full">
+        <li>
+          <div className="flex justify-between items-center w-full">
+            <span>{t("settingScreen.viewOpenSourceLicenses")}</span>
+            <button
+              className="btn btn-sm btn-primary"
+              onClick={() => ThirdPartyLicenses.call({})}
+            >
+              {t("settingScreen.viewLicenses")}
+            </button>
+          </div>
+        </li>
+      </ul>
       </div>
-
-      <button className="btn btn-outline mt-4" onClick={() => navigate("/")}>{t("settingScreen.backToHome")}</button>
     </div>
   );
 }
