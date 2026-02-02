@@ -3,9 +3,12 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
   "scripts": {
-    "dev": "npm run collect-licenses && vite",
-    "build": "npm run collect-licenses && npm install && npm run build:vite",
+    "dev": "pnpm run collect-licenses && vite",
+    "build": "pnpm run collect-licenses && pnpm install && pnpm run build:vite",
     "build:vite": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",
