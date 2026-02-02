@@ -14,6 +14,7 @@ import { toastError } from "@/components/toast";
 import "@/libs/i18n";
 import {logging} from "@/libs/logging.tsx";
 import { UpdateConfirm } from "@/components/ui/dialogs/updateConfirm";
+import { ThirdPartyLicenses } from "@/components/ui/dialogs/license";
 import { userDataStore } from "./libs/userDataStore";
 import { commands } from "./bindings";
 
@@ -66,6 +67,7 @@ export default function App() {
       <InstanceDetail.Root />
       <Login.Root />
       <UpdateConfirm.Root />
+      <ThirdPartyLicenses.Root />
       {/* 理由がよくわからんがメインコンテンツをw-screenで覆わないとダイアログ表示時になんかズレる */}
       <div className="w-screen">
         <Router>

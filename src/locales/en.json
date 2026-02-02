@@ -45,6 +45,8 @@
     "thirdPartyLicenses": "Third-Party Licenses",
     "npmPackages": "NPM Packages",
     "cargoPackages": "Cargo Crates",
+    "viewOpenSourceLicenses": "View open source licenses",
+    "viewLicenses": "View Licenses",
     "backToHome": "Back to Home"
   },
   "toast": {
