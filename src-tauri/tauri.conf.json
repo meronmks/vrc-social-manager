@@ -30,7 +30,7 @@
   },
   "productName": "vrc-social-manager",
   "mainBinaryName": "vrc-social-manager",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "identifier": "com.meronmks.vsm",
   "plugins": {
     "updater": {

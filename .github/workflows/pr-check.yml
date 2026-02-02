@@ -19,20 +19,25 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: pnpmセットアップ
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
       - name: Node.jsセットアップ
         uses: actions/setup-node@v6
         with:
           node-version: lts/*
-          cache: 'npm'
+          cache: 'pnpm'
 
       - name: フロントエンド依存関係インストール
-        run: npm install
+        run: pnpm install
 
       - name: TypeScript型チェック
-        run: npm run lint
+        run: pnpm run lint
 
       - name: フロントエンドビルド
-        run: npm run build
+        run: pnpm run build
 
   # Rustのビルドチェック（複数プラットフォーム）
   rust-check:
@@ -65,17 +70,22 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
+      - name: pnpmセットアップ
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
       - name: Node.jsセットアップ
         uses: actions/setup-node@v6
         with:
           node-version: lts/*
-          cache: 'npm'
+          cache: 'pnpm'
 
       - name: フロントエンド依存関係インストール
-        run: npm install
+        run: pnpm install
 
       - name: ライセンス情報生成
-        run: npm run collect-licenses
+        run: pnpm run collect-licenses
 
       - name: Rustビルドチェック
         working-directory: src-tauri
@@ -98,11 +108,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
+      - name: pnpmセットアップ
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
       - name: Node.jsセットアップ
         uses: actions/setup-node@v6
         with:
           node-version: lts/*
-          cache: 'npm'
+          cache: 'pnpm'
 
       - name: Rust安定版インストール
         uses: dtolnay/rust-toolchain@stable
@@ -113,7 +128,7 @@ jobs:
           workspaces: './src-tauri -> target'
 
       - name: フロントエンド依存関係インストール
-        run: npm install
+        run: pnpm install
 
       - name: Tauriビルド（成果物なし）
-        run: npm run tauri build -- --no-bundle
+        run: pnpm run tauri build -- --no-bundle
