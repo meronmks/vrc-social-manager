@@ -17,7 +17,7 @@ jobs:
   frontend-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: pnpmセットアップ
         uses: pnpm/action-setup@v4
@@ -54,7 +54,7 @@ jobs:
 
     runs-on: ${{ matrix.platform.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: 依存関係インストール (Ubuntu)
         if: matrix.platform.os == 'ubuntu-22.04'
@@ -101,7 +101,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs: [frontend-check, rust-check]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: 依存関係インストール
         run: |
