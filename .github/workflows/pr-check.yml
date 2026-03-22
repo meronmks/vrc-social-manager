@@ -130,5 +130,5 @@ jobs:
       - name: フロントエンド依存関係インストール
         run: pnpm install
 
-      - name: Tauriビルド（成果物なし）
-        run: pnpm run tauri build -- --no-bundle
+      - name: Tauriビルド
+        run: pnpm run tauri build --no-bundle
