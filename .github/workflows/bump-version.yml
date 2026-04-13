@@ -211,7 +211,7 @@ jobs:
         id: create_branch
 
       - name: Create Pull Request
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
