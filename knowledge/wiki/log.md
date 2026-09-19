@@ -2,7 +2,7 @@
 title: Knowledge Base 作業ログ
 kind: log
 status: verified
-updated: 2026-09-19
+updated: 2026-09-20
 sources:
   - ../../README.md
   - ../../package.json
@@ -27,3 +27,9 @@ sources:
 - `login` がユーザー名とパスワードをデバッグログへ出力していたことを実装で確認し、値を出力しない形へ修正。
 - 同じ認証フローにあったメール OTP と TOTP の値のログ出力も修正。
 - 認証コマンドのログはコマンド名だけを記録し、機密値を含めない方針を明記。
+
+## [2026-09-20] maintenance | GitHub Actions のリリース経路
+
+- リリース PR のマージ処理から再利用可能な公開ワークフローを直接呼び出す構成へ変更。
+- `GITHUB_TOKEN` によるタグ push が別ワークフローを起動しない制約と、手動タグ push の公開経路を記録。
+- GitHub の自動生成リリースノートを GitHub Release と updater の `latest.json` で共用する方針を記録。

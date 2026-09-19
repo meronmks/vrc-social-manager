@@ -5,196 +5,112 @@ on:
     types: [closed]
     branches: [main]
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   prepare:
-    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/')
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/v')
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     outputs:
-      version: ${{ steps.extract_version.outputs.version }}
-      tag_name: ${{ steps.extract_version.outputs.tag_name }}
-      release_body_file: ${{ steps.release_body.outputs.release_body_file }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          ref: main
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
 
-      - name: Extract version from branch name
-        id: extract_version
+      - name: バージョンを検証してタグを作成
+        id: release
         shell: bash
-        run: |
-          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
-          VERSION=$(echo "$BRANCH_NAME" | sed 's/release\/v//')
-          
-          # バージョン形式の検証
-          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+|-rc\.[0-9]+)?$'; then
-            echo "Error: Invalid version format: $VERSION"
-            exit 1
-          fi
-          
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag_name=v$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Verify version matches tauri.conf.json
-        shell: bash
-        run: |
-          EXPECTED_VERSION="${{ steps.extract_version.outputs.version }}"
-          ACTUAL_VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
-          
-          if [ "$EXPECTED_VERSION" != "$ACTUAL_VERSION" ]; then
-            echo "Error: Version mismatch!"
-            echo "Expected: $EXPECTED_VERSION"
-            echo "Actual: $ACTUAL_VERSION"
-            exit 1
-          fi
-          
-          echo "Version verified: $ACTUAL_VERSION"
-
-      - name: Create tag
-        shell: bash
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          
-          TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
-          
-          git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
-          
-          git push origin "$TAG_NAME"
-          echo "Created tag: $TAG_NAME"
-
-      - name: Generate release body
-        id: release_body
-        shell: bash
-        run: |
-          VERSION="${{ steps.extract_version.outputs.version }}"
-          
-          # リリースボディファイルが存在するかチェック
-          if [ -f ".release-body-${VERSION}.md" ]; then
-            RELEASE_BODY_FILE=".release-body-${VERSION}.md"
-          else
-            # フォールバック: CHANGELOGから該当バージョンを抽出
-            echo "## Changes in v${VERSION}" > ".release-body-${VERSION}.md"
-            echo "" >> ".release-body-${VERSION}.md"
-            
-            # CHANGELOGから該当バージョンのセクションを抽出
-            awk "/^## \[${VERSION}\]/, /^## \[/{
-              if (/^## \[${VERSION}\]/) next
-              if (/^## \[/ && !/^## \[${VERSION}\]/) exit
-              if (!/^$/ && !/^\[.*\]:/) print
-            }" CHANGELOG.md >> ".release-body-${VERSION}.md"
-            
-            RELEASE_BODY_FILE=".release-body-${VERSION}.md"
-          fi
-          
-          echo "release_body_file=${RELEASE_BODY_FILE}" >> $GITHUB_OUTPUT
-
-  release:
-    needs: prepare
-    permissions:
-      contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: 'macos-latest'
-            args: '--target universal-apple-darwin'
-          - platform: 'ubuntu-22.04'
-            args: ''
-          - platform: 'windows-latest'
-            args: ''
-    env:
-      TAURI_BUNDLER_DMG_IGNORE_CI: false
-
-    runs-on: ${{ matrix.platform }}
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          ref: main
-
-      - name: install dependencies (Ubuntu only)
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
-      - name: setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: latest
-
-      - name: setup node
-        uses: actions/setup-node@v6
-        with:
-          node-version: lts/*
-          cache: 'pnpm'
-
-      - name: install Rust stable
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
-
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: './src-tauri -> target'
-
-      - name: install frontend dependencies
-        run: pnpm install
-
-      - name: install bundle-licenses
-        run: cargo install cargo-bundle-licenses
-
-      - uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # tauri updater signing
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          tagName: ${{ needs.prepare.outputs.tag_name }}
-          releaseName: ${{ needs.prepare.outputs.tag_name }}
-          releaseBody: ${{ matrix.platform == 'ubuntu-22.04' && format('file:{0}', needs.prepare.outputs.release_body_file) || '' }}
-          releaseDraft: true
-          prerelease: false
-          args: ${{ matrix.args }}
+          BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+
+          VERSION="${BRANCH_NAME#release/v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(beta|rc)\.[0-9]+)?$ ]]; then
+            echo "エラー: 不正なバージョン形式です: $VERSION"
+            exit 1
+          fi
+
+          CONFIG_VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
+          if [ "$VERSION" != "$CONFIG_VERSION" ]; then
+            echo "エラー: リリースブランチと tauri.conf.json のバージョンが一致しません"
+            echo "ブランチ: $VERSION"
+            echo "tauri.conf.json: $CONFIG_VERSION"
+            exit 1
+          fi
+
+          TAG_NAME="v$VERSION"
+          TARGET_COMMIT=$(git rev-parse HEAD)
+          EXISTING_COMMIT=$(git rev-list -n 1 "$TAG_NAME" 2>/dev/null || true)
+
+          if [ -n "$EXISTING_COMMIT" ]; then
+            if [ "$EXISTING_COMMIT" != "$TARGET_COMMIT" ]; then
+              echo "エラー: $TAG_NAME は別のコミットを指しています"
+              echo "既存タグ: $EXISTING_COMMIT"
+              echo "対象: $TARGET_COMMIT"
+              exit 1
+            fi
+            echo "$TAG_NAME は対象コミットに作成済みです"
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+            git push origin "refs/tags/$TAG_NAME"
+            echo "$TAG_NAME を作成しました"
+          fi
+
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: prepare
+    uses: ./.github/workflows/publish.yml
+    with:
+      tag_name: ${{ needs.prepare.outputs.tag_name }}
+    secrets: inherit
 
   cleanup:
-    needs: release
+    needs: [prepare, publish]
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
-      - uses: actions/checkout@v5
-
-      - name: Delete release branch
-        shell: bash
-        run: |
-          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
-          git push origin --delete "$BRANCH_NAME"
-          echo "Deleted release branch: $BRANCH_NAME"
-
-      - name: Comment on PR
+      - name: リリースブランチを削除してPRへ通知
         uses: actions/github-script@v8
+        env:
+          BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+          TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const version = '${{ github.event.pull_request.head.ref }}'.replace('release/v', '');
-            const tagName = `v${version}`;
-            
-            const comment = `🚀 **リリース処理が完了しました**\n\n` +
-                          `- タグ: \`${tagName}\`\n` +
-                          `- ドラフトリリースが作成されました\n` +
-                          `- [Releases](${context.payload.repository.html_url}/releases) で確認・公開できます\n\n` +
-                          `リリースブランチ \`${{ github.event.pull_request.head.ref }}\` は自動削除されました。`;
-            
+            const branchRef = `heads/${process.env.BRANCH_NAME}`;
+
+            try {
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: branchRef,
+              });
+              core.info(`リリースブランチ ${process.env.BRANCH_NAME} を削除しました`);
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+              core.info('リリースブランチは既に削除されています');
+            }
+
+            const body = [
+              '🚀 **リリース処理が完了しました**',
+              '',
+              `- タグ: \`${process.env.TAG_NAME}\``,
+              '- ドラフトリリースを作成しました',
+              `- [Releases](${context.payload.repository.html_url}/releases) で確認・公開できます`,
+            ].join('\n');
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-              body: comment
+              body,
             });

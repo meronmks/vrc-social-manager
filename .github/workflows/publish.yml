@@ -4,9 +4,81 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_call:
+    inputs:
+      tag_name:
+        description: '公開対象のタグ名'
+        required: true
+        type: string
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+      prerelease: ${{ steps.release.outputs.prerelease }}
+      release_body: ${{ steps.release_notes.outputs.result }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.tag_name || github.ref }}
+
+      - name: リリース情報を検証
+        id: release
+        shell: bash
+        env:
+          REQUESTED_TAG: ${{ inputs.tag_name || github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          TAG_NAME="$REQUESTED_TAG"
+          if [[ ! "$TAG_NAME" =~ ^v([0-9]+\.[0-9]+\.[0-9]+(-(beta|rc)\.[0-9]+)?)$ ]]; then
+            echo "エラー: 不正なタグ形式です: $TAG_NAME"
+            exit 1
+          fi
+
+          VERSION="${TAG_NAME#v}"
+          CONFIG_VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
+          if [ "$VERSION" != "$CONFIG_VERSION" ]; then
+            echo "エラー: タグと tauri.conf.json のバージョンが一致しません"
+            echo "タグ: $VERSION"
+            echo "tauri.conf.json: $CONFIG_VERSION"
+            exit 1
+          fi
+
+          if [[ "$VERSION" == *-* ]]; then
+            IS_PRERELEASE=true
+          else
+            IS_PRERELEASE=false
+          fi
+
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
+
+      - name: リリースノートを生成
+        id: release_notes
+        uses: actions/github-script@v8
+        env:
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}
+        with:
+          result-encoding: string
+          script: |
+            const { data } = await github.rest.repos.generateReleaseNotes({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: process.env.TAG_NAME,
+              target_commitish: process.env.TAG_NAME,
+            });
+
+            return data.body;
+
   publish-tauri:
+    needs: prepare
     permissions:
       contents: write
     strategy:
@@ -25,50 +97,54 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.prepare.outputs.tag_name }}
 
-      - name: install dependencies (Ubuntu only)
+      - name: 依存関係をインストール (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - name: setup pnpm
+      - name: pnpmをセットアップ
         uses: pnpm/action-setup@v4
         with:
           version: latest
 
-      - name: setup node
+      - name: Node.jsをセットアップ
         uses: actions/setup-node@v6
         with:
           node-version: lts/*
           cache: 'pnpm'
 
-      - name: install Rust stable
+      - name: Rust安定版をインストール
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Rust cache
+      - name: Rustキャッシュ
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
 
-      - name: install frontend dependencies
-        run: pnpm install
+      - name: フロントエンド依存関係をインストール
+        run: pnpm install --frozen-lockfile
 
-      - name: install bundle-licenses
+      - name: bundle-licensesをインストール
         run: cargo install cargo-bundle-licenses
 
-      - uses: tauri-apps/tauri-action@v0
+      - name: アプリをビルドしてドラフトリリースへ追加
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-          # tauri updater signing
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: v__VERSION__
-          releaseName: 'v__VERSION__'
+          tagName: ${{ needs.prepare.outputs.tag_name }}
+          releaseName: ${{ needs.prepare.outputs.tag_name }}
+          releaseBody: ${{ needs.prepare.outputs.release_body }}
           releaseDraft: true
-          prerelease: false
+          prerelease: ${{ needs.prepare.outputs.prerelease }}
+          retryAttempts: 3
           args: ${{ matrix.args }}
