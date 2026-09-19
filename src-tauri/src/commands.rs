@@ -151,7 +151,7 @@ async fn login(
     user_name: &str,
     password: &str,
 ) -> Result<String, RustError> {
-    debug!("Call login {:?} {:?}", user_name, password);
+    debug!("Call login");
 
     let client = CLIENT.clone();
 
@@ -193,7 +193,7 @@ async fn login(
 #[tauri::command]
 #[specta::specta]
 async fn email_otp(app_handle: tauri::AppHandle, otp: &str) -> Result<bool, RustError> {
-    debug!("Call email_otp {:?}", otp);
+    debug!("Call email_otp");
 
     let client = CLIENT.clone();
 
@@ -211,7 +211,7 @@ async fn email_otp(app_handle: tauri::AppHandle, otp: &str) -> Result<bool, Rust
 #[tauri::command]
 #[specta::specta]
 async fn two_factor_auth(app_handle: tauri::AppHandle, otp: &str) -> Result<bool, RustError> {
-    debug!("Call two_factor_auth {:?}", otp);
+    debug!("Call two_factor_auth");
 
     let client = CLIENT.clone();
 

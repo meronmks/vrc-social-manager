@@ -18,7 +18,7 @@ VRC Social Manager の実装・運用知識への入口です。回答や設計�
 
 - [プロジェクト概要](project-overview.md) — 目的、主要機能、技術スタック、責任範囲の要約。
 - [アーキテクチャ](architecture.md) — React/Tauri/Rust 間の境界、IPC、主要なデータフロー。
-- [認証とローカル保存](authentication-and-storage.md) — VRChat 認証、Cookie、設定・キャッシュの保存方式とセキュリティ境界。
+- [認証とローカル保存](authentication-and-storage.md) — VRChat 認証、Cookie、設定・キャッシュの保存方式、機密値を含むログの禁止方針。
 - [開発とリリース](development-and-release.md) — 開発コマンド、型生成、品質確認、更新配布の概要。
 
 ## 運用

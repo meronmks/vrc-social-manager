@@ -46,10 +46,7 @@ Cookie の保存処理は [`src-tauri/src/lib.rs`](../../src-tauri/src/lib.rs) �
 - VRChat API 通信は `https://api.vrchat.cloud/api` を基点とする。
 - ログ、デバッグ出力、Knowledge Base へ認証情報や個人データを転記しない。
 - アカウント切り替え時は現在の CookieStore をクリアし、選択したユーザーの keyring エントリを読み込む。
-
-> [!WARNING]
-> `login` コマンドは現在、デバッグログへユーザー名とパスワード引数を出力する形になっています。
-> 実装上のセキュリティ上の懸念であり、認証関連を変更する際は機密値をログへ出さない方針で見直す必要があります。
+- `login`、`email_otp`、`two_factor_auth` のデバッグログはコマンド名だけを記録し、ユーザー名、パスワード、OTP の値は出力しない。
 
 根拠: [`src-tauri/src/commands.rs`](../../src-tauri/src/commands.rs)
 
