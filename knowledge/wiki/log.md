@@ -1,0 +1,23 @@
+---
+title: Knowledge Base 作業ログ
+kind: log
+status: verified
+updated: 2026-09-19
+sources:
+  - ../../README.md
+  - ../../package.json
+  - ../../src-tauri/Cargo.toml
+  - ../../src/App.tsx
+  - ../../src-tauri/src/lib.rs
+---
+
+# Knowledge Base 作業ログ
+
+このファイルは追記専用です。既存エントリの変更、削除、並べ替えは行いません。
+
+## [2026-09-19] maintenance | LLM Wiki の初期構築
+
+- LLM Wiki の三層構造を、このリポジトリ向けに「一次情報」「不変の raw sources」「LLM 管理 Wiki」として定義。
+- プロジェクト概要、アーキテクチャ、認証と保存、開発とリリースの初期ページを作成。
+- エージェント向けの ingest、query、lint、更新条件をルートの `AGENTS.md` に追加。
+- 調査対象: `README.md`、`package.json`、`src/`、`src-tauri/`、`.github/workflows/`。
