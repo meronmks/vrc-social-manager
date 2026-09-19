@@ -88,6 +88,14 @@ async getUserById(userId: string) : Promise<Result<string, RustError>> {
     else return { status: "error", error: e  as any };
 }
 },
+async getUserProfileById(userId: string) : Promise<Result<string, RustError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_user_profile_by_id", { userId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async inviteMyselfToInstance(worldId: string, instanceId: string) : Promise<Result<boolean, RustError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("invite_myself_to_instance", { worldId, instanceId }) };
@@ -134,6 +142,14 @@ async switchUser(userId: string) : Promise<void> {
 async getReleaseNote(tagName: string) : Promise<Result<string, RustError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_release_note", { tagName }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getFavoritesUserInstances(offset: number, n: number) : Promise<Result<string, RustError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_favorites_user_instances", { offset, n }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };

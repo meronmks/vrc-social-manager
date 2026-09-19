@@ -2,11 +2,22 @@ import {FriendDetail} from "@/components/ui/dialogs/friendDetail.tsx"
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { useCallback } from "react";
-import {Instance, InstanceDetailData} from "@/libs/exportInterfaces.tsx";
+import {Friend, Instance, InstanceDetailData} from "@/libs/exportInterfaces.tsx";
 import {commands} from "@/bindings.ts";
 import {toastError} from "@/components/toast.tsx";
 import {InstanceDetail} from "@/components/ui/dialogs/instanceDetail.tsx";
 import { FaUsers, FaUser, FaLock, FaQuestion, FaGlobe } from 'react-icons/fa';
+import {logging} from "@/libs/logging.tsx";
+
+interface UserProfile {
+  bio?: string;
+  bioLinks?: string[];
+  currentAvatarImageUrl?: string;
+  currentAvatarThumbnailImageUrl?: string;
+  iconUrl?: string;
+  statusDescription?: string;
+  userIcon?: string;
+}
 
 type InstanceData = {
   instanceId: string;
@@ -90,6 +101,35 @@ const showInstanceDetail = async (worldID: string, instanceID: string) => {
   }
 };
 
+const showFriendDetail = async (friend: Friend) => {
+  let detailedFriend = friend;
+
+  try {
+    const response = await commands.getUserProfileById(friend.id);
+    if (response.status === "ok") {
+      const profile = JSON.parse(response.data) as UserProfile;
+      detailedFriend = {
+        ...friend,
+        avatar:
+          profile.iconUrl ||
+          profile.currentAvatarThumbnailImageUrl ||
+          profile.currentAvatarImageUrl ||
+          profile.userIcon ||
+          friend.avatar,
+        bio: profile.bio ?? friend.bio,
+        bioLinks: profile.bioLinks ?? friend.bioLinks,
+        statusDescription: friend.statusDescription ?? profile.statusDescription,
+      };
+    } else {
+      await logging.error(`Failed to get friend profile ${friend.id}: ${response.error.message}`);
+    }
+  } catch (error) {
+    await logging.error(`Failed to get friend profile ${friend.id}: ${error}`);
+  }
+
+  FriendDetail.call({ friend: detailedFriend });
+};
+
 export default function InstanceView({ instance }: { instance: Instance }) {
   const getStatusColor = useCallback((status: any) => {
     switch (status) {
@@ -151,7 +191,7 @@ export default function InstanceView({ instance }: { instance: Instance }) {
         <div className="space-y-2">
           <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-8 gap-2">
             {(instance.friends || []).map((friend) => (
-              <div key={friend.id} className="flex flex-col items-center p-2 hover:bg-base-300 rounded-lg cursor-pointer" onClick={() => FriendDetail.call({ friend: friend })}>
+              <div key={friend.id} className="flex flex-col items-center p-2 hover:bg-base-300 rounded-lg cursor-pointer" onClick={() => void showFriendDetail(friend)}>
                 <div className="indicator">
                   <span className={`indicator-item ${getStatusColor(friend.status)}`}>●</span>
                   <Avatar src={friend.avatar} className="w-10"/>
