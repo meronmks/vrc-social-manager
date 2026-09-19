@@ -12,6 +12,30 @@ import { Sidebar } from "@/components/ui/Sidebar";
 import {logging} from "@/libs/logging.tsx";
 import { userDataStore } from "@/libs/userDataStore";
 
+interface FriendListUser {
+  id: string;
+  displayName: string;
+  location: string;
+  status: string;
+  statusDescription?: string;
+  platform?: string;
+  imageUrl?: string;
+  currentAvatarImageUrl?: string;
+  currentAvatarThumbnailImageUrl?: string;
+  userIcon?: string;
+  iconUrl?: string;
+  bio?: string;
+  bioLinks?: string[];
+}
+
+const getAvatarUrl = (friend: FriendListUser): string =>
+  friend.iconUrl ||
+  friend.imageUrl ||
+  friend.currentAvatarThumbnailImageUrl ||
+  friend.currentAvatarImageUrl ||
+  friend.userIcon ||
+  "";
+
 export default function FriendScreen() {
   const isDev = import.meta.env.DEV;
   const [instancesData, setInstancesData] = useState<Instance[]>([]);
@@ -252,9 +276,9 @@ export default function FriendScreen() {
   };
 
   const loadInstances = async (data: string) => {
-    const friendList = JSON.parse(data);
+    const friendList = JSON.parse(data) as FriendListUser[];
 
-    const newInstances = await Promise.all(friendList.map(async (friend: any) => {
+    const newInstances = await Promise.all(friendList.map(async (friend) => {
       let instanceId = friend.location;
       const splitW = instanceId.split(":");
       let worldId = splitW[0];
@@ -284,13 +308,13 @@ export default function FriendScreen() {
         friends: [{
           id: friend.id,
           name: friend.displayName,
-          avatar: friend.imageUrl,
+          avatar: getAvatarUrl(friend),
           status: friend.status,
           location: friend.location,
-          bio: friend.bio,
+          bio: friend.bio ?? "",
           statusDescription: friend.statusDescription,
           platform: friend.platform,
-          bioLinks: friend.bioLinks,
+          bioLinks: friend.bioLinks ?? [],
         }],
       };
     }));

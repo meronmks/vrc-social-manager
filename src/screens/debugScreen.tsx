@@ -15,6 +15,7 @@ export default function DebugScreen() {
   const [endpoint, setEndpoint] = useState<string>("/1/auth/user");
   const [requestData, setRequestData] = useState<string>("");
   const [apiResponse, setApiResponse] = useState<string>("");
+  const [favoritesUserInstancesData, setFavoritesUserInstancesData] = useState<string>("");
 
   const sendCustomRequest = async () => {
     try {
@@ -86,6 +87,16 @@ export default function DebugScreen() {
     } else {
       setInstanceData(dd.error.message);
     }
+  };
+
+  const getFavoritesUserInstances = async () => {
+    const dd = await commands.getFavoritesUserInstances(0, 100);
+    if (dd.status == "ok") {
+      setFavoritesUserInstancesData(JSON.stringify(JSON.parse(dd.data), null, 2));
+    } else {
+      setFavoritesUserInstancesData(dd.error.message);
+    }
+    
   };
 
   return (
@@ -163,6 +174,11 @@ export default function DebugScreen() {
       />
       <button className="btn btn-primary mt-4" onClick={async () => await getInstance()}>Send</button>
       <pre className="min-h-64 max-h-64 w-full overflow-x-auto overflow-y-auto p-2 bg-base-300 rounded-md">{instanceData}</pre>
+    
+  
+      <div className="divider divider-accent">getFavoritesUserInstances</div>
+      <button className="btn btn-primary mt-4" onClick={async () => await getFavoritesUserInstances()}>Send</button>
+      <pre className="min-h-64 max-h-64 w-full overflow-x-auto overflow-y-auto p-2 bg-base-300 rounded-md">{favoritesUserInstancesData}</pre>
     </div>
   );
 }

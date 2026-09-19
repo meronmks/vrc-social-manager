@@ -1,4 +1,4 @@
-use crate::structs::{ApiResponse, AppState, World};
+use crate::structs::{ApiResponse, AppState, Favorite, User, World};
 use crate::{load_cookies, save_cookies, CLIENT, COOKIE_STORE};
 use log::{debug, error, trace};
 use once_cell::sync::Lazy;
@@ -28,6 +28,7 @@ pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         get_raw_world_by_id,
         get_instance,
         get_user_by_id,
+        get_user_profile_by_id,
         invite_myself_to_instance,
         get_licenses,
         debug_api_request,
@@ -35,6 +36,7 @@ pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         get_user_group_instances,
         switch_user,
         get_release_note,
+        get_favorites_user_instances,
     ]
 }
 
@@ -53,6 +55,7 @@ pub(crate) fn export_ts() {
             get_raw_world_by_id,
             get_instance,
             get_user_by_id,
+            get_user_profile_by_id,
             invite_myself_to_instance,
             get_licenses,
             debug_api_request,
@@ -60,6 +63,7 @@ pub(crate) fn export_ts() {
             get_user_group_instances,
             switch_user,
             get_release_note,
+            get_favorites_user_instances,
         ])
         .export(
             specta_typescript::Typescript::default()
@@ -147,7 +151,7 @@ async fn login(
     user_name: &str,
     password: &str,
 ) -> Result<String, RustError> {
-    debug!("Call login {:?} {:?}", user_name, password);
+    debug!("Call login");
 
     let client = CLIENT.clone();
 
@@ -189,7 +193,7 @@ async fn login(
 #[tauri::command]
 #[specta::specta]
 async fn email_otp(app_handle: tauri::AppHandle, otp: &str) -> Result<bool, RustError> {
-    debug!("Call email_otp {:?}", otp);
+    debug!("Call email_otp");
 
     let client = CLIENT.clone();
 
@@ -207,7 +211,7 @@ async fn email_otp(app_handle: tauri::AppHandle, otp: &str) -> Result<bool, Rust
 #[tauri::command]
 #[specta::specta]
 async fn two_factor_auth(app_handle: tauri::AppHandle, otp: &str) -> Result<bool, RustError> {
-    debug!("Call two_factor_auth {:?}", otp);
+    debug!("Call two_factor_auth");
 
     let client = CLIENT.clone();
 
@@ -346,6 +350,21 @@ async fn get_user_by_id(user_id: &str) -> Result<String, RustError> {
 
     let res = clinet
         .get(format!("{VRCHAT_API_BASE_URL}/1/users/{user_id}"))
+        .send()
+        .await?;
+
+    handle_raw_response!(res)
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn get_user_profile_by_id(user_id: &str) -> Result<String, RustError> {
+    debug!("Call get_user_profile_by_id {:?}", user_id);
+
+    let client = CLIENT.clone();
+
+    let res = client
+        .get(format!("{VRCHAT_API_BASE_URL}/1/profile/{user_id}"))
         .send()
         .await?;
 
@@ -641,6 +660,48 @@ async fn get_user_group_instances() -> Result<String, RustError> {
         _ => {
             error!("Failed to get current user info for group instances: {:?}", current_user_res);
             Err(current_user_res.status().into())
+        }
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn get_favorites_user_instances(offset: i32, n: i32) -> Result<String, RustError> {
+    debug!("Call get_favorites_user_instances");
+
+    let client = CLIENT.clone();
+    // ユーザーのお気に入りフレンドを取得
+    let res = client
+        .get(format!("{VRCHAT_API_BASE_URL}/1/favorites"))
+        .query(&[("offset", offset), ("n", n)])
+        .query(&[("type", "friend")])
+        .send()
+        .await?;
+
+    match res.status() {
+        reqwest::StatusCode::OK => {
+            let res_text = res
+                .error_for_status()?
+                .text()
+                .await
+                .map_err(|e| e.to_string())?;
+            let favorites: Vec<Favorite> = serde_json::from_str(&res_text)?;
+            let mut users: Vec<User> = Vec::new();
+
+            for favorite in &favorites {
+                let res2 = get_user_by_id(&favorite.favorite_id).await?;
+                users.push(serde_json::from_str(&res2)?);
+            }
+
+            Ok(serde_json::to_string(&users)?)
+        }
+        reqwest::StatusCode::UNAUTHORIZED => {
+            error!("Unauthorized access when getting favorites");
+            Err("errors.unauthorized".into())
+        }
+        _ => {
+            error!("Failed to get favorites: {:?}", res);
+            Err(res.status().into())
         }
     }
 }
