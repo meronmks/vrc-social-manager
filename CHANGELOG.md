@@ -16,8 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Fixed
+- APIのレスポンスが変更となり、ユーザーのプロフィール画像およびプロフィール情報が取得できなくなった問題を修正
 
 ### Security
+- デバッグ時のログ出力から機密情報を削除
 
 ## [0.10.0] - 2026-02-02
 

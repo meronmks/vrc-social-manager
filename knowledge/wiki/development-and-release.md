@@ -115,6 +115,7 @@ Rust の Tauri コマンドは `tauri-specta` から [`src/bindings.ts`](../../s
 
 ## 関連ページ
 
+- [リリース手順書](release-procedure.md)
 - [プロジェクト概要](project-overview.md)
 - [アーキテクチャ](architecture.md)
 - [認証とローカル保存](authentication-and-storage.md)

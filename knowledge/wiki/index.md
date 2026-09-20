@@ -2,7 +2,7 @@
 title: Knowledge Base 索引
 kind: index
 status: verified
-updated: 2026-09-19
+updated: 2026-09-20
 sources:
   - ../../README.md
   - ../../package.json
@@ -20,6 +20,7 @@ VRC Social Manager の実装・運用知識への入口です。回答や設計�
 - [アーキテクチャ](architecture.md) — React/Tauri/Rust 間の境界、IPC、主要なデータフロー。
 - [認証とローカル保存](authentication-and-storage.md) — VRChat 認証、Cookie、設定・キャッシュの保存方式、機密値を含むログの禁止方針。
 - [開発とリリース](development-and-release.md) — 開発コマンド、型生成、品質確認、更新配布の概要。
+- [リリース手順書](release-procedure.md) — バージョン選択、リリース PR、ドラフト確認、公開、失敗時の復旧手順。
 
 ## 運用
 
