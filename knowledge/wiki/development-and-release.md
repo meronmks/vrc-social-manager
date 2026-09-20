@@ -2,14 +2,16 @@
 title: 開発とリリース
 kind: operations
 status: verified
-updated: 2026-09-19
+updated: 2026-09-20
 sources:
   - ../../README.md
   - ../../package.json
   - ../../scripts/lint.js
   - ../../src-tauri/Cargo.toml
   - ../../.github/workflows/pr-check.yml
+  - ../../.github/workflows/bump-version.yml
   - ../../.github/workflows/publish.yml
+  - ../../.github/workflows/release-pr.yml
 ---
 
 # 開発とリリース
@@ -75,6 +77,19 @@ Rust の Tauri コマンドは `tauri-specta` から [`src/bindings.ts`](../../s
 
 `.github/workflows/` には、PR 検査、バージョン更新、公開、リリース PR のワークフローがあります。
 アプリは Tauri updater を組み込み、起動時設定が有効な場合に更新の有無を確認します。
+
+リリースは次の順序で行います。
+
+1. `bump-version.yml` を手動実行し、バージョン更新を含む `release/v*` ブランチと PR を作成する。
+2. リリース PR を `main` へマージすると、`release-pr.yml` がマージコミットへタグを付ける。
+3. `release-pr.yml` から再利用可能な `publish.yml` を直接呼び出し、3 OS 向け成果物と updater 用の
+   `latest.json` をドラフトリリースへ追加する。
+4. リリース本文と `latest.json` の `notes` には、GitHub の自動生成リリースノートを使用する。
+
+`GITHUB_TOKEN` で push したタグは別の workflow run を開始しないため、リリース PR 経由では
+タグ push イベントに依存せず `workflow_call` を使用します。人がタグを push した場合は、従来どおり
+`publish.yml` のタグトリガーから同じ公開処理を実行できます。
+
 公開やバージョン変更に手を入れる際は、少なくとも次を一緒に確認します。
 
 - `package.json` と `src-tauri/tauri.conf.json` のバージョン
@@ -100,6 +115,7 @@ Rust の Tauri コマンドは `tauri-specta` から [`src/bindings.ts`](../../s
 
 ## 関連ページ
 
+- [リリース手順書](release-procedure.md)
 - [プロジェクト概要](project-overview.md)
 - [アーキテクチャ](architecture.md)
 - [認証とローカル保存](authentication-and-storage.md)

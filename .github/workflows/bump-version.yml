@@ -104,7 +104,7 @@ jobs:
           # ベータバージョンまたはRCバージョンの場合は、ベース部分と番号を分離
           BASE_VERSION=$(echo $CURRENT_VERSION | sed -E 's/-(beta|rc)\.[0-9]+$//')
           PRERELEASE_NUM=$(echo $CURRENT_VERSION | grep -oP '(beta|rc)\.\K[0-9]+$' || echo "0")
-          PRERELEASE_TYPE=$(echo $CURRENT_VERSION | grep -oP '-(beta|rc)\.' | sed -E 's/[.-]//g' || echo "")
+          PRERELEASE_TYPE=$(echo "$CURRENT_VERSION" | grep -oP -- '-(beta|rc)\.' | sed -E 's/[.-]//g' || echo "")
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
           echo "prerelease_num=$PRERELEASE_NUM" >> $GITHUB_OUTPUT
@@ -204,7 +204,7 @@ jobs:
           git commit -m "chore: bump version to $NEW_VERSION"
           
           # ブランチをプッシュ
-          git push origin "$BRANCH_NAME"
+          git push --set-upstream origin "$BRANCH_NAME"
           
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
