@@ -45,9 +45,21 @@
     }
   },
   "app": {
-    "withGlobalTauri": true,
+    "withGlobalTauri": false,
     "security": {
-      "csp": null,
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' https: data: blob:",
+        "connect-src": "'self' ipc: http://ipc.localhost https://ipc.localhost",
+        "font-src": "'self' data:",
+        "object-src": "'none'",
+        "frame-src": "'none'",
+        "base-uri": "'none'",
+        "form-action": "'none'"
+      },
+      "devCsp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost ws: wss:; font-src 'self' data:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'",
       "capabilities": [
         "desktop-capability",
         "android-capability"

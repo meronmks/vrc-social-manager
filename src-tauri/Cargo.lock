@@ -3977,6 +3977,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab7f01e9310a820edd31c80fde3cae445295adde21a3f9416517d7d65015b971"
 dependencies = [
  "paste",
+ "serde_json",
  "specta-macros",
  "thiserror 1.0.69",
 ]
@@ -5128,6 +5129,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 name = "vrc-social-manager"
 version = "0.0.0"
 dependencies = [
+ "base64 0.22.1",
  "dirs",
  "keyring",
  "log",

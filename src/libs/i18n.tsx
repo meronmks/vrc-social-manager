@@ -22,6 +22,8 @@ i18n
     interpolation: { escapeValue: false },
   });
 
+i18n.on("languageChanged", language => { document.documentElement.lang = language; });
+
 userDataStore.getLanguage()
   .then((userLang) => {
     i18n.changeLanguage(userLang ?? i18n.language);

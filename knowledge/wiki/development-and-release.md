@@ -71,7 +71,7 @@ Rust の Tauri コマンドは `tauri-specta` から [`src/bindings.ts`](../../s
 画面に追加するユーザー向け文言は、原則として
 [`src/locales/ja.json`](../../src/locales/ja.json) と
 [`src/locales/en.json`](../../src/locales/en.json) の両方へ追加します。
-初期言語と永続化は `i18next` と plugin-store が扱います。
+初期言語は `i18next` が扱い、選択した言語は[設定用IPC](../../src-tauri/src/preferences.rs)を経由してRust側のストアに保存します。
 
 ## CI とリリース
 

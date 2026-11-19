@@ -1,443 +1,413 @@
-import { useState, useMemo, useEffect, useRef } from "react";
-import { Input } from "@/components/ui/input";
-import { IoClose } from "react-icons/io5";
-import { Virtuoso } from "react-virtuoso";
-import { commands } from "@/bindings";
-import { getVersion } from "@tauri-apps/api/app";
-import { toastError } from "@/components/toast.tsx";
-import { Friend, Instance } from "@/libs/exportInterfaces.tsx";
-import InstanceView from "@/components/ui/instance.tsx";
-import { useTranslation } from "react-i18next";
-import { Sidebar } from "@/components/ui/Sidebar";
-import {logging} from "@/libs/logging.tsx";
-import { userDataStore } from "@/libs/userDataStore";
+import { useState } from "react";
+import {
+  FiFolder,
+  FiRefreshCw,
+  FiSearch,
+  FiStar,
+  FiX,
+  FiMessageCircle,
+  FiChevronRight,
+} from "react-icons/fi";
+import { Avatar, Occupancy, Presence, SocialDetail, WorldPhoto } from "@/components/ui/socialDetail";
+import {
+  access,
+  Account,
+  clock,
+  destination,
+  locationOf,
+  Notify,
+  Person,
+  useText,
+  where,
+} from "@/libs/social";
+import { useSocialData, viewSources } from "@/libs/useSocialData";
 
-interface FriendListUser {
-  id: string;
-  displayName: string;
-  location: string;
-  status: string;
-  statusDescription?: string;
-  platform?: string;
-  imageUrl?: string;
-  currentAvatarImageUrl?: string;
-  currentAvatarThumbnailImageUrl?: string;
-  userIcon?: string;
-  iconUrl?: string;
-  bio?: string;
-  bioLinks?: string[];
+interface Props {
+  account: Account;
+  instances: boolean;
+  notify: Notify;
+  expire: () => void;
 }
+export default function FriendScreen({ account, instances, notify, expire }: Props) {
+  const data = useSocialData(account.id, notify, expire);
+  const [query, setQuery] = useState("");
+  const [scope, setScope] = useState("all");
+  const [sortOrder, setSortOrder] = useState("friendCount");
+  const [kind, setKind] = useState("all");
+  const [selectedPerson, selectPerson] = useState("");
+  const [instanceSelection, setInstanceSelection] = useState<{ location: string; friendId?: string }>();
+  const t = useText();
+  const starred = new Set(data.favorites.map((f) => f.favoriteId));
+  const inGroup = new Set(data.favorites.filter((f) => f.tags.includes(data.group)).map((f) => f.favoriteId));
+  const search = query.trim().toLocaleLowerCase();
+  const everyone = Object.values(data.friends);
+  const people = everyone
+    .filter((p) =>
+      search ? p.displayName.toLocaleLowerCase().includes(search) : data.showAll || inGroup.has(p.id),
+    )
+    .sort((a, b) => Number(b.online) - Number(a.online) || a.displayName.localeCompare(b.displayName));
+  const byPlace = new Map<string, Person[]>();
+  for (const person of everyone) {
+    if (!person.online) continue;
+    const location = locationOf(person);
+    if (!destination(location)) continue;
+    const others = byPlace.get(location);
+    if (others) others.push(person);
+    else byPlace.set(location, [person]);
+  }
+  const memberView = scope === "members";
+  const locations = (memberView ? data.members : [...byPlace.keys()]).filter((location) => {
+    const p = data.placeAt(location);
+    if (memberView) return true;
+    if (scope === "favorite" && !byPlace.get(location)?.some((f) => inGroup.has(f.id))) return false;
+    return (
+      kind === "all" || (kind === "group" ? p?.type === "group" : Boolean(p?.type && p.type !== "group"))
+    );
+  });
+  if (instances && sortOrder === "friendCount") {
+    locations.sort((a, b) => (byPlace.get(b)?.length ?? 0) - (byPlace.get(a)?.length ?? 0));
+  }
+  const view = instances
+    ? memberView
+      ? "members"
+      : scope === "favorite"
+        ? "favoritePlaces"
+        : "allPlaces"
+    : search || data.showAll
+      ? "search"
+      : "home";
+  const sources = viewSources[view];
+  const failed = sources.some((s) => data.phases[s] === "failed");
+  const busy = sources.some((s) => data.phases[s] === "loading");
+  const checked = data.checked[view];
+  const origin = instances ? instanceSelection?.location : undefined;
+  const person = instances
+    ? data.friends[instanceSelection?.friendId ?? ""]
+    : people.find((p) => p.id === selectedPerson);
+  const location = person ? undefined : origin;
+  function renderPlaceFriends(location: string, interactive = false) {
+    const friends = byPlace.get(location);
+    return (
+      <small className="place-friends">
+        {friends?.length
+          ? friends.map((friend) => {
+              const content = (
+                <>
+                  <Avatar person={friend} account={account.id} />
+                  <span>
+                    {starred.has(friend.id) && "☆ "}
+                    {friend.displayName}
+                  </span>
+                </>
+              );
+              return interactive ? (
+                <button
+                  type="button"
+                  className="place-friend friend-detail-link"
+                  key={friend.id}
+                  aria-label={t(
+                    friend.displayName + "の詳細を開く",
+                    "View details for " + friend.displayName,
+                  )}
+                  onClick={() => setInstanceSelection({ location, friendId: friend.id })}
+                >
+                  {content}
+                </button>
+              ) : (
+                <span className="place-friend" key={friend.id}>
+                  {content}
+                </span>
+              );
+            })
+          : data.phases.friends === "ready"
+            ? t("フレンド 0人", "No friends here")
+            : t("フレンド未確認", "Friends unconfirmed")}
+      </small>
+    );
+  }
 
-const getAvatarUrl = (friend: FriendListUser): string =>
-  friend.iconUrl ||
-  friend.imageUrl ||
-  friend.currentAvatarThumbnailImageUrl ||
-  friend.currentAvatarImageUrl ||
-  friend.userIcon ||
-  "";
-
-export default function FriendScreen() {
-  const isDev = import.meta.env.DEV;
-  const [instancesData, setInstancesData] = useState<Instance[]>([]);
-  const [search, setSearch] = useState("");
-  const [groupFilter, setGroupFilter] = useState<'all' | 'groups' | 'non-groups'>('all');
-  const [userData, setUserData] = useState<any>(null);
-  const [onlineUserCount, setOnlineUserCount] = useState(0);
-  const [offlineUserCount, setOfflineUserCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [appVersion, setAppVersion] = useState("unknown");
-  const { t } = useTranslation();
-  const abortControllerRef = useRef<AbortController>(null);
-
-  // データの保存
-  const saveInstancesData = async (data: Instance[]) => {
-    await userDataStore.setInstancesData(JSON.stringify(data));
-  };
-
-
-  // データの復元
-  const restoreInstancesData = async () => {
-    const savedData = await userDataStore.getInstancesData();
-    if (savedData) {
-      setInstancesData(JSON.parse(savedData));
-    }
-  };
-
-
-  // userDataの保存
-  const saveUserData = async (data: any) => {
-    await userDataStore.addOrUpdateUser(data.id, data.displayName, data);
-    await userDataStore.setCurrentUser(data.id);
-  };
-
-  // userDataの復元
-  const restoreUserData = async (): Promise<boolean> => {
-    try {
-      const savedData = await userDataStore.getCurrentUser();
-      if (savedData) {
-        // savedData.userDataが文字列の場合はパース、オブジェクトの場合はそのまま使用
-        const parsedData = typeof savedData.userData === 'string' 
-          ? JSON.parse(savedData.userData) 
-          : savedData.userData;
-        setUserData(parsedData);
-        return true;
-      }
-    } catch (error) {
-      await logging.error(`Failed to restore user data: ${error}`);
-      setUserData(null);
-    }
-    return false;
-  };
-
-  useEffect(() => {
-    async function init() {
-      const version = await getVersion();
-      setAppVersion(version);
-      await restoreInstancesData();
-      const result = await restoreUserData();
-      if (result) {
-        await checkAuthToken();
-      }
-    }
-    async function checkAuthToken() {
-      const res = await commands.verifyAuthToken();
-      if (res.status == "ok") {
-        const currentUser = await commands.getCurrentUserInfo();
-        if (currentUser.status == "ok") {
-          const parsedUserData = JSON.parse(currentUser.data);
-          setUserData(parsedUserData);
-          await saveUserData(parsedUserData);
+  const groups = data.groups.map((g, index) => {
+    const slot = /^group_(\d+)$/.exec(g.name);
+    const number = slot ? Number(slot[1]) : index;
+    const name = g.displayName?.trim();
+    const profileName = slot && account.friendGroupNames?.[number]?.trim();
+    const label = (name && name !== g.name && name) || (profileName !== g.name && profileName);
+    return { name: g.name, label: label || t(`お気に入り ${number + 1}`, `Favorites ${number + 1}`) };
+  });
+  const scopes = [
+    ["all", t("全フレンド", "All friends")],
+    ["favorite", t("お気に入りから", "From favorites")],
+    ["members", t("所属グループ", "My groups")],
+  ];
+  const kinds = [
+    ["all", t("すべて", "All")],
+    ["group", t("グループ主催", "Group")],
+    ["other", t("グループ以外", "Other")],
+  ];
+  const filterSummary = [
+    scopes.find(([value]) => value === scope)?.[1],
+    scope === "favorite" && groups.find((g) => g.name === data.group)?.label,
+    !memberView && kinds.find(([value]) => value === kind)?.[1],
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const allOption = "*";
+  const online = people.filter((p) => p.online).length;
+  const countLabel = t(
+    `${people.length}人中 ${online}人がオンライン`,
+    `${online} of ${people.length} online`,
+  );
+  const groupPicker = (
+    <label className="group-picker">
+      <FiFolder />
+      <select
+        aria-label={
+          instances ? t("お気に入りグループ", "Favorite group") : t("フレンドの表示範囲", "Friend filter")
         }
-      } else {
-        await userDataStore.removeUser(await userDataStore.getCurrentUserId() || "");
-        setUserData(null);
-        toastError(t(res.error.message));
-      }
-    }
-    init();
-  }, []);
+        value={!instances && data.showAll ? allOption : data.group}
+        onChange={(e) => {
+          const all = e.target.value === allOption;
+          if (!instances) data.chooseFriendScope(all);
+          if (!all) data.choose(e.target.value);
+          selectPerson("");
+          setInstanceSelection(undefined);
+        }}
+      >
+        {!instances && <option value={allOption}>{t("全フレンド", "All friends")}</option>}
+        {!data.groups.length && <option value="">{t("お気に入りグループ", "Favorite group")}</option>}
+        {groups.map(({ name, label }) => (
+          <option key={name} value={name}>
+            {label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 
-  useEffect(() => {
-    return () => {
-      // コンポーネントのアンマウント時に実行中の処理を中断
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, []);
-
-  // instancesDataが更新されたときに保存
-  useEffect(() => {
-    if (instancesData.length > 0) {
-      saveInstancesData(instancesData);
-    }
-  }, [instancesData]);
-
-
-  const filteredInstances = useMemo(() => {
-    let filtered = instancesData.map((instance) => ({
-      ...instance,
-      friends: instance.friends?.filter((friend) =>
-        friend.name.toLowerCase().includes(search.toLowerCase()) ||
-        instance.name.toLowerCase().includes(search.toLowerCase())
-      ) || [],
-    })).filter(instance => {
-      // friendsがundefinedの場合でも、インスタンス名がマッチすれば表示
-      if (!instance.friends || instance.friends.length === 0) {
-        return instance.name.toLowerCase().includes(search.toLowerCase()) || search === "";
-      }
-      return instance.friends.length > 0;
-    });
-
-    // グループフィルターの適用
-    if (groupFilter === 'groups') {
-      filtered = filtered.filter(instance => 
-        instance.worldId.startsWith('group_') || 
-        instance.id.includes('group') ||
-        instance.name.toLowerCase().includes('group') ||
-        instance.friends?.some(f => f.id.startsWith('group_'))
-      );
-    } else if (groupFilter === 'non-groups') {
-      filtered = filtered.filter(instance => 
-        !instance.worldId.startsWith('group_') && 
-        !instance.id.includes('group') &&
-        !instance.name.toLowerCase().includes('group') &&
-        !instance.friends?.some(f => f.id.startsWith('group_'))
-      );
-    }
-
-    return filtered
-      .sort((a, b) => {
-        // APIでオンラインユーザだけ取得を試みてもofflineで帰ってくるやつらがいる（Webだけ見てるとかの判定用と思われる）
-        if (a.id.toLowerCase() === "offline") return 1;
-        if (b.id.toLowerCase() === "offline") return -1;
-
-        if (a.id.toLowerCase() === "web_or_mobile") return 1;
-        if (b.id.toLowerCase() === "web_or_mobile") return -1;
-
-        if (a.id.toLowerCase() === "private") return 1;
-        if (b.id.toLowerCase() === "private") return -1;
-
-        if (a.id.toLowerCase() === "traveling") return 1;
-        if (b.id.toLowerCase() === "traveling") return -1;
-
-        const aRealFriendsCount = a.friends?.length || 0;
-        const bRealFriendsCount = b.friends?.length || 0;
-        return bRealFriendsCount - aRealFriendsCount;
-      });
-  }, [search, instancesData, onlineUserCount, groupFilter]);
-
-  const load = async () => {
-    // 既存の処理が実行中の場合は中断
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    abortControllerRef.current = new AbortController();
-    const signal = abortControllerRef.current.signal;
-
-    setInstancesData([]);
-    setOnlineUserCount(0);
-    setOfflineUserCount(0);
-    setIsLoading(true);
-
-    try {
-      let getMaxCount = await userDataStore.getFetchFriendsCount();
-      if (!getMaxCount) {
-        getMaxCount = 50;
-      }
-
-      // グループインスタンスの取得
-      try {
-        const groupInstances = await commands.getUserGroupInstances();
-        if (groupInstances.status === "ok") {
-          await loadGroupInstances(groupInstances.data);
-        } else {
-          await logging.error(`Error fetching group instances: ${groupInstances.error}`);
-        }
-      } catch (error) {
-        await logging.error(`Error fetching group instances: ${error}`);
-      }
-
-      // オンラインユーザーの取得
-      let onlineOffset = 0;
-      for (let i: number = 0; ; i++) {
-        if (signal.aborted) {
-          return;
-        }
-
-        const friends = await commands.getCurrentUserFriends(onlineOffset, getMaxCount, false);
-        if (friends.status == "ok") {
-          await loadInstances(friends.data);
-          const friendNum: number = JSON.parse(friends.data).length;
-
-          setOnlineUserCount((prev) => prev + friendNum);
-          onlineOffset += friendNum;
-          // ページングが絶妙に壊れてる？仕様？なのか完全に0が返ってくるまで続きのページが存在する可能性がある
-          if (friendNum === 0) break;
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        } else {
-          await logging.error(`Error fetching online friends:${friends.error}`);
-          break;
-        }
-      }
-
-      // オフラインユーザーの取得
-      let offlineOffset = 0;
-      for (let i: number = 0; ; i++) {
-        if (signal.aborted) {
-          return;
-        }
-
-        const friends = await commands.getCurrentUserFriends(offlineOffset, getMaxCount, true);
-        if (friends.status == "ok") {
-          await loadInstances(friends.data);
-          const friendNum: number = JSON.parse(friends.data).length;
-
-          setOfflineUserCount((prev) => prev + friendNum);
-          offlineOffset += friendNum;
-          // ページングが絶妙に壊れてる？仕様？なのか完全に0が返ってくるまで続きのページが存在する可能性がある
-          if (friendNum === 0) break;
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        } else {
-          await logging.error(`Error fetching offline friends:${friends.error}`);
-          break;
-        }
-      }
-    } catch (error) {
-      if (!signal.aborted) {
-        await logging.error(`Error loading data:${error}`);
-      }
-    } finally {
-      if (!signal.aborted) {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  const loadInstances = async (data: string) => {
-    const friendList = JSON.parse(data) as FriendListUser[];
-
-    const newInstances = await Promise.all(friendList.map(async (friend) => {
-      let instanceId = friend.location;
-      const splitW = instanceId.split(":");
-      let worldId = splitW[0];
-      const instanceDetail = splitW[1] || "";
-
-      if (worldId === "offline" && friend.status !== "offline") {
-        instanceId = "web_or_mobile";
-        worldId = "web_or_mobile";
-      }
-
-      const worldRes = await commands.getWorldById(worldId);
-      let worldName = worldId;
-      let worldThumbnail = "";
-
-      if (worldRes.status === "ok") {
-        const worldJson = JSON.parse(worldRes.data);
-        worldName = worldJson.name;
-        worldThumbnail = worldJson.thumbnailImageUrl;
-      }
-
-      return {
-        id: instanceId,
-        worldId,
-        instanceId: instanceDetail,
-        name: worldName,
-        thumbnail: worldThumbnail,
-        friends: [{
-          id: friend.id,
-          name: friend.displayName,
-          avatar: getAvatarUrl(friend),
-          status: friend.status,
-          location: friend.location,
-          bio: friend.bio ?? "",
-          statusDescription: friend.statusDescription,
-          platform: friend.platform,
-          bioLinks: friend.bioLinks ?? [],
-        }],
-      };
-    }));
-
-    setInstancesData((prev) => {
-      const updatedInstances = [...prev];
-
-      newInstances.forEach((newInstance) => {
-        let existingInstance = updatedInstances.find(i => i.id === newInstance.id);
-
-        if (existingInstance) {
-          newInstance.friends?.forEach((newFriend: Friend) => {
-            if (!existingInstance!.friends?.some(f => f.id === newFriend.id)) {
-              existingInstance!.friends = existingInstance!.friends || [];
-              existingInstance!.friends.push(newFriend);
-            }
-          });
-        } else {
-          updatedInstances.push(newInstance);
-        }
-      });
-
-      return updatedInstances;
-    });
-  };
-
-  const loadGroupInstances = async (data: string) => {
-    try {
-      const groupResponse = JSON.parse(data);
-      const instances = groupResponse.instances || [];
-      
-      const groupInstances: Instance[] = instances.map((instance: any) => ({
-        id: instance.id,
-        worldId: instance.worldId,
-        instanceId: instance.instanceId,
-        name: instance.world?.name || instance.name || t('groupInstance.unknownWorld'),
-        thumbnail: instance.world?.thumbnailImageUrl || "",
-      }));
-      
-      setInstancesData(prev => [...prev, ...groupInstances]);
-    } catch (error) {
-      await logging.error(`Error parsing group instances: ${error}`);
-    }
-  };
-
+  const retryLabel = t("再試行", "Retry");
   return (
-    <div className="flex min-h-screen bg-base-300">
-      <Sidebar 
-        userData={userData}
-        onlineUserCount={onlineUserCount}
-        offlineUserCount={offlineUserCount}
-        appVersion={appVersion}
-        load={load}
-        isDev={isDev}
-        isLoading={isLoading}
-      />
-
-      {/* Main Content */}
-      <div className="flex-1 p-4 flex flex-col h-screen overflow-hidden">
-        {/* Search Bar and Filters */}
-        <div className="space-y-4 mb-4">
-          {/* Search Bar */}
-          <div className="relative w-full">
-            <Input
-              className="w-full pr-10"
-              placeholder={t("searchPlaceholder")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+    <div className={"social-columns" + (person || location ? " with-selection" : "")}>
+      <section className="social-list">
+        <h1>
+          {instances
+            ? t("インスタンス", "Instances")
+            : search
+              ? t("フレンド検索", "Friend search")
+              : t("フレンド", "Friends")}
+        </h1>
+        <div className="list-tools">
+          <small>
+            {t("最終確認", "Last checked")}　{checked ? clock(checked) : "—"}
+          </small>
+          <button className="quiet-action" onClick={data.refresh} disabled={busy && !failed}>
+            <FiRefreshCw />
+            {t("更新", "Refresh")}
+          </button>
+        </div>
+        {!instances && (
+          <label className="search-box">
+            <FiSearch />
+            <input
+              aria-label={t("全フレンドから名前で検索", "Search all friends by name")}
+              placeholder={t("全フレンドから名前で検索", "Search all friends by name")}
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                selectPerson("");
+              }}
             />
-            {search && (
+            {query && (
               <button
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-secondary-content cursor-pointer p-1 rounded-full hover:bg-secondary transition-colors"
-                onClick={() => setSearch("")}
+                aria-label={t("検索をクリア", "Clear search")}
+                onClick={() => {
+                  setQuery("");
+                  selectPerson("");
+                }}
               >
-                <IoClose size={20} />
+                <FiX />
               </button>
             )}
-          </div>
-          
-          {/* Group Filter */}
-          <div className="flex gap-2">
-            <button
-              className={`px-3 py-1 rounded-md transition-colors ${
-                groupFilter === 'all' 
-                  ? 'bg-primary text-primary-content' 
-                  : 'bg-base-200 hover:bg-base-300'
-              }`}
-              onClick={() => setGroupFilter('all')}
-            >
-              {t('filter.all', '全て')}
-            </button>
-            <button
-              className={`px-3 py-1 rounded-md transition-colors ${
-                groupFilter === 'groups' 
-                  ? 'bg-primary text-primary-content' 
-                  : 'bg-base-200 hover:bg-base-300'
-              }`}
-              onClick={() => setGroupFilter('groups')}
-            >
-              {t('filter.groups', 'グループ')}
-            </button>
-            <button
-              className={`px-3 py-1 rounded-md transition-colors ${
-                groupFilter === 'non-groups' 
-                  ? 'bg-primary text-primary-content' 
-                  : 'bg-base-200 hover:bg-base-300'
-              }`}
-              onClick={() => setGroupFilter('non-groups')}
-            >
-              {t('filter.nonGroups', '非グループ')}
-            </button>
-          </div>
-        </div>
-        {/* Friend List by Instance */}
-        <div className="flex-1 overflow-y-auto">
-          <Virtuoso
-            totalCount={filteredInstances.length}
-            itemContent={(index) => (
-              <InstanceView instance={filteredInstances[index]} />
+          </label>
+        )}
+        {instances ? (
+          <details className="instance-filters">
+            <summary>
+              <strong>{t("絞り込み", "Filters")}</strong>
+              <span title={filterSummary}>{filterSummary}</span>
+              <FiChevronRight aria-hidden="true" />
+            </summary>
+            <label className="select-row">
+              {t("探す対象", "Source")}
+              <select
+                value={scope}
+                onChange={(e) => {
+                  setScope(e.target.value);
+                  setInstanceSelection(undefined);
+                }}
+              >
+                {scopes.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {scope === "favorite" && groupPicker}
+            {!memberView && (
+              <div className="segmented" role="group" aria-label={t("インスタンス種別", "Instance type")}>
+                {kinds.map(([value, label]) => (
+                  <button
+                    key={value}
+                    aria-pressed={kind === value}
+                    onClick={() => {
+                      setKind(value);
+                      setInstanceSelection(undefined);
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             )}
-          />
-        </div>
-      </div>
+          </details>
+        ) : (
+          !search && groupPicker
+        )}
+        {(busy || failed) && (
+          <div className={failed ? "list-state warn" : "list-state"} role="status">
+            {failed ? (
+              <>
+                {(search || data.showAll) && !instances
+                  ? t("一部のフレンドを取得できませんでした", "Some friends could not be loaded")
+                  : !checked && !instances
+                    ? t("お気に入りを取得できませんでした", "Could not load favorites")
+                    : t("一覧を更新できませんでした", "Could not refresh the list")}
+                {checked ? " · " + clock(checked) + t("時点", " as of last check") : ""}{" "}
+                <button onClick={data.refresh}>{retryLabel}</button>
+              </>
+            ) : (
+              <>
+                <span className="loading loading-spinner loading-xs" />
+                {instances
+                  ? t("インスタンスを取得中…", "Loading instances…")
+                  : t("フレンド一覧を取得中…", "Loading friends…")}
+              </>
+            )}
+          </div>
+        )}
+        {!instances ? (
+          <>
+            <h4>
+              {!people.length && (busy || failed)
+                ? failed
+                  ? t("人数未確認", "Count unavailable")
+                  : t("人数を集計中…", "Counting friends…")
+                : countLabel}
+              {people.length > 0 && (busy || failed) && t("（暫定）", " (provisional)")}
+            </h4>
+            {people.map((p) => (
+              <button
+                key={p.id}
+                className="friend-row"
+                aria-pressed={p.id === selectedPerson}
+                onClick={() => selectPerson(p.id)}
+              >
+                <Avatar person={p} account={account.id} />
+                <span className="friend-copy">
+                  <strong>
+                    {p.displayName}{" "}
+                    {(search || data.showAll) && starred.has(p.id) && <FiStar className="star" />}
+                  </strong>
+                  {p.online && <small>{where(locationOf(p), data.placeAt(locationOf(p)), t)}</small>}
+                  {p.statusDescription && (
+                    <small className="note">
+                      <FiMessageCircle />
+                      {p.statusDescription}
+                    </small>
+                  )}
+                </span>
+                <Presence status={p.online ? p.status : "offline"} />
+                <FiChevronRight className="row-chevron" />
+              </button>
+            ))}
+            {!people.length && !busy && !failed && (
+              <p className="empty-text">
+                {search
+                  ? t("「" + query + "」に一致するフレンドはいません", "No friends match “" + query + "”")
+                  : data.showAll
+                    ? t("フレンドがいません", "No friends yet")
+                    : inGroup.size
+                      ? t("フレンド情報を確認できませんでした", "Friend details unavailable")
+                      : t("このグループにはまだフレンドがいません", "No friends in this group yet")}
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="instance-list-heading">
+              <h4>
+                {t("インスタンス", "Instances")}　
+                {locations.length || (!busy && !failed) ? locations.length : "—"}
+              </h4>
+              <select
+                aria-label={t("並び順", "Sort order")}
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+              >
+                <option value="friendCount">{t("フレンドが多い順", "Most friends first")}</option>
+                <option value="original">{t("取得順", "Fetch order")}</option>
+              </select>
+            </div>
+            {locations.map((l) => {
+              const p = data.placeAt(l);
+              return (
+                <button
+                  className="place-row"
+                  key={l}
+                  aria-pressed={l === origin}
+                  onClick={() => setInstanceSelection({ location: l })}
+                >
+                  <WorldPhoto world={p?.world} account={account.id} compact />
+                  <strong>{where(l, p, t)}</strong>
+                  <Occupancy place={p} />
+                  <small className="instance-info">
+                    {p?.displayName && p.displayName !== p.world?.name && p.displayName + " · "}
+                    {access(p, t)} · #{destination(l)?.instanceId.split("~")[0]} {p?.groupName}
+                  </small>
+                  {renderPlaceFriends(l)}
+                </button>
+              );
+            })}
+            {!locations.length && !busy && !failed && (
+              <p className="empty-text">{t("表示するインスタンスはありません", "No matching instances")}</p>
+            )}
+          </>
+        )}
+      </section>
+      {person || location ? (
+        <SocialDetail
+          key={person?.id ?? location}
+          account={account}
+          person={person}
+          location={location}
+          instanceFriends={location ? renderPlaceFriends(location, true) : undefined}
+          backToInstance={person && origin ? () => setInstanceSelection({ location: origin }) : undefined}
+          placeAt={data.placeAt}
+          starred={!!person && starred.has(person.id)}
+          onPerson={data.applyFriend}
+          onPlace={(l, p) => data.setPlaces((prev) => ({ ...prev, [l]: { ...prev[l], ...p } }))}
+          notify={notify}
+          expire={expire}
+          close={() => {
+            selectPerson("");
+            setInstanceSelection(undefined);
+          }}
+        />
+      ) : (
+        <aside className="social-detail blank-detail">
+          {instances ? t("インスタンスを選択", "Select an instance") : t("フレンドを選択", "Select a friend")}
+        </aside>
+      )}
     </div>
   );
 }
