@@ -60,8 +60,8 @@ importers:
         specifier: ^10.1.0
         version: 10.1.0(@types/react@19.2.10)(react@19.2.4)(supports-color@5.5.0)
       react-router:
-        specifier: ^7.9.6
-        version: 7.13.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        specifier: ^7.18.5
+        version: 7.18.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react-toastify:
         specifier: ^11.0.5
         version: 11.0.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -1355,8 +1355,8 @@ packages:
     resolution: {integrity: sha512-z6F7K9bV85EfseRCp2bzrpyQ0Gkw1uLoCel9XBVWPg/TjRj94SkJzUTGfOa4bs7iJvBWtQG0Wq7wnI0syw3EBQ==}
     engines: {node: '>=0.10.0'}
 
-  react-router@7.13.0:
-    resolution: {integrity: sha512-PZgus8ETambRT17BUm/LL8lX3Of+oiLaPuVTRH3l1eLvSPpKO3AvhAEb5N7ihAFZQrYDqkvvWfFh9p0z9VsjLw==}
+  react-router@7.18.5:
+    resolution: {integrity: sha512-dTgvcXDOrLPrlLHrcZAqWveiK1hMSqN+rGAJzegP8HtmNkfRxOoshGWBNX3ZJ0cZjOHkRdlUJtaIhZMLLyGyPw==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
       react: '>=18'
@@ -2898,7 +2898,7 @@ snapshots:
 
   react-refresh@0.17.0: {}
 
-  react-router@7.13.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+  react-router@7.18.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
     dependencies:
       cookie: 1.1.1
       react: 19.2.4
