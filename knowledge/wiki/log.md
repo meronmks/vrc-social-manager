@@ -39,3 +39,7 @@ sources:
 - 通常版、ベータ版、RC 版のバージョン入力例と GitHub Actions での公開手順を文書化。
 - リリース PR、ドラフトリリース、成果物、署名、`latest.json` の確認項目をチェックリスト化。
 - ブランチ作成、タグ作成、OS 別ビルド、cleanup、公開後の問題に対する復旧手順を記録。
+
+## [2026-11-19] maintenance | Dependabot のセキュリティ更新のグループ化
+
+- npm と Cargo のセキュリティ更新をそれぞれまとめ、確認後に Mergify の既存キューへ投入する運用を記録。[開発とリリース](development-and-release.md)
