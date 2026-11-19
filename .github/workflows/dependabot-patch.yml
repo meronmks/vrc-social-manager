@@ -1,0 +1,57 @@
+name: Dependabot パッチ判定
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  classify:
+    name: 依存関係の更新種別を確認
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      eligible: ${{ steps.classify.outputs.eligible }}
+    steps:
+      - name: Dependabot のメタデータを取得
+        id: metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      - name: 全依存関係がパッチ更新か判定
+        id: classify
+        env:
+          DEPENDENCIES: ${{ steps.metadata.outputs.updated-dependencies-json || '[]' }}
+        run: |
+          eligible=$(jq -c '
+            def version:
+              if type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$") then
+                split(".") | map(tonumber)
+              else
+                null
+              end;
+
+            type == "array" and length > 0 and all(.[];
+              (.packageEcosystem == "npm_and_yarn" or .packageEcosystem == "cargo")
+              and .updateType == "version-update:semver-patch"
+              and (
+                (.prevVersion | version) as $before
+                | (.newVersion | version) as $after
+                | $before != null and $after != null
+                  and $before[:2] == $after[:2] and $before[2] < $after[2]
+              )
+            )
+          ' <<< "$DEPENDENCIES")
+          echo "eligible=$eligible" >> "$GITHUB_OUTPUT"
+
+  dependabot-patch:
+    name: dependabot-patch
+    if: needs.classify.outputs.eligible == 'true'
+    needs: classify
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'すべての対象依存関係がパッチ更新です'

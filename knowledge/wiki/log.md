@@ -43,3 +43,7 @@ sources:
 ## [2026-11-19] maintenance | Dependabot のセキュリティ更新のグループ化
 
 - npm と Cargo のセキュリティ更新をそれぞれまとめ、確認後に Mergify の既存キューへ投入する運用を記録。[開発とリリース](development-and-release.md)
+
+## [2026-11-19] maintenance | Dependabot のパッチ更新を判定して自動投入
+
+- 更新種別が省略される PR にもパッチ判定を追加。全対象がパッチと確認できた npm・Cargo の PR を、既存の CI 条件と合わせて Mergify の自動投入対象にした。[開発とリリース](development-and-release.md)
