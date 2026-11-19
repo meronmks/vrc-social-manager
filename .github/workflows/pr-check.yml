@@ -25,7 +25,7 @@ jobs:
           version: latest
 
       - name: Node.jsセットアップ
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: lts/*
           cache: 'pnpm'
@@ -76,7 +76,7 @@ jobs:
           version: latest
 
       - name: Node.jsセットアップ
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: lts/*
           cache: 'pnpm'
@@ -114,7 +114,7 @@ jobs:
           version: latest
 
       - name: Node.jsセットアップ
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: lts/*
           cache: 'pnpm'
