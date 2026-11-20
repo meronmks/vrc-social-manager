@@ -47,3 +47,7 @@ sources:
 ## [2026-11-19] maintenance | Dependabot のパッチ更新を判定して自動投入
 
 - 更新種別が省略される PR にもパッチ判定を追加。全対象がパッチと確認できた npm・Cargo の PR を、既存の CI 条件と合わせて Mergify の自動投入対象にした。[開発とリリース](development-and-release.md)
+
+## [2026-11-20] maintenance | アプリ内のベータ参加と更新確認
+
+- [リリース手順書](release-procedure.md)に旧UIからの参加、ベータ・RC・正式版の選択、参加解除後の更新を追記。

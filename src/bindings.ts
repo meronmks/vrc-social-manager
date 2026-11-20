@@ -5,6 +5,14 @@
 
 
 export const commands = {
+async checkBetaUpdate() : Promise<Result<BetaUpdate | null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("check_beta_update") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async login(userName: string, password: string) : Promise<Result<string, RustError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("login", { userName, password }) };
@@ -168,7 +176,9 @@ async getFavoritesUserInstances(offset: number, n: number) : Promise<Result<stri
 /** user-defined types **/
 
 export type ApiResponse = { status: string; data: string }
+export type BetaUpdate = { rid: number; currentVersion: string; version: string; body: string | null; rawJson: Partial<{ [key in string]: JsonValue }> }
 export type DebugApiRequest = { method: string; endpoint: string; data?: string | null }
+export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 export type RustError = { type: "Unrecoverable"; message: string }
 
 /** tauri-specta globals **/
