@@ -1,6 +1,5 @@
 import { commands, JsonValue, Resource, Result } from "@/bindings";
 import { useTranslation } from "react-i18next";
-import { InstanceDetailData } from "./exportInterfaces";
 
 export type Text = (ja: string, en: string) => string;
 export function useText(): Text {
@@ -51,13 +50,25 @@ export interface WorldInfo {
   thumbnailImageUrl?: string;
   imageUrl?: string;
 }
-export type Place = Partial<Omit<InstanceDetailData, "world">> & {
+// インスタンス API の応答のうち、画面で使う項目。
+export interface Place {
   worldId: string;
   instanceId: string;
+  displayName?: string;
+  type?: string;
+  ownerId?: string | null;
+  region?: string;
+  userCount?: number;
+  capacity?: number;
+  queueEnabled?: boolean;
+  queueSize?: number;
+  canRequestInvite?: boolean;
+  groupAccessType?: string;
+  /** 主催グループの名前（グループ API から補完する） */
   groupName?: string;
   world?: WorldInfo;
   worldLoading?: boolean;
-};
+}
 export type PublicProfile = UserImages & Pick<Person, "bio" | "bioLinks">;
 export type AuthReply = Account | { method: "emailOtp" | "totp" };
 async function data<T>(call: Promise<Result<JsonValue, string>>): Promise<T> {
@@ -105,6 +116,13 @@ export function locationOf(person: Person): string {
       : person.worldId || "")
   );
 }
+// ゲーム内にいるかを判定する。
+// Web サイトやコンパニオンアプリのみの接続（state: "active"、location: "offline"）はオンライン一覧にも
+// 含まれるが、ゲーム内にはいないためオンラインとして扱わない。
+export function isInGame(person: Person, listedOnline = true) {
+  if (!listedOnline || person.state === "offline" || person.state === "active") return false;
+  return locationOf(person) !== "offline";
+}
 export function where(value: string, place: Place | undefined, t: Text) {
   if (place?.world?.name) return place.world.name;
   if (place?.worldLoading) return t("ワールド名を取得中…", "Loading world name…");
@@ -139,11 +157,27 @@ export function access(place: Place | undefined, t: Text) {
       return t("種別未確認", "Unknown access");
   }
 }
+// インスタンスIDのうち、画面に出す番号部分（"~" より前）を返す。
+export function instanceNumber(instanceId: string) {
+  return instanceId.split("~")[0];
+}
+// ワールド名と異なるときだけインスタンス名を返す。
+export function instanceName(place: Place | undefined) {
+  return place?.displayName && place.displayName !== place.world?.name ? place.displayName : undefined;
+}
+// 画像URLの候補から HTTPS のものだけを重複なく取り出す。
+export function httpsUrls(candidates: (string | undefined)[]) {
+  return [...new Set(candidates.filter((url): url is string => !!url?.startsWith("https://")))];
+}
 export function clock(time: number) {
   return new Date(time).toLocaleTimeString([], { hour12: false, hour: "2-digit", minute: "2-digit" });
 }
+export type Phase = "loading" | "ready" | "failed";
 export function isExpired(error: unknown) {
   return String(error) === "http:401";
+}
+export function isRateLimited(error: unknown) {
+  return String(error) === "http:429";
 }
 export interface Notice {
   time: number;

@@ -228,3 +228,15 @@ sources:
 ## [2026-11-20] maintenance | ベータ配信を更新チャンネル方式に整理
 
 - GitHub API で全リリースを走査していたベータ確認を廃止し、公開時に [update-manifest.yml](../../.github/workflows/update-manifest.yml) が更新する `beta.json` を参照する方式へ変更。確認とインストールを [updates.rs](../../src-tauri/src/updates.rs) に集約し、[リリース手順書](release-procedure.md)、[開発とリリース](development-and-release.md)、[アーキテクチャ](architecture.md)を更新。
+
+## [2026-11-20] query | 新UIと画面定義の照合
+
+- [フレンドUI仕様](friend-ui-spec.md#画面定義と現行実装の差分)に認証、自己招待、ヘッダー、設定の表示差を記録し、実装への参照先を更新。
+
+## [2026-11-20] maintenance | 新UIの画面定義を実装と同期
+
+- [AltPenの画面定義](../../design/friend-home.pen)、PNG、[UI仕様](friend-ui-spec.md#新uiの画面定義)に、通知とアカウント操作、認証期限切れと二要素認証、自己招待の再送、ベータ版の設定を反映。
+
+## [2026-11-20] maintenance | 新UIのフロントエンドを整理
+
+- 旧UIの未使用コンポーネントと型定義を削除し、[App](../../src/App.tsx) のアカウント操作・通知履歴を [useAccounts](../../src/libs/useAccounts.ts)・[useNotices](../../src/libs/useNotices.ts) へ、一覧の絞り込みを [friendView](../../src/libs/friendView.ts) へ分離。詳細パネルの部品は `src/components/social/` に分割した。[アーキテクチャ](architecture.md)と[UI仕様](friend-ui-spec.md)の参照先を更新。

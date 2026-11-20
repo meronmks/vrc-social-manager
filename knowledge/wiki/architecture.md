@@ -7,6 +7,8 @@ sources:
   - ../../src/App.tsx
   - ../../src/screens/friendScreen.tsx
   - ../../src/libs/useSocialData.ts
+  - ../../src/libs/useAccounts.ts
+  - ../../src/libs/friendView.ts
   - ../../src-tauri/src/social.rs
   - ../../src/bindings.ts
   - ../../src-tauri/src/commands.rs
@@ -51,10 +53,18 @@ IPC の TypeScript 側インターフェースは `tauri-specta` が生成しま
 - 所属グループやフレンドの現在地によるインスタンスの分類
 - 個別の現在地の再取得、プロフィール表示、自己招待
 
-一覧の取得・ページング・手動更新は [useSocialData](../../src/libs/useSocialData.ts)、アカウント操作と通知履歴は [App](../../src/App.tsx) が担当する。
+フロントエンドの主な分担は次の通りです。
 
-UI コンポーネントは `src/components/ui/`、共有の表示用型は
-[`src/libs/exportInterfaces.tsx`](../../src/libs/exportInterfaces.tsx) にあります。
+| 場所 | 役割 |
+| --- | --- |
+| [`src/App.tsx`](../../src/App.tsx) | 画面の組み立て、タブ、問題表示 |
+| [`src/libs/useAccounts.ts`](../../src/libs/useAccounts.ts) | 登録アカウントの読み込み・切り替え・ログアウト、ログイン画面の表示状態 |
+| [`src/libs/useNotices.ts`](../../src/libs/useNotices.ts) | アカウントごとの通知履歴と Toast |
+| [`src/libs/useSocialData.ts`](../../src/libs/useSocialData.ts) | 一覧の取得・ページング・手動更新、ワールドとインスタンスの補完 |
+| [`src/libs/friendView.ts`](../../src/libs/friendView.ts) | 一覧の絞り込み・並び替え・お気に入りグループ名（表示に依存しない処理） |
+| [`src/libs/social.ts`](../../src/libs/social.ts) | `social_*` コマンドの呼び出し、画面で使う型、表示用の整形 |
+| `src/components/social/` | フレンド・インスタンスの一覧と詳細パネル、アイコン・状態表示・自己招待などの部品 |
+| `src/components/ui/` | ヘッダー、ログインフォーム、更新確認ダイアログ |
 
 ## IPC と Rust バックエンド
 

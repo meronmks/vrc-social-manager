@@ -1,188 +1,94 @@
 import { useState } from "react";
+import { FiRefreshCw, FiSearch, FiX } from "react-icons/fi";
+import { FriendList } from "@/components/social/friendList";
+import { GroupPicker } from "@/components/social/groupPicker";
+import { InstanceFilters, InstanceList } from "@/components/social/instanceList";
+import { PlaceFriends } from "@/components/social/placeFriends";
+import { SocialDetail } from "@/components/social/socialDetail";
 import {
-  FiFolder,
-  FiRefreshCw,
-  FiSearch,
-  FiStar,
-  FiX,
-  FiChevronRight,
-} from "react-icons/fi";
-import { Avatar, Occupancy, Presence, SocialDetail, WorldPhoto } from "@/components/ui/socialDetail";
-import {
-  access,
-  Account,
-  clock,
-  destination,
-  locationOf,
-  Notify,
-  Person,
-  useText,
-  where,
-} from "@/libs/social";
+  ALL_FRIENDS,
+  favoriteGroupOptions,
+  favoriteIdsIn,
+  groupByPlace,
+  InstanceKind,
+  InstanceScope,
+  SortOrder,
+  viewKeyOf,
+  visibleFriends,
+  visibleLocations,
+} from "@/libs/friendView";
+import { Account, clock, Notify, useText } from "@/libs/social";
 import { useSocialData, viewSources } from "@/libs/useSocialData";
 
 interface Props {
   account: Account;
+  /** true ならインスタンス一覧、false ならフレンド一覧を表示する */
   instances: boolean;
   notify: Notify;
   expire: () => void;
 }
+
+// フレンドとインスタンスのタブ。同じ取得データを共有し、タブを切り替えても検索や選択を保つ。
 export default function FriendScreen({ account, instances, notify, expire }: Props) {
   const data = useSocialData(account.id, notify, expire);
   const [query, setQuery] = useState("");
-  const [scope, setScope] = useState("all");
-  const [sortOrder, setSortOrder] = useState("friendCount");
-  const [kind, setKind] = useState("all");
+  const [scope, setScope] = useState<InstanceScope>("all");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("friendCount");
+  const [kind, setKind] = useState<InstanceKind>("all");
   const [selectedPerson, selectPerson] = useState("");
   const [instanceSelection, setInstanceSelection] = useState<{ location: string; friendId?: string }>();
   const t = useText();
+
   const starred = new Set(data.favorites.map((f) => f.favoriteId));
-  const inGroup = new Set(data.favorites.filter((f) => f.tags.includes(data.group)).map((f) => f.favoriteId));
+  const inGroup = favoriteIdsIn(data.favorites, data.group);
   const search = query.trim().toLocaleLowerCase();
   const everyone = Object.values(data.friends);
-  const people = everyone
-    .filter((p) =>
-      search ? p.displayName.toLocaleLowerCase().includes(search) : data.showAll || inGroup.has(p.id),
-    )
-    .sort((a, b) => Number(b.online) - Number(a.online) || a.displayName.localeCompare(b.displayName));
-  const byPlace = new Map<string, Person[]>();
-  for (const person of everyone) {
-    if (!person.online) continue;
-    const location = locationOf(person);
-    if (!destination(location)) continue;
-    const others = byPlace.get(location);
-    if (others) others.push(person);
-    else byPlace.set(location, [person]);
-  }
-  const memberView = scope === "members";
-  const locations = (memberView ? data.members : [...byPlace.keys()]).filter((location) => {
-    const p = data.placeAt(location);
-    if (memberView) return true;
-    if (scope === "favorite" && !byPlace.get(location)?.some((f) => inGroup.has(f.id))) return false;
-    return (
-      kind === "all" || (kind === "group" ? p?.type === "group" : Boolean(p?.type && p.type !== "group"))
-    );
+  const people = visibleFriends(everyone, search, data.showAll, inGroup);
+  const byPlace = groupByPlace(everyone);
+  const locations = visibleLocations({
+    scope,
+    kind,
+    sortOrder,
+    members: data.members,
+    byPlace,
+    inGroup,
+    placeAt: data.placeAt,
   });
-  if (instances && sortOrder === "friendCount") {
-    locations.sort((a, b) => (byPlace.get(b)?.length ?? 0) - (byPlace.get(a)?.length ?? 0));
-  }
-  const view = instances
-    ? memberView
-      ? "members"
-      : scope === "favorite"
-        ? "favoritePlaces"
-        : "allPlaces"
-    : search || data.showAll
-      ? "search"
-      : "home";
+  const groups = favoriteGroupOptions(data.groups, account.friendGroupNames);
+
+  const view = viewKeyOf(instances, scope, !!search || data.showAll);
   const sources = viewSources[view];
   const failed = sources.some((s) => data.phases[s] === "failed");
   const busy = sources.some((s) => data.phases[s] === "loading");
   const checked = data.checked[view];
+  const friendsReady = data.phases.friends === "ready";
+
+  // 詳細パネルの対象。インスタンス一覧ではインスタンス内のフレンドを開いても元の場所に戻れるようにする。
   const origin = instances ? instanceSelection?.location : undefined;
   const person = instances
     ? data.friends[instanceSelection?.friendId ?? ""]
     : people.find((p) => p.id === selectedPerson);
   const location = person ? undefined : origin;
-  function renderPlaceFriends(location: string, interactive = false) {
-    const friends = byPlace.get(location);
-    return (
-      <small className="place-friends">
-        {friends?.length
-          ? friends.map((friend) => {
-              const content = (
-                <>
-                  <Avatar person={friend} account={account.id} />
-                  <span>
-                    {starred.has(friend.id) && "☆ "}
-                    {friend.displayName}
-                  </span>
-                </>
-              );
-              return interactive ? (
-                <button
-                  type="button"
-                  className="place-friend friend-detail-link"
-                  key={friend.id}
-                  aria-label={t(
-                    friend.displayName + "の詳細を開く",
-                    "View details for " + friend.displayName,
-                  )}
-                  onClick={() => setInstanceSelection({ location, friendId: friend.id })}
-                >
-                  {content}
-                </button>
-              ) : (
-                <span className="place-friend" key={friend.id}>
-                  {content}
-                </span>
-              );
-            })
-          : data.phases.friends === "ready"
-            ? t("フレンド 0人", "No friends here")
-            : t("フレンド未確認", "Friends unconfirmed")}
-      </small>
-    );
+  function clearSelection() {
+    selectPerson("");
+    setInstanceSelection(undefined);
   }
 
-  const groups = data.groups.map((g, index) => {
-    const slot = /^group_(\d+)$/.exec(g.name);
-    const number = slot ? Number(slot[1]) : index;
-    const names = [g.displayName, slot ? account.friendGroupNames?.[number] : g.name];
-    const label = names.map(name => name?.trim()).find(name => name && name !== slot?.[0]);
-    return { name: g.name, label: label || `Group ${number + 1}` };
-  });
-  const scopes = [
-    ["all", t("全フレンド", "All friends")],
-    ["favorite", t("お気に入りから", "From favorites")],
-    ["members", t("所属グループ", "My groups")],
-  ];
-  const kinds = [
-    ["all", t("すべて", "All")],
-    ["group", t("グループ主催", "Group")],
-    ["other", t("グループ以外", "Other")],
-  ];
-  const filterSummary = [
-    scopes.find(([value]) => value === scope)?.[1],
-    scope === "favorite" && groups.find((g) => g.name === data.group)?.label,
-    !memberView && kinds.find(([value]) => value === kind)?.[1],
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  const allOption = "*";
-  const online = people.filter((p) => p.online).length;
-  const countLabel = t(
-    `${people.length}人中 ${online}人がオンライン`,
-    `${online} of ${people.length} online`,
-  );
   const groupPicker = (
-    <label className="group-picker">
-      <FiFolder />
-      <select
-        aria-label={
-          instances ? t("お気に入りグループ", "Favorite group") : t("フレンドの表示範囲", "Friend filter")
-        }
-        value={!instances && data.showAll ? allOption : data.group}
-        onChange={(e) => {
-          const all = e.target.value === allOption;
-          if (!instances) data.chooseFriendScope(all);
-          if (!all) data.choose(e.target.value);
-          selectPerson("");
-          setInstanceSelection(undefined);
-        }}
-      >
-        {!instances && <option value={allOption}>{t("全フレンド", "All friends")}</option>}
-        {!data.groups.length && <option value="">{t("お気に入りグループ", "Favorite group")}</option>}
-        {groups.map(({ name, label }) => (
-          <option key={name} value={name}>
-            {label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <GroupPicker
+      groups={groups}
+      allowAll={!instances}
+      label={instances ? t("お気に入りグループ", "Favorite group") : t("フレンドの表示範囲", "Friend filter")}
+      value={!instances && data.showAll ? ALL_FRIENDS : data.group}
+      onChange={(value) => {
+        const all = value === ALL_FRIENDS;
+        if (!instances) data.chooseFriendScope(all);
+        if (!all) data.choose(value);
+        clearSelection();
+      }}
+    />
   );
 
-  const retryLabel = t("再試行", "Retry");
   return (
     <div className={"social-columns" + (person || location ? " with-selection" : "")}>
       <section className="social-list">
@@ -202,178 +108,80 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
             {t("更新", "Refresh")}
           </button>
         </div>
-        {!instances && (
-          <label className="search-box">
-            <FiSearch />
-            <input
-              aria-label={t("全フレンドから名前で検索", "Search all friends by name")}
-              placeholder={t("全フレンドから名前で検索", "Search all friends by name")}
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
+        {instances ? (
+          <InstanceFilters
+            scope={scope}
+            kind={kind}
+            groupLabel={groups.find((g) => g.name === data.group)?.label}
+            groupPicker={groupPicker}
+            onScope={(value) => {
+              setScope(value);
+              setInstanceSelection(undefined);
+            }}
+            onKind={(value) => {
+              setKind(value);
+              setInstanceSelection(undefined);
+            }}
+          />
+        ) : (
+          <>
+            <SearchBox
+              query={query}
+              onChange={(value) => {
+                setQuery(value);
                 selectPerson("");
               }}
             />
-            {query && (
-              <button
-                aria-label={t("検索をクリア", "Clear search")}
-                onClick={() => {
-                  setQuery("");
-                  selectPerson("");
-                }}
-              >
-                <FiX />
-              </button>
-            )}
-          </label>
+            {!search && groupPicker}
+          </>
         )}
+        <ListStatus
+          busy={busy}
+          failed={failed}
+          checked={checked}
+          message={
+            instances
+              ? t("一覧を更新できませんでした", "Could not refresh the list")
+              : search || data.showAll
+                ? t("一部のフレンドを取得できませんでした", "Some friends could not be loaded")
+                : !checked
+                  ? t("お気に入りを取得できませんでした", "Could not load favorites")
+                  : t("一覧を更新できませんでした", "Could not refresh the list")
+          }
+          loading={
+            instances ? t("インスタンスを取得中…", "Loading instances…") : t("フレンド一覧を取得中…", "Loading friends…")
+          }
+          retry={data.refresh}
+        />
         {instances ? (
-          <details className="instance-filters">
-            <summary>
-              <strong>{t("絞り込み", "Filters")}</strong>
-              <span title={filterSummary}>{filterSummary}</span>
-              <FiChevronRight aria-hidden="true" />
-            </summary>
-            <label className="select-row">
-              {t("探す対象", "Source")}
-              <select
-                value={scope}
-                onChange={(e) => {
-                  setScope(e.target.value);
-                  setInstanceSelection(undefined);
-                }}
-              >
-                {scopes.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {scope === "favorite" && groupPicker}
-            {!memberView && (
-              <div className="segmented" role="group" aria-label={t("インスタンス種別", "Instance type")}>
-                {kinds.map(([value, label]) => (
-                  <button
-                    key={value}
-                    aria-pressed={kind === value}
-                    onClick={() => {
-                      setKind(value);
-                      setInstanceSelection(undefined);
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </details>
+          <InstanceList
+            locations={locations}
+            byPlace={byPlace}
+            placeAt={data.placeAt}
+            account={account.id}
+            starred={starred}
+            friendsReady={friendsReady}
+            busy={busy}
+            failed={failed}
+            sortOrder={sortOrder}
+            onSort={setSortOrder}
+            selected={origin}
+            onSelect={(l) => setInstanceSelection({ location: l })}
+          />
         ) : (
-          !search && groupPicker
-        )}
-        {(busy || failed) && (
-          <div className={failed ? "list-state warn" : "list-state"} role="status">
-            {failed ? (
-              <>
-                {(search || data.showAll) && !instances
-                  ? t("一部のフレンドを取得できませんでした", "Some friends could not be loaded")
-                  : !checked && !instances
-                    ? t("お気に入りを取得できませんでした", "Could not load favorites")
-                    : t("一覧を更新できませんでした", "Could not refresh the list")}
-                {checked ? " · " + clock(checked) + t("時点", " as of last check") : ""}{" "}
-                <button onClick={data.refresh}>{retryLabel}</button>
-              </>
-            ) : (
-              <>
-                <span className="loading loading-spinner loading-xs" />
-                {instances
-                  ? t("インスタンスを取得中…", "Loading instances…")
-                  : t("フレンド一覧を取得中…", "Loading friends…")}
-              </>
-            )}
-          </div>
-        )}
-        {!instances ? (
-          <>
-            <h4>
-              {!people.length && (busy || failed)
-                ? failed
-                  ? t("人数未確認", "Count unavailable")
-                  : t("人数を集計中…", "Counting friends…")
-                : countLabel}
-              {people.length > 0 && (busy || failed) && t("（暫定）", " (provisional)")}
-            </h4>
-            {people.map((p) => (
-              <button
-                key={p.id}
-                className="friend-row"
-                aria-pressed={p.id === selectedPerson}
-                onClick={() => selectPerson(p.id)}
-              >
-                <Avatar person={p} account={account.id} />
-                <span className="friend-copy">
-                  <strong>
-                    {p.displayName}{" "}
-                    {(search || data.showAll) && starred.has(p.id) && <FiStar className="star" />}
-                  </strong>
-                  {p.online && <small>{where(locationOf(p), data.placeAt(locationOf(p)), t)}</small>}
-                </span>
-                <Presence status={p.online ? p.status : "offline"} description={p.statusDescription} />
-                <FiChevronRight className="row-chevron" />
-              </button>
-            ))}
-            {!people.length && !busy && !failed && (
-              <p className="empty-text">
-                {search
-                  ? t("「" + query + "」に一致するフレンドはいません", "No friends match “" + query + "”")
-                  : data.showAll
-                    ? t("フレンドがいません", "No friends yet")
-                    : inGroup.size
-                      ? t("フレンド情報を確認できませんでした", "Friend details unavailable")
-                      : t("このグループにはまだフレンドがいません", "No friends in this group yet")}
-              </p>
-            )}
-          </>
-        ) : (
-          <>
-            <div className="instance-list-heading">
-              <h4>
-                {t("インスタンス", "Instances")}　
-                {locations.length || (!busy && !failed) ? locations.length : "—"}
-              </h4>
-              <select
-                aria-label={t("並び順", "Sort order")}
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-              >
-                <option value="friendCount">{t("フレンドが多い順", "Most friends first")}</option>
-                <option value="original">{t("取得順", "Fetch order")}</option>
-              </select>
-            </div>
-            {locations.map((l) => {
-              const p = data.placeAt(l);
-              return (
-                <button
-                  className="place-row"
-                  key={l}
-                  aria-pressed={l === origin}
-                  onClick={() => setInstanceSelection({ location: l })}
-                >
-                  <WorldPhoto world={p?.world} account={account.id} compact />
-                  <strong>{where(l, p, t)}</strong>
-                  <Occupancy place={p} />
-                  <small className="instance-info">
-                    {p?.displayName && p.displayName !== p.world?.name && p.displayName + " · "}
-                    {access(p, t)} · #{destination(l)?.instanceId.split("~")[0]} {p?.groupName}
-                  </small>
-                  {renderPlaceFriends(l)}
-                </button>
-              );
-            })}
-            {!locations.length && !busy && !failed && (
-              <p className="empty-text">{t("表示するインスタンスはありません", "No matching instances")}</p>
-            )}
-          </>
+          <FriendList
+            people={people}
+            account={account.id}
+            query={query}
+            showAll={data.showAll}
+            groupSize={inGroup.size}
+            starred={starred}
+            busy={busy}
+            failed={failed}
+            selected={selectedPerson}
+            onSelect={selectPerson}
+            placeAt={data.placeAt}
+          />
         )}
       </section>
       {person || location ? (
@@ -382,23 +190,80 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
           account={account}
           person={person}
           location={location}
-          instanceFriends={location ? renderPlaceFriends(location, true) : undefined}
+          instanceFriends={
+            location ? (
+              <PlaceFriends
+                friends={byPlace.get(location)}
+                account={account.id}
+                starred={starred}
+                friendsReady={friendsReady}
+                onSelect={(friendId) => setInstanceSelection({ location, friendId })}
+              />
+            ) : undefined
+          }
           backToInstance={person && origin ? () => setInstanceSelection({ location: origin }) : undefined}
           placeAt={data.placeAt}
           starred={!!person && starred.has(person.id)}
           onPerson={data.applyFriend}
-          onPlace={(l, p) => data.setPlaces((prev) => ({ ...prev, [l]: { ...prev[l], ...p } }))}
+          onPlace={data.updatePlace}
           notify={notify}
           expire={expire}
-          close={() => {
-            selectPerson("");
-            setInstanceSelection(undefined);
-          }}
+          close={clearSelection}
         />
       ) : (
         <aside className="social-detail blank-detail">
           {instances ? t("インスタンスを選択", "Select an instance") : t("フレンドを選択", "Select a friend")}
         </aside>
+      )}
+    </div>
+  );
+}
+
+// 全フレンドを名前で探す検索欄。
+function SearchBox({ query, onChange }: { query: string; onChange: (query: string) => void }) {
+  const t = useText();
+  return (
+    <label className="search-box">
+      <FiSearch />
+      <input
+        aria-label={t("全フレンドから名前で検索", "Search all friends by name")}
+        placeholder={t("全フレンドから名前で検索", "Search all friends by name")}
+        value={query}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {query && (
+        <button aria-label={t("検索をクリア", "Clear search")} onClick={() => onChange("")}>
+          <FiX />
+        </button>
+      )}
+    </label>
+  );
+}
+
+// 取得中・取得失敗の帯。失敗時は最後に確認できた時刻と再試行ボタンを出す。
+function ListStatus(props: {
+  busy: boolean;
+  failed: boolean;
+  checked?: number;
+  message: string;
+  loading: string;
+  retry: () => void;
+}) {
+  const t = useText();
+  if (!props.busy && !props.failed) return null;
+  return (
+    <div className={props.failed ? "list-state warn" : "list-state"} role="status">
+      {props.failed ? (
+        <>
+          {props.message}
+          {props.checked ? " · " + clock(props.checked) + t("時点", " as of last check") : ""}{" "}
+          <button onClick={props.retry}>{t("再試行", "Retry")}</button>
+        </>
+      ) : (
+        <>
+          <span className="loading loading-spinner loading-xs" />
+          {props.loading}
+        </>
       )}
     </div>
   );

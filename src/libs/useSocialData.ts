@@ -5,15 +5,18 @@ import {
   Favorite,
   FavoriteGroup,
   isExpired,
+  isInGame,
+  isRateLimited,
   locationOf,
   Notify,
   Person,
+  Phase,
   Place,
   request,
   WorldInfo,
 } from "./social";
 
-export type Phase = "loading" | "ready" | "failed";
+// 一覧の種類ごとに、表示に必要な取得処理。
 export const viewSources = {
   home: ["favorites", "friends"],
   search: ["friends"],
@@ -21,7 +24,15 @@ export const viewSources = {
   favoritePlaces: ["friends", "places", "favorites"],
   members: ["members"],
 } as const;
+export type ViewKey = keyof typeof viewSources;
+type Source = "friends" | "favorites" | "members" | "places";
 type Places = Record<string, Place>;
+const loadingPhases: Record<Source, Phase> = {
+  friends: "loading",
+  favorites: "loading",
+  members: "loading",
+  places: "loading",
+};
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function useSocialData(account: string, notify: Notify, expire: () => void) {
@@ -34,13 +45,8 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
   const [worlds, setWorlds] = useState<Record<string, WorldInfo & { loading?: boolean }>>({});
   const scheduleWorld = useRef<(location: string) => void>(() => {});
   const [members, setMembers] = useState<string[]>([]);
-  const [phases, setPhases] = useState<Record<"friends" | "favorites" | "members" | "places", Phase>>({
-    friends: "loading",
-    favorites: "loading",
-    members: "loading",
-    places: "loading",
-  });
-  const [checked, setChecked] = useState<Record<string, number>>({});
+  const [phases, setPhases] = useState(loadingPhases);
+  const [checked, setChecked] = useState<Partial<Record<ViewKey, number>>>({});
   const [revision, setRevision] = useState(0);
   const selectedGroup = useRef("");
   const details = useRef(new Map<string, { version: number; person: Person }>());
@@ -70,9 +76,7 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
       );
   }
 
-  function choose(name: string) {
-    selectedGroup.current = name;
-    setGroup(name);
+  function saveFavoriteGroup(name: string) {
     void userDataStore
       .setFavoriteGroup(account, name)
       .catch(() =>
@@ -82,6 +86,17 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
           true,
         ),
       );
+  }
+
+  function choose(name: string) {
+    selectedGroup.current = name;
+    setGroup(name);
+    saveFavoriteGroup(name);
+  }
+
+  // 詳細パネルで取得したインスタンス情報を一覧のキャッシュへ反映する。
+  function updatePlace(location: string, place: Place) {
+    setPlaces((prev) => ({ ...prev, [location]: { ...prev[location], ...place } }));
   }
 
   function placeAt(location: string): Place | undefined {
@@ -103,9 +118,9 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
 
   function applyFriend(person: Person) {
     const location = locationOf(person);
-    // Web利用中は現在地が offline でも接続中のため、詳細では接続状態を使う。
+    // 詳細取得時は接続状態でゲーム内かを判定し直す（Web のみの接続はオフライン扱い）。
     if (person.state === "offline" || person.state === "active" || person.state === "online") {
-      person = { ...person, online: person.state !== "offline" };
+      person = { ...person, online: isInGame(person) };
     }
     scheduleWorld.current(location);
     details.current.set(person.id, { version: ++version.current, person });
@@ -120,21 +135,20 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
       const detail = details.current.get(p.id);
       return detail && detail.version > started ? { ...p, ...detail.person } : p;
     };
-    const completed = new Set<keyof typeof phases>();
-    function phase(key: keyof typeof phases, state: Phase) {
+    const completed = new Set<Source>();
+    function phase(key: Source, state: Phase) {
       if (!live) return;
       setPhases((prev) => ({ ...prev, [key]: state }));
       if (state !== "ready") return;
       completed.add(key);
       // 同じ更新で表示対象の取得がすべて成功したときだけ確認時刻を進める。
-      const timestamps: Record<string, number> = {};
-      for (const [view, sources] of Object.entries(viewSources)) {
-        if (sources.some((s) => s === key) && sources.every((s) => completed.has(s)))
-          timestamps[view] = Date.now();
+      const timestamps: Partial<Record<ViewKey, number>> = {};
+      for (const [view, sources] of Object.entries(viewSources) as [ViewKey, readonly Source[]][]) {
+        if (sources.includes(key) && sources.every((s) => completed.has(s))) timestamps[view] = Date.now();
       }
       setChecked((prev) => ({ ...prev, ...timestamps }));
     }
-    function fail(key: keyof typeof phases, e: unknown, ja: string, en: string) {
+    function fail(key: Source, e: unknown, ja: string, en: string) {
       if (!live) return;
       phase(key, "failed");
       callbacks.current.notify(ja, en, true);
@@ -176,7 +190,7 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
           try {
             world = await request(account, { kind: "world", id });
           } catch (e) {
-            stopWorldRequests = isExpired(e) || String(e) === "http:429";
+            stopWorldRequests = isExpired(e) || isRateLimited(e);
             if (live && isExpired(e)) callbacks.current.expire();
           }
         }
@@ -185,18 +199,20 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
       });
     }
     scheduleWorld.current = queueWorld;
-    async function named(p: Place) {
-      if (p.type === "group" && p.ownerId && !p.groupName) {
-        if (!groupNames.has(p.ownerId)) {
-          try {
-            groupNames.set(p.ownerId, (await request(account, { kind: "group", id: p.ownerId })).name);
-          } catch (e) {
-            if (isExpired(e)) throw e;
-          }
+    // グループ主催のインスタンスに主催グループ名を補う。同じ更新中はグループごとに一度だけ取得する。
+    async function attachGroupName(location: string, p: Place) {
+      if (p.type !== "group" || !p.ownerId || p.groupName) return;
+      if (!groupNames.has(p.ownerId)) {
+        try {
+          groupNames.set(p.ownerId, (await request(account, { kind: "group", id: p.ownerId })).name);
+        } catch (e) {
+          if (isExpired(e)) throw e;
         }
-        return { ...p, groupName: groupNames.get(p.ownerId) };
       }
-      return p;
+      const groupName = groupNames.get(p.ownerId);
+      if (live && groupName) {
+        setPlaces((prev) => ({ ...prev, [location]: { ...prev[location], groupName } }));
+      }
     }
     async function loadFriends() {
       const current: Record<string, Person> = {};
@@ -214,16 +230,10 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
             const place = await request(account, { kind: "instance", location });
             if (!live) return;
             setPlaces((prev) => ({ ...prev, [location]: place }));
-            const groupPlace = await named(place);
-            if (live && groupPlace.groupName) {
-              setPlaces((prev) => ({
-                ...prev,
-                [location]: { ...prev[location], groupName: groupPlace.groupName },
-              }));
-            }
+            await attachGroupName(location, place);
           } catch (e) {
             incomplete = true;
-            if (isExpired(e) || String(e) === "http:429") stopped = e;
+            if (isExpired(e) || isRateLimited(e)) stopped = e;
           }
           await pause(150);
         });
@@ -233,7 +243,8 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
         const merge = (page: Person[], offline: boolean) => {
           const batch: Record<string, Person> = {};
           for (const p of page) {
-            batch[p.id] = newer({ ...p, online: !offline });
+            // オンライン一覧には Web のみの接続も含まれるため、ゲーム内にいる人だけをオンラインにする。
+            batch[p.id] = newer({ ...p, online: isInGame(p, !offline) });
             if (batch[p.id].online) queuePlace(locationOf(batch[p.id]));
           }
           Object.assign(current, batch);
@@ -274,16 +285,7 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
         setGroups(slots);
         selectedGroup.current = next;
         setGroup(next);
-        if (next && next !== saved)
-          void userDataStore
-            .setFavoriteGroup(account, next)
-            .catch(() =>
-              callbacks.current.notify(
-                "グループの選択を保存できませんでした",
-                "Could not save the selected group",
-                true,
-              ),
-            );
+        if (next && next !== saved) saveFavoriteGroup(next);
         const entries = await pages(
           (offset) => request(account, { kind: "favorites", offset }),
           (f) => f.favoriteId,
@@ -311,16 +313,13 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
         phase("members", "ready");
         for (const [location, raw] of Object.entries(entries)) {
           if (!live) return;
-          const place = await named(raw);
-          if (live && place.groupName) {
-            setPlaces((prev) => ({ ...prev, [location]: { ...prev[location], groupName: place.groupName } }));
-          }
+          await attachGroupName(location, raw);
         }
       } catch (e) {
         fail("members", e, "所属グループの場所を取得できませんでした", "Could not load group instances");
       }
     }
-    setPhases({ friends: "loading", favorites: "loading", members: "loading", places: "loading" });
+    setPhases(loadingPhases);
     void loadFriends();
     void loadFavorites();
     void loadMembers();
@@ -343,6 +342,6 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
     checked,
     applyFriend,
     refresh: () => setRevision((v) => v + 1),
-    setPlaces,
+    updatePlace,
   };
 }
