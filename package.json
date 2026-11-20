@@ -17,10 +17,8 @@
     "@tauri-apps/api": "^2.9.1",
     "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
     "@tauri-apps/plugin-log": "^2.4.0",
-    "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-shell": "^2.3.3",
     "@tauri-apps/plugin-store": "^2.4.1",
-    "@tauri-apps/plugin-updater": "^2.8.1",
     "dayjs": "^1.11.19",
     "i18next": "^25.6.2",
     "i18next-browser-languagedetector": "^8.2.0",
@@ -32,8 +30,8 @@
     "react-markdown": "^10.1.0",
     "react-router": "^7.9.6",
     "react-toastify": "^11.0.5",
-    "remark-gfm": "^4.0.1",
     "react-virtuoso": "^4.14.1",
+    "remark-gfm": "^4.0.1",
     "tailwindcss": "^4.0.12"
   },
   "devDependencies": {

@@ -8,7 +8,6 @@
   ],
   "permissions": [
     "clipboard-manager:allow-write-text",
-    "process:default",
     "core:default",
     "shell:allow-open",
     "shell:default",

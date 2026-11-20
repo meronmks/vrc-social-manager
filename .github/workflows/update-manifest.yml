@@ -1,0 +1,99 @@
+name: 'update-manifest'
+
+# ベータ配信チャンネル用のマニフェスト（update-manifests ブランチの beta.json）を更新する。
+# 正式版・ベータ・RC のどれが公開されても、既存より新しい場合だけ差し替える。
+# 正式版チャンネルは GitHub の releases/latest を直接参照するため、ここでは扱わない。
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: '反映する公開済みリリースのタグ名（例: v0.11.0-beta.1）'
+        required: true
+        type: string
+
+concurrency:
+  group: update-manifest
+  cancel-in-progress: false
+
+jobs:
+  beta:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG_NAME: ${{ inputs.tag_name || github.event.release.tag_name }}
+      BRANCH: update-manifests
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          sparse-checkout: .github
+
+      - name: 公開済みリリースのマニフェストを取得
+        id: fetch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$TAG_NAME" =~ ^v([0-9]+\.[0-9]+\.[0-9]+(-(beta|rc)\.[0-9]+)?)$ ]]; then
+            echo "配信対象外のタグのため終了します: $TAG_NAME"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$(gh release view "$TAG_NAME" --json isDraft --jq .isDraft)" != "false" ]; then
+            echo "エラー: $TAG_NAME は公開されていません"
+            exit 1
+          fi
+
+          gh release download "$TAG_NAME" --pattern latest.json --output "$RUNNER_TEMP/latest.json"
+          if [ "$(jq -r .version "$RUNNER_TEMP/latest.json")" != "${TAG_NAME#v}" ]; then
+            echo "エラー: latest.json のバージョンがタグと一致しません"
+            exit 1
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: update-manifests ブランチへ反映
+        if: steps.fetch.outputs.skip == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git fetch --depth=1 origin "$BRANCH"; then
+            git switch -C "$BRANCH" FETCH_HEAD
+          else
+            git switch --orphan "$BRANCH"
+          fi
+
+          # semver の優先順位で比較する（タグ形式は上で検証済み: X.Y.Z または X.Y.Z-(beta|rc).N）。
+          NEWER=$(node - "$RUNNER_TEMP/latest.json" beta.json <<'EOF'
+          const fs = require("fs");
+          const [next, current] = process.argv.slice(2);
+          const key = (v) => {
+            const m = /^(\d+)\.(\d+)\.(\d+)(?:-(beta|rc)\.(\d+))?$/.exec(v);
+            if (!m) throw new Error(`比較できないバージョンです: ${v}`);
+            return [+m[1], +m[2], +m[3], { beta: 0, rc: 1 }[m[4]] ?? 2, +(m[5] ?? 0)];
+          };
+          const version = (path) => JSON.parse(fs.readFileSync(path, "utf8")).version;
+          const newer = (a, b) => {
+            const i = a.findIndex((n, j) => n !== b[j]);
+            return i >= 0 && a[i] > b[i];
+          };
+          console.log(!fs.existsSync(current) || newer(key(version(next)), key(version(current))));
+          EOF
+          )
+
+          if [ "$NEWER" != "true" ]; then
+            echo "beta.json は $TAG_NAME 以上の版を指しているため更新しません"
+            exit 0
+          fi
+
+          cp "$RUNNER_TEMP/latest.json" beta.json
+          git add beta.json
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m "beta.json を $TAG_NAME に更新"
+          git push origin "HEAD:refs/heads/$BRANCH"

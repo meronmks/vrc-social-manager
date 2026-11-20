@@ -224,3 +224,7 @@ sources:
 ## [2026-11-20] maintenance | アプリ内のベータ参加と更新確認
 
 - [リリース手順書](release-procedure.md)に旧UIからの参加、ベータ・RC・正式版の選択、参加解除後の更新を追記。
+
+## [2026-11-20] maintenance | ベータ配信を更新チャンネル方式に整理
+
+- GitHub API で全リリースを走査していたベータ確認を廃止し、公開時に [update-manifest.yml](../../.github/workflows/update-manifest.yml) が更新する `beta.json` を参照する方式へ変更。確認とインストールを [updates.rs](../../src-tauri/src/updates.rs) に集約し、[リリース手順書](release-procedure.md)、[開発とリリース](development-and-release.md)、[アーキテクチャ](architecture.md)を更新。

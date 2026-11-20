@@ -32,7 +32,9 @@ const VRCHAT_API_BASE_URL: &str = "https://api.vrchat.cloud/api";
 pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
     generate_handler![
         #[cfg(desktop)]
-        crate::beta_updates::check_beta_update,
+        crate::updates::check_app_update,
+        #[cfg(desktop)]
+        crate::updates::install_app_update,
         crate::preferences::settings_get,
         crate::preferences::settings_set,
         crate::social::social_switch,
@@ -62,7 +64,8 @@ pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
 pub(crate) fn export_ts() {
     tauri_specta::Builder::<tauri::Wry>::new()
         .commands(tauri_specta::collect_commands![
-            crate::beta_updates::check_beta_update,
+            crate::updates::check_app_update,
+            crate::updates::install_app_update,
             crate::preferences::settings_get,
             crate::preferences::settings_set,
             crate::social::social_switch,

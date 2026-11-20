@@ -2,7 +2,7 @@
 title: アーキテクチャ
 kind: architecture
 status: verified
-updated: 2026-11-19
+updated: 2026-11-20
 sources:
   - ../../src/App.tsx
   - ../../src/screens/friendScreen.tsx
@@ -10,6 +10,7 @@ sources:
   - ../../src-tauri/src/social.rs
   - ../../src/bindings.ts
   - ../../src-tauri/src/commands.rs
+  - ../../src-tauri/src/updates.rs
   - ../../src-tauri/src/lib.rs
 ---
 
@@ -42,7 +43,7 @@ IPC の TypeScript 側インターフェースは `tauri-specta` が生成しま
 
 [`src/App.tsx`](../../src/App.tsx) がアプリ共通のダイアログ、Toast、ルーターを構成します。
 通常ルートはお気に入り・インスタンス・設定で、デバッグ画面は開発ビルドだけに公開されます。
-起動時にはテーマを復元し、設定が有効なら Tauri updater で更新を確認します。
+起動時にはテーマを復元し、設定が有効なら Rust 側の更新コマンド（[`updates.rs`](../../src-tauri/src/updates.rs)）で更新を確認します。
 
 [`src/screens/friendScreen.tsx`](../../src/screens/friendScreen.tsx) は現在の中心画面です。主に次を担います。
 

@@ -7,9 +7,10 @@ sources:
   - ../../.github/workflows/bump-version.yml
   - ../../.github/workflows/release-pr.yml
   - ../../.github/workflows/publish.yml
+  - ../../.github/workflows/update-manifest.yml
   - ../../CHANGELOG.md
   - ../../src-tauri/tauri.conf.json
-  - ../../src-tauri/src/beta_updates.rs
+  - ../../src-tauri/src/updates.rs
   - ../../src/libs/useAppUpdates.ts
 ---
 
@@ -147,6 +148,8 @@ GitHub の `Releases` を開き、対象タグのドラフトで次を確認し�
 
 - 正式版は、公開後に `/releases/latest/download/latest.json` から取得できることを確認する。
 - ベータ版と RC 版はプレリリースとして公開し、タグ固有の `/releases/download/vX.Y.Z-beta.N/latest.json` とその中の各 OS の成果物を確認する。
+- 公開（`release: published`）を契機に[マニフェスト更新処理](../../.github/workflows/update-manifest.yml)が動き、`update-manifests` ブランチの `beta.json` を更新する。正式版・ベータ・RC のいずれでも、既存の `beta.json` より新しい版の場合だけ差し替わる。Actions の実行結果と `beta.json` の `version` を確認する。
+- 実行に失敗した場合や公開前に作られたリリースを反映したい場合は、`update-manifest.yml` を `workflow_dispatch` でタグ名を指定して手動実行する。
 - 公開後、実機で更新確認画面のバージョンとリリースノートを確認する。
 
 ### 旧UIから新UIのベータ配信を始める
@@ -155,7 +158,16 @@ GitHub の `Releases` を開き、対象タグのドラフトで次を確認し�
 2. 新UIのコミットで `tauri.conf.json` のバージョンを合わせ、例えば `v0.11.0-beta.1` のタグを push する。[タグの配信処理](../../.github/workflows/publish.yml)で作成されたドラフトを確認し、プレリリースとして公開する。
 3. 旧UIの設定で「ベータ版の更新を受け取る」をオンにし、その場で新UIのバージョンと変更内容を確認する。「後で」を選んだ場合も参加設定は保存される。
 
-参加は端末の `store.json` に `beta-updates` として保存する。未設定・オフの場合は安定版の `releases/latest` を参照する。オンの場合は公開済みの正式版・ベータ・RCをバージョン順に比較し、インストール済みより新しい最大の版を提示する。インストールには既存の Tauri 署名検証を使う。更新の確認・適用に失敗した場合は設定の「今すぐ確認」から再試行できる。[更新候補の選択](../../src-tauri/src/beta_updates.rs)・[参加設定と更新確認](../../src/libs/useAppUpdates.ts)
+参加は端末の `store.json` に `beta-updates` として保存する。更新の確認とインストールは Rust 側がこの値を読んで参照先を切り替える。
+
+| チャンネル | 参照するマニフェスト（上から順に試行） |
+| --- | --- |
+| 安定版（未設定・オフ） | `releases/latest/download/latest.json` |
+| ベータ（オン） | `update-manifests` ブランチの `beta.json` → 取得できなければ安定版と同じ `latest.json` |
+
+`beta.json` は公開済みリリースの `latest.json` の複製で、正式版・ベータ・RC のうち最も新しい版を指す。アプリは GitHub API を使わず静的なマニフェストだけを参照するため、API のレート制限を受けない。インストールには既存の Tauri 署名検証を使い、確認時に保持した更新をそのまま適用する。更新の確認・適用に失敗した場合は詳細をログに残し、設定の「今すぐ確認」から再試行できる。[チャンネルと更新処理](../../src-tauri/src/updates.rs)・[参加設定と画面連携](../../src/libs/useAppUpdates.ts)
+
+`update-manifests` ブランチはワークフローだけが更新する配信専用ブランチであり、手動で編集・削除しない。ブランチが存在しない間（最初のプレリリース公開前）は、ベータ参加者も安定版の `latest.json` へフォールバックする。
 
 参加を解除するとその場で安定版を確認する。インストール済みのベータより安定版が古い間は現在の版を使い続け、同じベースバージョンの正式版またはそれより新しい安定版が出れば更新できる。
 

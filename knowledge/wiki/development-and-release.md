@@ -2,7 +2,7 @@
 title: 開発とリリース
 kind: operations
 status: verified
-updated: 2026-09-20
+updated: 2026-11-20
 sources:
   - ../../README.md
   - ../../package.json
@@ -12,6 +12,8 @@ sources:
   - ../../.github/workflows/bump-version.yml
   - ../../.github/workflows/publish.yml
   - ../../.github/workflows/release-pr.yml
+  - ../../.github/workflows/update-manifest.yml
+  - ../../src-tauri/src/updates.rs
 ---
 
 # 開発とリリース
@@ -77,6 +79,8 @@ Rust の Tauri コマンドは `tauri-specta` から [`src/bindings.ts`](../../s
 
 `.github/workflows/` には、PR 検査、バージョン更新、公開、リリース PR のワークフローがあります。
 アプリは Tauri updater を組み込み、起動時設定が有効な場合に更新の有無を確認します。
+更新の確認・インストールは [`updates.rs`](../../src-tauri/src/updates.rs) に集約され、ベータ参加設定に応じて
+参照するマニフェストを切り替えます。ベータ用の `beta.json` はリリース公開時に `update-manifest.yml` が更新します。
 
 リリースは次の順序で行います。
 
@@ -94,7 +98,7 @@ Rust の Tauri コマンドは `tauri-specta` から [`src/bindings.ts`](../../s
 
 - `package.json` と `src-tauri/tauri.conf.json` のバージョン
 - Cargo のパッケージ／ロック情報
-- updater の署名・endpoint 設定
+- updater の署名設定（`tauri.conf.json`）と参照先 URL（`updates.rs`）
 - `CHANGELOG.md` と GitHub Release の生成処理
 - 対象 OS ごとのビルド成果物
 

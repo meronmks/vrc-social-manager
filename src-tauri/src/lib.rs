@@ -15,7 +15,7 @@ use tauri_plugin_store::StoreExt;
 use keyring::Entry;
 
 #[cfg(desktop)]
-mod beta_updates;
+mod updates;
 mod commands;
 mod structs;
 mod social;
@@ -94,7 +94,6 @@ pub fn run() {
                 ])
                 .build()
         )
-        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(commands::handlers())
@@ -111,6 +110,8 @@ pub fn run() {
             #[cfg(desktop)]
             app.handle()
                 .plugin(tauri_plugin_updater::Builder::new().build())?;
+            #[cfg(desktop)]
+            app.manage(updates::PendingUpdate::default());
             Ok(())
         })
         .on_window_event(|window, event| match event {

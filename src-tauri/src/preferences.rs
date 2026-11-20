@@ -71,9 +71,8 @@ fn accounts(raw: Value) -> Result<Value, String> {
     Ok(Value::Array(rows))
 }
 
-#[tauri::command]
-#[specta::specta]
-pub fn settings_get(app: tauri::AppHandle, setting: Preference) -> Result<Value, String> {
+/// 設定値を読む。Rust 側から参照する場合もキー名を重複定義しないようこれを使う。
+pub(crate) fn read(app: &tauri::AppHandle, setting: &Preference) -> Result<Value, String> {
     let store = app.store("store.json").map_err(|_| "storage")?;
     let value = store.get(setting.key()).unwrap_or(Value::Null);
     if matches!(setting, Preference::Accounts) {
@@ -81,6 +80,12 @@ pub fn settings_get(app: tauri::AppHandle, setting: Preference) -> Result<Value,
     } else {
         Ok(value)
     }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn settings_get(app: tauri::AppHandle, setting: Preference) -> Result<Value, String> {
+    read(&app, &setting)
 }
 
 #[tauri::command]

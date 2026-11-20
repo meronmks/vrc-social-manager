@@ -1,23 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { check, Update } from "@tauri-apps/plugin-updater";
-import { relaunch } from "@tauri-apps/plugin-process";
 import { toast } from "react-toastify";
-import { commands } from "@/bindings";
+import { commands, type AppUpdate } from "@/bindings";
 import { UpdateConfirm } from "@/components/ui/dialogs/updateConfirm";
 import { userDataStore } from "@/libs/userDataStore";
 import { logging } from "@/libs/logging";
 
-async function findUpdate(beta: boolean) {
-  if (!beta) return check({ timeout: 20000 });
-  const result = await commands.checkBetaUpdate();
+// 更新チャンネルの選択・確認・インストールは Rust 側（updates.rs）が担い、ここは画面との橋渡しだけを行う。
+async function findUpdate() {
+  const result = await commands.checkAppUpdate();
   if (result.status === "error") throw new Error(result.error);
-  const data = result.data;
-  return data ? new Update({ ...data, body: data.body ?? undefined }) : null;
+  return result.data;
 }
 
-async function confirmUpdate(update: Update) {
-  let notes = update.body;
+async function confirmUpdate(update: AppUpdate) {
+  let notes = update.notes ?? undefined;
   if (!notes) {
     try {
       const result = await commands.getReleaseNote(update.version);
@@ -27,8 +24,9 @@ async function confirmUpdate(update: Update) {
     }
   }
   if (await UpdateConfirm.call({ version: update.version, releaseNotes: notes })) {
-    await update.downloadAndInstall();
-    await relaunch();
+    // 成功時はアプリが再起動するため戻らない。
+    const result = await commands.installAppUpdate();
+    if (result.status === "error") throw new Error(result.error);
   }
 }
 
@@ -36,13 +34,9 @@ export function useAppUpdates(promptOnStartup: boolean) {
   const { t } = useTranslation();
   const [beta, setBeta] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
-  const [available, setAvailable] = useState<Update | null>(null);
+  const [available, setAvailable] = useState<AppUpdate | null>(null);
   const [message, setMessage] = useState("");
   const lock = useRef(false);
-
-  useEffect(() => () => {
-    if (available) void available.close().catch(() => {});
-  }, [available]);
 
   async function run(action: () => Promise<void>, report: boolean) {
     if (lock.current) return;
@@ -51,19 +45,19 @@ export function useAppUpdates(promptOnStartup: boolean) {
     setMessage("");
     try {
       await action();
-    } catch {
+    } catch (e) {
       setMessage("settingScreen.updateFailed");
       if (report) toast.error(t("settingScreen.updateFailed"));
-      void logging.warn("アプリの更新処理に失敗しました").catch(() => {});
+      void logging.warn(`アプリの更新処理に失敗しました: ${e instanceof Error ? e.message : e}`).catch(() => {});
     } finally {
       lock.current = false;
       setBusy(false);
     }
   }
 
-  async function lookup(selected: boolean, prompt: boolean) {
+  async function lookup(prompt: boolean) {
     setAvailable(null);
-    const found = await findUpdate(selected);
+    const found = await findUpdate();
     setAvailable(found);
     if (found && prompt) await confirmUpdate(found);
     if (!found) setMessage("settingScreen.noUpdatesAvailable");
@@ -75,18 +69,14 @@ export function useAppUpdates(promptOnStartup: boolean) {
       .then(([selected, auto]) => {
         if (!live) return;
         setBeta(selected);
-        if (auto) void run(() => lookup(selected, promptOnStartup), promptOnStartup);
+        if (auto) void run(() => lookup(promptOnStartup), promptOnStartup);
       })
       .catch(() => { if (live) setMessage("settingScreen.updateSettingsFailed"); });
     return () => { live = false; };
   }, []);
 
   function checkNow() {
-    return run(async () => {
-      const selected = await userDataStore.getBetaUpdates();
-      setBeta(selected);
-      await lookup(selected, true);
-    }, true);
+    return run(() => lookup(true), true);
   }
 
   function changeBeta(selected: boolean) {
@@ -98,7 +88,8 @@ export function useAppUpdates(promptOnStartup: boolean) {
         return;
       }
       setBeta(selected);
-      await lookup(selected, true);
+      // 保存したチャンネルで確認し直す（Rust 側が保存値を読む）。
+      await lookup(true);
     }, true);
   }
 

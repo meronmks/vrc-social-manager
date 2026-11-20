@@ -5,9 +5,17 @@
 
 
 export const commands = {
-async checkBetaUpdate() : Promise<Result<BetaUpdate | null, string>> {
+async checkAppUpdate() : Promise<Result<AppUpdate | null, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("check_beta_update") };
+    return { status: "ok", data: await TAURI_INVOKE("check_app_update") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async installAppUpdate() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("install_app_update") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -235,7 +243,7 @@ async getFavoritesUserInstances(offset: number, n: number) : Promise<Result<stri
 /** user-defined types **/
 
 export type ApiResponse = { status: string; data: string }
-export type BetaUpdate = { rid: number; currentVersion: string; version: string; body: string | null; rawJson: Partial<{ [key in string]: JsonValue }> }
+export type AppUpdate = { currentVersion: string; version: string; notes: string | null }
 export type DebugApiRequest = { method: string; endpoint: string; data?: string | null }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 export type Preference = { kind: "theme" } | { kind: "language" } | { kind: "fetchFriendsCount" } | { kind: "autoCheckUpdates" } | { kind: "betaUpdates" } | { kind: "showAllFriends"; account: string } | { kind: "favoriteGroup"; account: string } | { kind: "accounts" } | { kind: "currentAccount" }
