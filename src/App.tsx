@@ -3,52 +3,23 @@ import { BrowserRouter as Router, Route, Routes } from "react-router";
 import FriendScreen from "@/screens/friendScreen";
 import SettingsScreen from "@/screens/settingsScreen";
 import DebugScreen from "@/screens/debugScreen";
-import { check } from '@tauri-apps/plugin-updater'
-import { relaunch } from '@tauri-apps/plugin-process'
 import { Confirm } from "@/components/ui/dialogs/confirm";
 import { FriendDetail } from "@/components/ui/dialogs/friendDetail";
 import { ToastContainer } from "react-toastify";
 import { InstanceDetail } from "@/components/ui/dialogs/instanceDetail.tsx";
 import { Login } from "@/components/ui/dialogs/login";
-import { toastError } from "@/components/toast";
 import "@/libs/i18n";
-import {logging} from "@/libs/logging.tsx";
 import { UpdateConfirm } from "@/components/ui/dialogs/updateConfirm";
 import { ThirdPartyLicenses } from "@/components/ui/dialogs/license";
 import { userDataStore } from "./libs/userDataStore";
-import { commands } from "./bindings";
+
+import { useAppUpdates } from "@/libs/useAppUpdates";
 
 export default function App() {
+  const updates = useAppUpdates(true);
   const isDev = import.meta.env.DEV;
 
   useEffect(() => {
-    async function init() {
-      // アップデートチェックの設定を読み込む
-      const autoCheckUpdates = await userDataStore.getAutoCheckUpdates();
-      // 設定が未定義の場合はデフォルトでtrue
-      if (autoCheckUpdates !== false) {
-        try {
-          await logging.info("Check for updates")
-          const update = await check();
-          if (update) {
-            const releaseNote = await commands.getReleaseNote(update.version);
-            const result = await UpdateConfirm.call({
-              version: update.version,
-              releaseNotes: releaseNote.status === "ok" ? JSON.parse(releaseNote.data).body : undefined,
-            });
-            if (result){
-              await update.downloadAndInstall()
-              await relaunch()
-            }
-          } else {
-            await logging.info("No updates available")
-          }
-        } catch (error) {
-          toastError("Update check failed: " + error);
-        }
-      }
-    }
-
     async function loadTheme() {
       const theme = await userDataStore.getTheme();
       if (theme) {
@@ -56,7 +27,6 @@ export default function App() {
       }
     }
     loadTheme();
-    init();
   }, []);
 
   return (
@@ -73,7 +43,7 @@ export default function App() {
         <Router>
           <Routes>
             <Route path="/" element={<FriendScreen/>} />
-            <Route path="/settings" element={<SettingsScreen />} />
+            <Route path="/settings" element={<SettingsScreen updates={updates} />} />
             {isDev && <Route path="/debug" element={<DebugScreen />} />}
           </Routes>
         </Router>

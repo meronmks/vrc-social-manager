@@ -4,17 +4,14 @@ import { commands } from "@/bindings";
 import { useTranslation } from "react-i18next";
 import i18n, { resources } from "@/libs/i18n";
 import { Login } from "@/components/ui/dialogs/login";
-import { check } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/plugin-process';
 import { getVersion } from "@tauri-apps/api/app";
-import { toastError } from "@/components/toast";
 import { ThirdPartyLicenses } from "@/components/ui/dialogs/license";
-import { logging } from "@/libs/logging.tsx";
-import { UpdateConfirm } from "@/components/ui/dialogs/updateConfirm";
 import { userDataStore, UserData } from "@/libs/userDataStore";
 import { FaArrowLeft } from 'react-icons/fa';
 
-export default function SettingsScreen() {
+import type { AppUpdates } from "@/libs/useAppUpdates";
+
+export default function SettingsScreen({ updates }: { updates: AppUpdates }) {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [theme, setTheme] = useState("");
@@ -22,13 +19,14 @@ export default function SettingsScreen() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [fetchFriendsCount, setFetchFriendsCount] = useState(50);
   const { t } = useTranslation();
+  const updateMessage = updates.message || (updates.available
+    ? t("settingScreen.updateAvailable", { version: updates.available.version })
+    : "");
   const supportedLangs = Object.keys(resources);
   const currentLang = i18n.language;
   const [loginUserName, setLoginUserName] = useState("unknown");
   const [currentVersion, setCurrentVersion] = useState("");
-  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [autoCheckUpdates, setAutoCheckUpdates] = useState<boolean | null>(null);
-  const [updateMessage, setUpdateMessage] = useState("");
 
   useEffect(() => {
     async function loadSettings() {
@@ -139,34 +137,6 @@ export default function SettingsScreen() {
   const handleNewAccountLogin = async () => {
     await commands.cookieClear(); // 現在のセッションをクリア
     Login.call({ onLoginSuccess: handleLoginSuccess })
-  };
-
-  const checkForUpdates = async () => {
-    setIsCheckingUpdate(true);
-    setUpdateMessage("");
-    try {
-      await logging.info("Check for updates")
-      const update = await check();
-      if (update) {
-        setUpdateMessage(t("settingScreen.updateAvailable", { version: update.version }));
-        const releaseNote = await commands.getReleaseNote(update.version);
-        const result = await UpdateConfirm.call({
-          version: update.version,
-          releaseNotes: releaseNote.status === "ok" ? JSON.parse(releaseNote.data).body : undefined,
-        });
-        if (result) {
-          await update.downloadAndInstall()
-          await relaunch()
-        }
-      } else {
-        await logging.info("No updates available")
-        setUpdateMessage(t("settingScreen.noUpdatesAvailable"));
-      }
-    } catch (error) {
-      toastError("Update check failed: " + error);
-    } finally {
-      setIsCheckingUpdate(false);
-    }
   };
 
   return (
@@ -304,17 +274,31 @@ export default function SettingsScreen() {
           </div>
         </li>
         <li>
+          <label className="flex justify-between items-center w-full">
+            {t("settingScreen.betaUpdates")}
+            <input
+              className="toggle toggle-primary"
+              type="checkbox"
+              checked={updates.beta === true}
+              disabled={updates.busy || updates.beta === null}
+              aria-describedby="beta-updates-help"
+              onChange={(e) => void updates.changeBeta(e.target.checked)}
+            />
+          </label>
+          <p id="beta-updates-help" className="text-sm">{t("settingScreen.betaUpdatesHelp")}</p>
+        </li>
+        <li>
           <div className="flex justify-between items-center w-full">
             <div className="flex-1">
               <button
                 className="btn btn-sm btn-primary"
-                onClick={checkForUpdates}
-                disabled={isCheckingUpdate}
+                onClick={() => void updates.checkNow()}
+                disabled={updates.busy}
               >
-                {isCheckingUpdate ? t("settingScreen.checkingForUpdates") : t("settingScreen.checkForUpdatesNow")}
+                {updates.busy ? t("settingScreen.checkingForUpdates") : t("settingScreen.checkForUpdatesNow")}
               </button>
               {updateMessage && (
-                <div className="text-sm mt-2">{updateMessage}</div>
+                <div className="text-sm mt-2" role="status">{updateMessage}</div>
               )}
             </div>
           </div>

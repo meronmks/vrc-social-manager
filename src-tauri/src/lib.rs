@@ -7,6 +7,8 @@ use tauri::{Manager, WindowEvent};
 use tauri_plugin_store::StoreExt;
 use keyring::Entry;
 
+#[cfg(desktop)]
+mod beta_updates;
 mod commands;
 mod structs;
 

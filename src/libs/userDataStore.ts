@@ -101,6 +101,15 @@ class UserDataStore {
         await this.store.save();
     }
 
+    async getBetaUpdates(): Promise<boolean> {
+        return (await this.store.get<boolean>("beta-updates")) === true;
+    }
+
+    async setBetaUpdates(enabled: boolean): Promise<void> {
+        await this.store.set("beta-updates", enabled);
+        await this.store.save();
+    }
+
     async setAutoCheckUpdates(autoCheck: boolean): Promise<void> {
         await this.store.set("auto-check-updates", autoCheck);
         await this.store.save();
