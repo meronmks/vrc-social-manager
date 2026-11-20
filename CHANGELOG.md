@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- 設定に「ベータ版の更新を受け取る」を追加。オンにするとベータ版・リリース候補を含む最新版をすぐに確認でき、オフにすると、以降はインストール済みの版より新しい安定版のみが更新対象になります。
+
 ### Changed
 
 ### Deprecated
