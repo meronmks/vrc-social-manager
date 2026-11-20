@@ -8,6 +8,9 @@ sources:
   - ../../package.json
   - ../../scripts/lint.js
   - ../../src-tauri/Cargo.toml
+  - ../../.github/dependabot.yml
+  - ../../.github/mergify.yml
+  - ../../.github/workflows/dependabot-patch.yml
   - ../../.github/workflows/pr-check.yml
   - ../../.github/workflows/bump-version.yml
   - ../../.github/workflows/publish.yml
@@ -105,6 +108,29 @@ Rust の Tauri コマンドは `tauri-specta` から [`src/bindings.ts`](../../s
 根拠: [`.github/workflows/`](../../.github/workflows/)、
 [`src-tauri/tauri.conf.json`](../../src-tauri/tauri.conf.json)、
 [`src/App.tsx`](../../src/App.tsx)
+
+## 依存関係の更新
+
+[Dependabot 設定](../../.github/dependabot.yml)は、npm と Cargo のセキュリティ更新を
+それぞれ `npm-security` と `cargo-security` の PR にまとめます。
+
+通常の更新では、Dependabot が minor または patch と分類し、PR の CI が成功すると、
+[Mergify](../../.github/mergify.yml) が `dep-update` キューに入れます。
+
+[パッチ判定](../../.github/workflows/dependabot-patch.yml)は、コミットに更新種別がない場合も
+Dependabot のメタデータから更新前後のバージョンを確認します。`main` 宛ての npm・Cargo の
+PR では、1 コミットで、メタデータ上の全依存関係がパッチ更新と確認でき、
+`.github/` を変更しない場合にこの判定を自動投入に使います。セキュリティ更新を
+まとめた PR にも同じ条件を適用します。
+
+自動投入するには元の PR の CI がすべて成功している必要があります。キューからマージするには、
+フロントエンド検査、3 OS の Rust 検査、Tauri ビルドの成功が必要です。
+[PR 検査の定義](../../.github/workflows/pr-check.yml)
+
+PR が自動でキューに入らない場合は、PR の **Checks** にある Mergify の **Summary** で
+未達の条件を確認します。自動投入の対象外となったセキュリティ更新は、差分を確認してから
+PR の **Queue this pull request** で投入できます。既存 PR のパッチ判定を実行するには、
+設定が `main` に入った後に Dependabot にリベースを依頼します。
 
 ## 変更時の最小検証
 

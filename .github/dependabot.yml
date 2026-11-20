@@ -7,6 +7,10 @@ updates:
     labels:
       - "dependencies"
       - "npm"
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -21,3 +25,7 @@ updates:
     labels:
       - "dependencies"
       - "cargo"
+    groups:
+      cargo-security:
+        applies-to: security-updates
+        patterns: ["*"]

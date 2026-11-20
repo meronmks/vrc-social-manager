@@ -213,6 +213,14 @@ sources:
 
 - [フレンドUI仕様](friend-ui-spec.md)に、一覧のステータステキストを優先する表示、接続状態の扱い、両タブで使うお気に入りグループ名の取得元を反映。
 
+## [2026-11-19] maintenance | Dependabot のセキュリティ更新のグループ化
+
+- npm と Cargo のセキュリティ更新をそれぞれまとめ、確認後に Mergify の既存キューへ投入する運用を記録。[開発とリリース](development-and-release.md)
+
+## [2026-11-19] maintenance | Dependabot のパッチ更新を判定して自動投入
+
+- 更新種別が省略される PR にもパッチ判定を追加。全対象がパッチと確認できた npm・Cargo の PR を、既存の CI 条件と合わせて Mergify の自動投入対象にした。[開発とリリース](development-and-release.md)
+
 ## [2026-11-20] maintenance | 設定からライセンスを読む画面
 
 - [UI仕様](friend-ui-spec.md)と[AltPenの定義](../../design/friend-home.pen)に一覧と本文の画面を追加し、旧ダイアログを設定のサブ画面に置き換えた。

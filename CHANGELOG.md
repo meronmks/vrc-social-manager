@@ -13,7 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - インスタンス一覧に、同じ場所にいるフレンドが多い順の並べ替えと、グループ主催の場所を絞り込む機能を追加しました。フレンドがいない場所も所属グループから探せます。
 - インスタンス詳細のフレンド名から、その人の詳細やVRChatのWebプロフィールを開けるようにしました。
 - アカウントごとに、自己招待の送信結果や更新エラーをアプリ終了まで読み返せる「最近の通知」を追加しました。
-- 設定からベータ版・RC版の更新を受け取るか選べるようにしました。
 
 ### Changed
 
@@ -22,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - フレンド詳細で現在地を再取得してから、そのインスタンスへの招待を自分に送れます。送信結果を確認できない場合はその旨を表示し、手動で再送できます。
 - フレンドの状態は色で区別し、本人のステータステキストを優先して表示します。お気に入りはVRChatの設定名を使い、標準の枠はゲームと同じ `Group 1` などの表記に揃えました。
 - 設定に現在のバージョンとフレンド一覧の取得件数を表示し、1回の取得件数を変更できるようにしました。サードパーティライセンスは設定内でnpm・Cargoを切り替え、パッケージ名で検索して本文を読めます。
+- ベータ版の更新確認を、リリース公開時に更新される配信用マニフェストを参照する方式に変更しました。GitHub APIのレート制限を受けず、マニフェストを取得できない場合は安定版の確認に切り替わります。
 
 ### Deprecated
 
@@ -38,6 +38,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 配布版から旧認証コマンドと汎用APIテスターを除外し、画面から保存ファイルやアカウント登録を直接書き換える権限を外しました。
 - 旧版が保存したプロフィール全文を起動時に整理し、画面へ返すユーザー情報を表示に必要な項目に絞りました。通信応答やCookie・資格情報ライブラリの診断出力もアプリのログから除外しました。
 - アカウントの切り替えとログアウトで対象IDを照合し、二要素認証コードの入力待ちに10分の期限を設けました。
+
+## [0.11.0] - 2026-11-20
+
+### Added
+- 設定に「ベータ版の更新を受け取る」を追加。オンにするとベータ版・リリース候補を含む最新版をすぐに確認でき、オフにすると、以降はインストール済みの版より新しい安定版のみが更新対象になります。更新確認に失敗した場合は原因をログに記録します。
 
 ## [0.10.2] - 2026-09-20
 
@@ -77,7 +82,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - CI設定の改善（TAURI_BUNDLER_DMG_IGNORE_CI設定追加）
 
-[Unreleased]: https://github.com/meronmks/vrc-social-manager/compare/v0.10.2...HEAD
+[Unreleased]: https://github.com/meronmks/vrc-social-manager/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/meronmks/vrc-social-manager/releases/tag/v0.11.0
 [0.10.2]: https://github.com/meronmks/vrc-social-manager/releases/tag/v0.10.2
 [0.10.0]: https://github.com/meronmks/vrc-social-manager/releases/tag/v0.10.0
 [0.8.1]: https://github.com/meronmks/vrc-social-manager/releases/tag/v0.8.1
