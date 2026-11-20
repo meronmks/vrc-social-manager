@@ -1,443 +1,270 @@
-import { useState, useMemo, useEffect, useRef } from "react";
-import { Input } from "@/components/ui/input";
-import { IoClose } from "react-icons/io5";
-import { Virtuoso } from "react-virtuoso";
-import { commands } from "@/bindings";
-import { getVersion } from "@tauri-apps/api/app";
-import { toastError } from "@/components/toast.tsx";
-import { Friend, Instance } from "@/libs/exportInterfaces.tsx";
-import InstanceView from "@/components/ui/instance.tsx";
-import { useTranslation } from "react-i18next";
-import { Sidebar } from "@/components/ui/Sidebar";
-import {logging} from "@/libs/logging.tsx";
-import { userDataStore } from "@/libs/userDataStore";
+import { useState } from "react";
+import { FiRefreshCw, FiSearch, FiX } from "react-icons/fi";
+import { FriendList } from "@/components/social/friendList";
+import { GroupPicker } from "@/components/social/groupPicker";
+import { InstanceFilters, InstanceList } from "@/components/social/instanceList";
+import { PlaceFriends } from "@/components/social/placeFriends";
+import { SocialDetail } from "@/components/social/socialDetail";
+import {
+  ALL_FRIENDS,
+  favoriteGroupOptions,
+  favoriteIdsIn,
+  groupByPlace,
+  InstanceKind,
+  InstanceScope,
+  SortOrder,
+  viewKeyOf,
+  visibleFriends,
+  visibleLocations,
+} from "@/libs/friendView";
+import { Account, clock, Notify, useText } from "@/libs/social";
+import { useSocialData, viewSources } from "@/libs/useSocialData";
 
-interface FriendListUser {
-  id: string;
-  displayName: string;
-  location: string;
-  status: string;
-  statusDescription?: string;
-  platform?: string;
-  imageUrl?: string;
-  currentAvatarImageUrl?: string;
-  currentAvatarThumbnailImageUrl?: string;
-  userIcon?: string;
-  iconUrl?: string;
-  bio?: string;
-  bioLinks?: string[];
+interface Props {
+  account: Account;
+  /** true ならインスタンス一覧、false ならフレンド一覧を表示する */
+  instances: boolean;
+  notify: Notify;
+  expire: () => void;
 }
 
-const getAvatarUrl = (friend: FriendListUser): string =>
-  friend.iconUrl ||
-  friend.imageUrl ||
-  friend.currentAvatarThumbnailImageUrl ||
-  friend.currentAvatarImageUrl ||
-  friend.userIcon ||
-  "";
+// フレンドとインスタンスのタブ。同じ取得データを共有し、タブを切り替えても検索や選択を保つ。
+export default function FriendScreen({ account, instances, notify, expire }: Props) {
+  const data = useSocialData(account.id, notify, expire);
+  const [query, setQuery] = useState("");
+  const [scope, setScope] = useState<InstanceScope>("all");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("friendCount");
+  const [kind, setKind] = useState<InstanceKind>("all");
+  const [selectedPerson, selectPerson] = useState("");
+  const [instanceSelection, setInstanceSelection] = useState<{ location: string; friendId?: string }>();
+  const t = useText();
 
-export default function FriendScreen() {
-  const isDev = import.meta.env.DEV;
-  const [instancesData, setInstancesData] = useState<Instance[]>([]);
-  const [search, setSearch] = useState("");
-  const [groupFilter, setGroupFilter] = useState<'all' | 'groups' | 'non-groups'>('all');
-  const [userData, setUserData] = useState<any>(null);
-  const [onlineUserCount, setOnlineUserCount] = useState(0);
-  const [offlineUserCount, setOfflineUserCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [appVersion, setAppVersion] = useState("unknown");
-  const { t } = useTranslation();
-  const abortControllerRef = useRef<AbortController>(null);
+  const starred = new Set(data.favorites.map((f) => f.favoriteId));
+  const inGroup = favoriteIdsIn(data.favorites, data.group);
+  const search = query.trim().toLocaleLowerCase();
+  const everyone = Object.values(data.friends);
+  const people = visibleFriends(everyone, search, data.showAll, inGroup);
+  const byPlace = groupByPlace(everyone);
+  const locations = visibleLocations({
+    scope,
+    kind,
+    sortOrder,
+    members: data.members,
+    byPlace,
+    inGroup,
+    placeAt: data.placeAt,
+  });
+  const groups = favoriteGroupOptions(data.groups, account.friendGroupNames);
 
-  // データの保存
-  const saveInstancesData = async (data: Instance[]) => {
-    await userDataStore.setInstancesData(JSON.stringify(data));
-  };
+  const view = viewKeyOf(instances, scope, !!search || data.showAll);
+  const sources = viewSources[view];
+  const failed = sources.some((s) => data.phases[s] === "failed");
+  const busy = sources.some((s) => data.phases[s] === "loading");
+  const checked = data.checked[view];
+  const friendsReady = data.phases.friends === "ready";
 
+  // 詳細パネルの対象。インスタンス一覧ではインスタンス内のフレンドを開いても元の場所に戻れるようにする。
+  const origin = instances ? instanceSelection?.location : undefined;
+  const person = instances
+    ? data.friends[instanceSelection?.friendId ?? ""]
+    : people.find((p) => p.id === selectedPerson);
+  const location = person ? undefined : origin;
+  function clearSelection() {
+    selectPerson("");
+    setInstanceSelection(undefined);
+  }
 
-  // データの復元
-  const restoreInstancesData = async () => {
-    const savedData = await userDataStore.getInstancesData();
-    if (savedData) {
-      setInstancesData(JSON.parse(savedData));
-    }
-  };
-
-
-  // userDataの保存
-  const saveUserData = async (data: any) => {
-    await userDataStore.addOrUpdateUser(data.id, data.displayName, data);
-    await userDataStore.setCurrentUser(data.id);
-  };
-
-  // userDataの復元
-  const restoreUserData = async (): Promise<boolean> => {
-    try {
-      const savedData = await userDataStore.getCurrentUser();
-      if (savedData) {
-        // savedData.userDataが文字列の場合はパース、オブジェクトの場合はそのまま使用
-        const parsedData = typeof savedData.userData === 'string' 
-          ? JSON.parse(savedData.userData) 
-          : savedData.userData;
-        setUserData(parsedData);
-        return true;
-      }
-    } catch (error) {
-      await logging.error(`Failed to restore user data: ${error}`);
-      setUserData(null);
-    }
-    return false;
-  };
-
-  useEffect(() => {
-    async function init() {
-      const version = await getVersion();
-      setAppVersion(version);
-      await restoreInstancesData();
-      const result = await restoreUserData();
-      if (result) {
-        await checkAuthToken();
-      }
-    }
-    async function checkAuthToken() {
-      const res = await commands.verifyAuthToken();
-      if (res.status == "ok") {
-        const currentUser = await commands.getCurrentUserInfo();
-        if (currentUser.status == "ok") {
-          const parsedUserData = JSON.parse(currentUser.data);
-          setUserData(parsedUserData);
-          await saveUserData(parsedUserData);
-        }
-      } else {
-        await userDataStore.removeUser(await userDataStore.getCurrentUserId() || "");
-        setUserData(null);
-        toastError(t(res.error.message));
-      }
-    }
-    init();
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      // コンポーネントのアンマウント時に実行中の処理を中断
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, []);
-
-  // instancesDataが更新されたときに保存
-  useEffect(() => {
-    if (instancesData.length > 0) {
-      saveInstancesData(instancesData);
-    }
-  }, [instancesData]);
-
-
-  const filteredInstances = useMemo(() => {
-    let filtered = instancesData.map((instance) => ({
-      ...instance,
-      friends: instance.friends?.filter((friend) =>
-        friend.name.toLowerCase().includes(search.toLowerCase()) ||
-        instance.name.toLowerCase().includes(search.toLowerCase())
-      ) || [],
-    })).filter(instance => {
-      // friendsがundefinedの場合でも、インスタンス名がマッチすれば表示
-      if (!instance.friends || instance.friends.length === 0) {
-        return instance.name.toLowerCase().includes(search.toLowerCase()) || search === "";
-      }
-      return instance.friends.length > 0;
-    });
-
-    // グループフィルターの適用
-    if (groupFilter === 'groups') {
-      filtered = filtered.filter(instance => 
-        instance.worldId.startsWith('group_') || 
-        instance.id.includes('group') ||
-        instance.name.toLowerCase().includes('group') ||
-        instance.friends?.some(f => f.id.startsWith('group_'))
-      );
-    } else if (groupFilter === 'non-groups') {
-      filtered = filtered.filter(instance => 
-        !instance.worldId.startsWith('group_') && 
-        !instance.id.includes('group') &&
-        !instance.name.toLowerCase().includes('group') &&
-        !instance.friends?.some(f => f.id.startsWith('group_'))
-      );
-    }
-
-    return filtered
-      .sort((a, b) => {
-        // APIでオンラインユーザだけ取得を試みてもofflineで帰ってくるやつらがいる（Webだけ見てるとかの判定用と思われる）
-        if (a.id.toLowerCase() === "offline") return 1;
-        if (b.id.toLowerCase() === "offline") return -1;
-
-        if (a.id.toLowerCase() === "web_or_mobile") return 1;
-        if (b.id.toLowerCase() === "web_or_mobile") return -1;
-
-        if (a.id.toLowerCase() === "private") return 1;
-        if (b.id.toLowerCase() === "private") return -1;
-
-        if (a.id.toLowerCase() === "traveling") return 1;
-        if (b.id.toLowerCase() === "traveling") return -1;
-
-        const aRealFriendsCount = a.friends?.length || 0;
-        const bRealFriendsCount = b.friends?.length || 0;
-        return bRealFriendsCount - aRealFriendsCount;
-      });
-  }, [search, instancesData, onlineUserCount, groupFilter]);
-
-  const load = async () => {
-    // 既存の処理が実行中の場合は中断
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    abortControllerRef.current = new AbortController();
-    const signal = abortControllerRef.current.signal;
-
-    setInstancesData([]);
-    setOnlineUserCount(0);
-    setOfflineUserCount(0);
-    setIsLoading(true);
-
-    try {
-      let getMaxCount = await userDataStore.getFetchFriendsCount();
-      if (!getMaxCount) {
-        getMaxCount = 50;
-      }
-
-      // グループインスタンスの取得
-      try {
-        const groupInstances = await commands.getUserGroupInstances();
-        if (groupInstances.status === "ok") {
-          await loadGroupInstances(groupInstances.data);
-        } else {
-          await logging.error(`Error fetching group instances: ${groupInstances.error}`);
-        }
-      } catch (error) {
-        await logging.error(`Error fetching group instances: ${error}`);
-      }
-
-      // オンラインユーザーの取得
-      let onlineOffset = 0;
-      for (let i: number = 0; ; i++) {
-        if (signal.aborted) {
-          return;
-        }
-
-        const friends = await commands.getCurrentUserFriends(onlineOffset, getMaxCount, false);
-        if (friends.status == "ok") {
-          await loadInstances(friends.data);
-          const friendNum: number = JSON.parse(friends.data).length;
-
-          setOnlineUserCount((prev) => prev + friendNum);
-          onlineOffset += friendNum;
-          // ページングが絶妙に壊れてる？仕様？なのか完全に0が返ってくるまで続きのページが存在する可能性がある
-          if (friendNum === 0) break;
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        } else {
-          await logging.error(`Error fetching online friends:${friends.error}`);
-          break;
-        }
-      }
-
-      // オフラインユーザーの取得
-      let offlineOffset = 0;
-      for (let i: number = 0; ; i++) {
-        if (signal.aborted) {
-          return;
-        }
-
-        const friends = await commands.getCurrentUserFriends(offlineOffset, getMaxCount, true);
-        if (friends.status == "ok") {
-          await loadInstances(friends.data);
-          const friendNum: number = JSON.parse(friends.data).length;
-
-          setOfflineUserCount((prev) => prev + friendNum);
-          offlineOffset += friendNum;
-          // ページングが絶妙に壊れてる？仕様？なのか完全に0が返ってくるまで続きのページが存在する可能性がある
-          if (friendNum === 0) break;
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        } else {
-          await logging.error(`Error fetching offline friends:${friends.error}`);
-          break;
-        }
-      }
-    } catch (error) {
-      if (!signal.aborted) {
-        await logging.error(`Error loading data:${error}`);
-      }
-    } finally {
-      if (!signal.aborted) {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  const loadInstances = async (data: string) => {
-    const friendList = JSON.parse(data) as FriendListUser[];
-
-    const newInstances = await Promise.all(friendList.map(async (friend) => {
-      let instanceId = friend.location;
-      const splitW = instanceId.split(":");
-      let worldId = splitW[0];
-      const instanceDetail = splitW[1] || "";
-
-      if (worldId === "offline" && friend.status !== "offline") {
-        instanceId = "web_or_mobile";
-        worldId = "web_or_mobile";
-      }
-
-      const worldRes = await commands.getWorldById(worldId);
-      let worldName = worldId;
-      let worldThumbnail = "";
-
-      if (worldRes.status === "ok") {
-        const worldJson = JSON.parse(worldRes.data);
-        worldName = worldJson.name;
-        worldThumbnail = worldJson.thumbnailImageUrl;
-      }
-
-      return {
-        id: instanceId,
-        worldId,
-        instanceId: instanceDetail,
-        name: worldName,
-        thumbnail: worldThumbnail,
-        friends: [{
-          id: friend.id,
-          name: friend.displayName,
-          avatar: getAvatarUrl(friend),
-          status: friend.status,
-          location: friend.location,
-          bio: friend.bio ?? "",
-          statusDescription: friend.statusDescription,
-          platform: friend.platform,
-          bioLinks: friend.bioLinks ?? [],
-        }],
-      };
-    }));
-
-    setInstancesData((prev) => {
-      const updatedInstances = [...prev];
-
-      newInstances.forEach((newInstance) => {
-        let existingInstance = updatedInstances.find(i => i.id === newInstance.id);
-
-        if (existingInstance) {
-          newInstance.friends?.forEach((newFriend: Friend) => {
-            if (!existingInstance!.friends?.some(f => f.id === newFriend.id)) {
-              existingInstance!.friends = existingInstance!.friends || [];
-              existingInstance!.friends.push(newFriend);
-            }
-          });
-        } else {
-          updatedInstances.push(newInstance);
-        }
-      });
-
-      return updatedInstances;
-    });
-  };
-
-  const loadGroupInstances = async (data: string) => {
-    try {
-      const groupResponse = JSON.parse(data);
-      const instances = groupResponse.instances || [];
-      
-      const groupInstances: Instance[] = instances.map((instance: any) => ({
-        id: instance.id,
-        worldId: instance.worldId,
-        instanceId: instance.instanceId,
-        name: instance.world?.name || instance.name || t('groupInstance.unknownWorld'),
-        thumbnail: instance.world?.thumbnailImageUrl || "",
-      }));
-      
-      setInstancesData(prev => [...prev, ...groupInstances]);
-    } catch (error) {
-      await logging.error(`Error parsing group instances: ${error}`);
-    }
-  };
+  const groupPicker = (
+    <GroupPicker
+      groups={groups}
+      allowAll={!instances}
+      label={instances ? t("お気に入りグループ", "Favorite group") : t("フレンドの表示範囲", "Friend filter")}
+      value={!instances && data.showAll ? ALL_FRIENDS : data.group}
+      onChange={(value) => {
+        const all = value === ALL_FRIENDS;
+        if (!instances) data.chooseFriendScope(all);
+        if (!all) data.choose(value);
+        clearSelection();
+      }}
+    />
+  );
 
   return (
-    <div className="flex min-h-screen bg-base-300">
-      <Sidebar 
-        userData={userData}
-        onlineUserCount={onlineUserCount}
-        offlineUserCount={offlineUserCount}
-        appVersion={appVersion}
-        load={load}
-        isDev={isDev}
-        isLoading={isLoading}
-      />
-
-      {/* Main Content */}
-      <div className="flex-1 p-4 flex flex-col h-screen overflow-hidden">
-        {/* Search Bar and Filters */}
-        <div className="space-y-4 mb-4">
-          {/* Search Bar */}
-          <div className="relative w-full">
-            <Input
-              className="w-full pr-10"
-              placeholder={t("searchPlaceholder")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {search && (
-              <button
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-secondary-content cursor-pointer p-1 rounded-full hover:bg-secondary transition-colors"
-                onClick={() => setSearch("")}
-              >
-                <IoClose size={20} />
-              </button>
-            )}
-          </div>
-          
-          {/* Group Filter */}
-          <div className="flex gap-2">
-            <button
-              className={`px-3 py-1 rounded-md transition-colors ${
-                groupFilter === 'all' 
-                  ? 'bg-primary text-primary-content' 
-                  : 'bg-base-200 hover:bg-base-300'
-              }`}
-              onClick={() => setGroupFilter('all')}
-            >
-              {t('filter.all', '全て')}
-            </button>
-            <button
-              className={`px-3 py-1 rounded-md transition-colors ${
-                groupFilter === 'groups' 
-                  ? 'bg-primary text-primary-content' 
-                  : 'bg-base-200 hover:bg-base-300'
-              }`}
-              onClick={() => setGroupFilter('groups')}
-            >
-              {t('filter.groups', 'グループ')}
-            </button>
-            <button
-              className={`px-3 py-1 rounded-md transition-colors ${
-                groupFilter === 'non-groups' 
-                  ? 'bg-primary text-primary-content' 
-                  : 'bg-base-200 hover:bg-base-300'
-              }`}
-              onClick={() => setGroupFilter('non-groups')}
-            >
-              {t('filter.nonGroups', '非グループ')}
-            </button>
-          </div>
+    <div className={"social-columns" + (person || location ? " with-selection" : "")}>
+      <section className="social-list">
+        <h1>
+          {instances
+            ? t("インスタンス", "Instances")
+            : search
+              ? t("フレンド検索", "Friend search")
+              : t("フレンド", "Friends")}
+        </h1>
+        <div className="list-tools">
+          <small>
+            {t("最終確認", "Last checked")}　{checked ? clock(checked) : "—"}
+          </small>
+          <button className="quiet-action" onClick={data.refresh} disabled={busy && !failed}>
+            <FiRefreshCw />
+            {t("更新", "Refresh")}
+          </button>
         </div>
-        {/* Friend List by Instance */}
-        <div className="flex-1 overflow-y-auto">
-          <Virtuoso
-            totalCount={filteredInstances.length}
-            itemContent={(index) => (
-              <InstanceView instance={filteredInstances[index]} />
-            )}
+        {instances ? (
+          <InstanceFilters
+            scope={scope}
+            kind={kind}
+            groupLabel={groups.find((g) => g.name === data.group)?.label}
+            groupPicker={groupPicker}
+            onScope={(value) => {
+              setScope(value);
+              setInstanceSelection(undefined);
+            }}
+            onKind={(value) => {
+              setKind(value);
+              setInstanceSelection(undefined);
+            }}
           />
-        </div>
-      </div>
+        ) : (
+          <>
+            <SearchBox
+              query={query}
+              onChange={(value) => {
+                setQuery(value);
+                selectPerson("");
+              }}
+            />
+            {!search && groupPicker}
+          </>
+        )}
+        <ListStatus
+          busy={busy}
+          failed={failed}
+          checked={checked}
+          message={
+            instances
+              ? t("一覧を更新できませんでした", "Could not refresh the list")
+              : search || data.showAll
+                ? t("一部のフレンドを取得できませんでした", "Some friends could not be loaded")
+                : !checked
+                  ? t("お気に入りを取得できませんでした", "Could not load favorites")
+                  : t("一覧を更新できませんでした", "Could not refresh the list")
+          }
+          loading={
+            instances ? t("インスタンスを取得中…", "Loading instances…") : t("フレンド一覧を取得中…", "Loading friends…")
+          }
+          retry={data.refresh}
+        />
+        {instances ? (
+          <InstanceList
+            locations={locations}
+            byPlace={byPlace}
+            placeAt={data.placeAt}
+            account={account.id}
+            starred={starred}
+            friendsReady={friendsReady}
+            busy={busy}
+            failed={failed}
+            sortOrder={sortOrder}
+            onSort={setSortOrder}
+            selected={origin}
+            onSelect={(l) => setInstanceSelection({ location: l })}
+          />
+        ) : (
+          <FriendList
+            people={people}
+            account={account.id}
+            query={query}
+            showAll={data.showAll}
+            groupSize={inGroup.size}
+            starred={starred}
+            busy={busy}
+            failed={failed}
+            selected={selectedPerson}
+            onSelect={selectPerson}
+            placeAt={data.placeAt}
+          />
+        )}
+      </section>
+      {person || location ? (
+        <SocialDetail
+          key={person?.id ?? location}
+          account={account}
+          person={person}
+          location={location}
+          instanceFriends={
+            location ? (
+              <PlaceFriends
+                friends={byPlace.get(location)}
+                account={account.id}
+                starred={starred}
+                friendsReady={friendsReady}
+                onSelect={(friendId) => setInstanceSelection({ location, friendId })}
+              />
+            ) : undefined
+          }
+          backToInstance={person && origin ? () => setInstanceSelection({ location: origin }) : undefined}
+          placeAt={data.placeAt}
+          starred={!!person && starred.has(person.id)}
+          onPerson={data.applyFriend}
+          onPlace={data.updatePlace}
+          notify={notify}
+          expire={expire}
+          close={clearSelection}
+        />
+      ) : (
+        <aside className="social-detail blank-detail">
+          {instances ? t("インスタンスを選択", "Select an instance") : t("フレンドを選択", "Select a friend")}
+        </aside>
+      )}
+    </div>
+  );
+}
+
+// 全フレンドを名前で探す検索欄。
+function SearchBox({ query, onChange }: { query: string; onChange: (query: string) => void }) {
+  const t = useText();
+  return (
+    <label className="search-box">
+      <FiSearch />
+      <input
+        aria-label={t("全フレンドから名前で検索", "Search all friends by name")}
+        placeholder={t("全フレンドから名前で検索", "Search all friends by name")}
+        value={query}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {query && (
+        <button aria-label={t("検索をクリア", "Clear search")} onClick={() => onChange("")}>
+          <FiX />
+        </button>
+      )}
+    </label>
+  );
+}
+
+// 取得中・取得失敗の帯。失敗時は最後に確認できた時刻と再試行ボタンを出す。
+function ListStatus(props: {
+  busy: boolean;
+  failed: boolean;
+  checked?: number;
+  message: string;
+  loading: string;
+  retry: () => void;
+}) {
+  const t = useText();
+  if (!props.busy && !props.failed) return null;
+  return (
+    <div className={props.failed ? "list-state warn" : "list-state"} role="status">
+      {props.failed ? (
+        <>
+          {props.message}
+          {props.checked ? " · " + clock(props.checked) + t("時点", " as of last check") : ""}{" "}
+          <button onClick={props.retry}>{t("再試行", "Retry")}</button>
+        </>
+      ) : (
+        <>
+          <span className="loading loading-spinner loading-xs" />
+          {props.loading}
+        </>
+      )}
     </div>
   );
 }

@@ -1,282 +1,143 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
-import { commands } from "@/bindings";
-import { useTranslation } from "react-i18next";
-import i18n, { resources } from "@/libs/i18n";
-import { Login } from "@/components/ui/dialogs/login";
+import { useEffect, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
-import { ThirdPartyLicenses } from "@/components/ui/dialogs/license";
-import { userDataStore, UserData } from "@/libs/userDataStore";
-import { FaArrowLeft } from 'react-icons/fa';
+import { useTranslation } from "react-i18next";
 import type { AppUpdates } from "@/libs/useAppUpdates";
+import { useNavigate } from "react-router";
+import { Account, useText } from "@/libs/social";
+import { userDataStore } from "@/libs/userDataStore";
+import i18n from "@/libs/i18n";
 
-export default function SettingsScreen({ updates }: { updates: AppUpdates }) {
+interface Props {
+  account: Account;
+  logout: () => void;
+  updates: AppUpdates;
+}
+export default function SettingsScreen({ account, logout, updates }: Props) {
+  const [theme, setTheme] = useState("light");
+  const [auto, setAuto] = useState(true);
+  const [count, setCount] = useState("50");
+  const [version, setVersion] = useState("");
+  const [invalid, setInvalid] = useState(false);
+  const [error, setError] = useState(false);
+  const [ready, setReady] = useState(false);
+  const t = useText();
+  const { t: translate } = useTranslation();
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [theme, setTheme] = useState("");
-  const [users, setUsers] = useState<UserData[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [fetchFriendsCount, setFetchFriendsCount] = useState(50);
-  const { t } = useTranslation();
-  const updateMessage = updates.message || (updates.available
-    ? t("settingScreen.updateAvailable", { version: updates.available.version })
-    : "");
-  const supportedLangs = Object.keys(resources);
-  const currentLang = i18n.language;
-  const [loginUserName, setLoginUserName] = useState("unknown");
-  const [currentVersion, setCurrentVersion] = useState("");
-  const [autoCheckUpdates, setAutoCheckUpdates] = useState<boolean | null>(null);
-
   useEffect(() => {
-    async function loadSettings() {
-      const dataTheme = await userDataStore.getTheme();
-      if (dataTheme) {
-        setTheme(dataTheme);
-      }
-
-      const ffc = await userDataStore.getFetchFriendsCount();
-      if (ffc) {
-        setFetchFriendsCount(ffc);
-      }
-
-      // 自動アップデートの設定を読み込む
-      const autoUpdate = await userDataStore.getAutoCheckUpdates();
-      setAutoCheckUpdates(autoUpdate ?? true);
-
-      // ユーザーデータの読み込み
-      const savedUsers = await userDataStore.getUsers();
-      setUsers(savedUsers);
-
-      const currentId = await userDataStore.getCurrentUserId();
-      if (currentId) {
-        setCurrentUserId(currentId);
-      }
-
-      const res = await commands.verifyAuthToken();
-      if (res.status == "ok") {
-        setIsLoggedIn(res.data);
-        getLoginUserName();
-      } else {
-        logout();
-      }
-
-      const version = await getVersion();
-      setCurrentVersion(version);
-    }
-    loadSettings();
+    let live = true;
+    Promise.all([
+      userDataStore.getTheme(),
+      userDataStore.getAutoCheckUpdates(),
+      userDataStore.getFetchFriendsCount(),
+      getVersion(),
+    ])
+      .then(([v, a, c, version]) => {
+        if (live) {
+          setTheme(v);
+          setAuto(a);
+          setCount(String(c));
+          setVersion(version);
+          setReady(true);
+        }
+      })
+      .catch(() => setError(true));
+    return () => {
+      live = false;
+    };
   }, []);
-
-  useEffect(() => {
-    if (theme == "") return;
-    userDataStore.setTheme(theme);
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
-
-  useEffect(() => {
-    if (autoCheckUpdates === null) return;
-    userDataStore.setAutoCheckUpdates(autoCheckUpdates);
-  }, [autoCheckUpdates]);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
-  };
-
-  const logout = async () => {
-    setIsLoggedIn(false);
-    await commands.cookieClear();
-
-    if (currentUserId) {
-      await userDataStore.removeUser(currentUserId);
-      setUsers(await userDataStore.getUsers());
-    }
-
-    setCurrentUserId(null);
-  };
-
-  const switchUser = async (userId: string) => {
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
-
-    await commands.cookieClear();
-    await commands.switchUser(userId);
-
-    await userDataStore.setCurrentUser(userId);
-    setCurrentUserId(userId);
-
-    setLoginUserName(user.displayName);
-    setIsLoggedIn(true);
-  };
-
-  const langChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selected = e.target.value;
-    i18n.changeLanguage(selected);
-    userDataStore.setLanguage(selected);
-  }
-
-  const getLoginUserName = async () => {
-    const res = await commands.getCurrentUserInfo();
-    if (res.status == "ok") {
-      const jsonData = JSON.parse(res.data);
-      setLoginUserName(jsonData.displayName);
-
-      await userDataStore.addOrUpdateUser(jsonData.id, jsonData.displayName, res.data);
-      const updatedUsers = await userDataStore.getUsers();
-      setUsers(updatedUsers);
-
-      await userDataStore.setCurrentUser(jsonData.id);
-      setCurrentUserId(jsonData.id);
+  async function save(fn: () => Promise<unknown>) {
+    try {
+      await fn();
+      setError(false);
+    } catch {
+      setError(true);
     }
   }
-
-  const handleLoginSuccess = () => {
-    setIsLoggedIn(true);
-    getLoginUserName();
-  };
-
-  const handleNewAccountLogin = async () => {
-    await commands.cookieClear(); // 現在のセッションをクリア
-    Login.call({ onLoginSuccess: handleLoginSuccess })
-  };
-
+  function saveCount() {
+    const n = Number(count);
+    if (!/^\d+$/.test(count) || !Number.isInteger(n) || n < 1 || n > 100) {
+      setInvalid(true);
+      return;
+    }
+    setInvalid(false);
+    void save(() => userDataStore.setFetchFriendsCount(n));
+  }
   return (
-    <div className="flex flex-col h-screen bg-base-200">
-      {/* ヘッダー: 戻るボタン + タイトル（常に上部に固定） */}
-      <div className="sticky top-0 z-10 flex items-center gap-4 p-4 bg-base-200/80 backdrop-blur-sm border-b border-base-300">
-        <button
-          className="btn btn-sm btn-ghost bg-base-300 gap-2"
-          onClick={() => navigate("/")}
-        >
-          <FaArrowLeft className="w-4 h-4" />
-          {t("settingScreen.backToHome")}
-        </button>
-        <h1 className="text-xl font-semibold">{t("settings")}</h1>
-      </div>
-
-      {/* スクロール可能なコンテンツエリア */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <h2 className="text-md font-semibold mb-4">{t("settingScreen.generalSettings")}</h2>
-      <ul className="menu bg-base-100 p-2 rounded-box shadow-md w-full">
-        <li>
-          <div className="flex justify-between items-center w-full">
-            <span>{t("language.title")}</span>
-            <select value={currentLang} onChange={langChange} className="select select-bordered">
-              {supportedLangs.map((lng) => (
-                <option key={lng} value={lng}>
-                  {t(`language.${lng}`, lng)}
-                </option>
-              ))}
-            </select>
-          </div>
-        </li>
-        <li>
-          <div className="flex justify-between items-center w-full">
-            <span>{t("settingScreen.theme")}</span>
-            <button className="btn btn-sm" onClick={toggleTheme}>{t("settingScreen.switchTheme", { theme: theme === "light" ? "Dark" : "Light" })}</button>
-          </div>
-        </li>
-        <li>
-          <div className="flex justify-between items-center w-full">
-            <span>{t("settingScreen.fetchFriendsCount")}</span>
-            <input
-              type="number"
-              min="1"
-              max="100"
-              className="input input-bordered mt-2"
-              placeholder="1-100"
-              value={fetchFriendsCount}
+    <section className="settings-page">
+      <h1>{t("設定", "Settings")}</h1>
+      {error && <p role="alert">{t("設定を読み書きできませんでした", "Could not read or save settings")}</p>}
+      <fieldset disabled={!ready}>
+        <h3>{t("表示", "Display")}</h3>
+        <div className="settings-box">
+          <label>
+            {t("表示言語", "Language")}
+            <select
+              value={i18n.language.startsWith("en") ? "en" : "ja"}
               onChange={(e) => {
-                const value = Number(e.target.value);
-                setFetchFriendsCount(value);
-                userDataStore.setFetchFriendsCount(value);
+                const lang = e.target.value;
+                void save(async () => {
+                  await userDataStore.setLanguage(lang);
+                  await i18n.changeLanguage(lang);
+                });
+              }}
+            >
+              <option value="ja">日本語</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <div>
+            {t("テーマ", "Theme")}
+            <span className="segmented">
+              {["light", "dark"].map((v) => (
+                <button
+                  key={v}
+                  aria-pressed={theme === v}
+                  onClick={() =>
+                    void save(async () => {
+                      await userDataStore.setTheme(v);
+                      setTheme(v);
+                      document.documentElement.dataset.theme = v;
+                    })
+                  }
+                >
+                  {v === "light" ? t("ライト", "Light") : t("ダーク", "Dark")}
+                </button>
+              ))}
+            </span>
+          </div>
+        </div>
+        <h3>{t("アカウント", "Account")}</h3>
+        <div className="settings-box">
+          <div>
+            <span>
+              {t("使用中", "Active")}　<strong>{account.displayName}</strong>
+            </span>
+            <button className="quiet-action" onClick={logout}>
+              {t("ログアウト", "Log out")}
+            </button>
+          </div>
+        </div>
+        <h3>{t("アプリの更新", "App updates")}</h3>
+        <div className="settings-box">
+          <label>
+            {t("起動時にアプリの更新を確認", "Check for updates on startup")}
+            <input
+              className="toggle"
+              type="checkbox"
+              checked={auto}
+              onChange={(e) => {
+                const v = e.target.checked;
+                void save(async () => {
+                  await userDataStore.setAutoCheckUpdates(v);
+                  setAuto(v);
+                });
               }}
             />
-          </div>
-        </li>
-      </ul>
-
-      <h2 className="text-md font-semibold my-4">{t("settingScreen.accountSettings")}</h2>
-      <ul className="menu bg-base-100 p-2 rounded-box shadow-md w-full">
-        <li>
-          {isLoggedIn ? (
-            <div className="flex flex-col w-full gap-2">
-              <div className="flex justify-between items-center w-full">
-                <span>{t("settingScreen.loggedIn", { user: loginUserName })}</span>
-                <div className="flex gap-2">
-                  <button className="btn btn-sm btn-primary" onClick={handleNewAccountLogin}>
-                    {t("settingScreen.addAccount")}
-                  </button>
-                  <button className="btn btn-sm btn-error" onClick={() => logout()}>
-                    {t("settingScreen.logout")}
-                  </button>
-                </div>
-              </div>
-              {users.length > 1 && (
-                <div className="flex justify-between items-center w-full">
-                  <span>{t("settingScreen.switchToAccount")}</span>
-                  <select
-                      className="select select-bordered"
-                      value={currentUserId ?? ""}
-                      onChange={(e) => switchUser(e.target.value)}
-                    >
-                      {users.map(user => (
-                        <option key={user.id} value={user.id}>
-                          {user.displayName}
-                        </option>
-                      ))}
-                    </select>
-                </div>
-              )}
-            </div>) : (
-            <div className="flex flex-col w-full gap-2">
-              <div className="flex justify-between items-center w-full">
-                <span>{t("settingScreen.loggedOut")}</span>
-                <button className="btn btn-sm btn-primary" onClick={handleNewAccountLogin}>{t("settingScreen.login")}</button>
-              </div>
-              {users.length > 0 && (
-                <div className="flex justify-between items-center w-full">
-                  <span>{t("settingScreen.switchToAccount")}</span>
-                  <select
-                      className="select select-bordered"
-                      value=""
-                      onChange={(e) => switchUser(e.target.value)}
-                    >
-                      <option value="" disabled>{t("settingScreen.selectAccount")}</option>
-                      {users.map(user => (
-                        <option key={user.id} value={user.id}>
-                          {user.displayName}
-                        </option>
-                      ))}
-                    </select>
-                </div>
-              )}
-            </div>
-          )}
-        </li>
-      </ul>
-
-      <h2 className="text-md font-semibold my-4">{t("settingScreen.updateSettings")}</h2>
-      <ul className="menu bg-base-100 p-2 rounded-box shadow-md w-full">
-        <li>
-          <div className="flex justify-between items-center w-full">
-            <span>{t("settingScreen.currentVersion", { version: currentVersion })}</span>
-          </div>
-        </li>
-        <li>
-          <div className="flex justify-between items-center w-full">
-            <span>{t("settingScreen.autoCheckUpdates")}</span>
+          </label>
+          <label>
+            {translate("settingScreen.betaUpdates")}
             <input
-              type="checkbox"
-              className="toggle toggle-primary"
-              checked={autoCheckUpdates ?? true}
-              onChange={(e) => setAutoCheckUpdates(e.target.checked)}
-            />
-          </div>
-        </li>
-        <li>
-          <label className="flex justify-between items-center w-full">
-            {t("settingScreen.betaUpdates")}
-            <input
-              className="toggle toggle-primary"
+              className="toggle"
               type="checkbox"
               checked={updates.beta === true}
               disabled={updates.busy || updates.beta === null}
@@ -284,41 +145,55 @@ export default function SettingsScreen({ updates }: { updates: AppUpdates }) {
               onChange={(e) => void updates.changeBeta(e.target.checked)}
             />
           </label>
-          <p id="beta-updates-help" className="text-sm">{t("settingScreen.betaUpdatesHelp")}</p>
-        </li>
-        <li>
-          <div className="flex justify-between items-center w-full">
-            <div className="flex-1">
-              <button
-                className="btn btn-sm btn-primary"
-                onClick={() => void updates.checkNow()}
-                disabled={updates.busy}
-              >
-                {updates.busy ? t("settingScreen.checkingForUpdates") : t("settingScreen.checkForUpdatesNow")}
-              </button>
-              {updateMessage && (
-                <div className="text-sm mt-2" role="status">{updateMessage}</div>
-              )}
-            </div>
-          </div>
-        </li>
-      </ul>
-
-      <h2 className="text-md font-semibold my-4">{t("settingScreen.thirdPartyLicenses")}</h2>
-      <ul className="menu bg-base-100 p-2 rounded-box shadow-md w-full">
-        <li>
-          <div className="flex justify-between items-center w-full">
-            <span>{t("settingScreen.viewOpenSourceLicenses")}</span>
-            <button
-              className="btn btn-sm btn-primary"
-              onClick={() => ThirdPartyLicenses.call({})}
-            >
-              {t("settingScreen.viewLicenses")}
+          <p id="beta-updates-help">{translate("settingScreen.betaUpdatesHelp")}</p>
+          <div>
+            <span>
+              {t("現在のバージョン", "Current version")}　{version}
+            </span>
+            <button className="quiet-action" disabled={updates.busy} onClick={() => void updates.checkNow()}>
+              {updates.busy ? t("確認中…", "Checking…") : t("今すぐ確認", "Check now")}
             </button>
           </div>
-        </li>
-      </ul>
-      </div>
-    </div>
+          {updates.message && <p role="status">{updates.message}</p>}
+        </div>
+        <h3>{t("詳細設定", "Advanced")}</h3>
+        <details className="settings-box">
+          <summary>{t("フレンド一覧の取得設定", "Friend list settings")}</summary>
+          <label>
+            {t("1回の通信で取得するフレンド数", "Friends per request")}
+            <input
+              type="number"
+              min={1}
+              max={100}
+              step={1}
+              value={count}
+              aria-invalid={invalid}
+              onChange={(e) => {
+                setCount(e.target.value);
+                setInvalid(false);
+              }}
+              onBlur={saveCount}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+              }}
+            />
+          </label>
+          <p className={invalid ? "form-error" : ""}>
+            {invalid
+              ? t("1〜100の整数を入力してください", "Enter a whole number from 1 to 100")
+              : t(
+                  "1〜100人で指定できます。次回の一覧取得から適用します。",
+                  "Enter 1–100. Applies to the next refresh.",
+                )}
+          </p>
+        </details>
+        <h3>{t("このアプリについて", "About")}</h3>
+        <div className="settings-box">
+          <button onClick={() => navigate("/settings/licenses", { state: { fromSettings: true } })}>
+            {t("サードパーティライセンス", "Third-party licenses")}　›
+          </button>
+        </div>
+      </fieldset>
+    </section>
   );
 }

@@ -5,9 +5,76 @@
 
 
 export const commands = {
-async checkBetaUpdate() : Promise<Result<BetaUpdate | null, string>> {
+async checkAppUpdate() : Promise<Result<AppUpdate | null, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("check_beta_update") };
+    return { status: "ok", data: await TAURI_INVOKE("check_app_update") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async installAppUpdate() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("install_app_update") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async settingsGet(setting: Preference) : Promise<Result<JsonValue, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("settings_get", { setting }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async settingsSet(setting: Preference, value: JsonValue) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("settings_set", { setting, value }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async socialSwitch(id: string) : Promise<Result<JsonValue, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("social_switch", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async socialLogin(target: string | null, loginId: string, password: string) : Promise<Result<JsonValue, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("social_login", { target, loginId, password }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async socialOtp(code: string) : Promise<Result<JsonValue, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("social_otp", { code }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async socialCancel() : Promise<void> {
+    await TAURI_INVOKE("social_cancel");
+},
+async socialLogout(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("social_logout", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async socialRequest(account: string, resource: Resource) : Promise<Result<JsonValue, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("social_request", { account, resource }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -176,9 +243,11 @@ async getFavoritesUserInstances(offset: number, n: number) : Promise<Result<stri
 /** user-defined types **/
 
 export type ApiResponse = { status: string; data: string }
-export type BetaUpdate = { rid: number; currentVersion: string; version: string; body: string | null; rawJson: Partial<{ [key in string]: JsonValue }> }
+export type AppUpdate = { currentVersion: string; version: string; notes: string | null }
 export type DebugApiRequest = { method: string; endpoint: string; data?: string | null }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
+export type Preference = { kind: "theme" } | { kind: "language" } | { kind: "fetchFriendsCount" } | { kind: "autoCheckUpdates" } | { kind: "betaUpdates" } | { kind: "showAllFriends"; account: string } | { kind: "favoriteGroup"; account: string } | { kind: "accounts" } | { kind: "currentAccount" }
+export type Resource = { kind: "friends"; offset: number; n: number; offline: boolean } | { kind: "groups" } | { kind: "icon"; url: string } | { kind: "favorites"; offset: number } | { kind: "memberInstances" } | { kind: "friend"; id: string } | { kind: "profile"; id: string } | { kind: "world"; id: string } | { kind: "group"; id: string } | { kind: "instance"; location: string } | { kind: "invite"; location: string }
 export type RustError = { type: "Unrecoverable"; message: string }
 
 /** tauri-specta globals **/

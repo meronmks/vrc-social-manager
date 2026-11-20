@@ -1,53 +1,79 @@
-use crate::structs::{ApiResponse, AppState, Favorite, User, World};
+use crate::structs::ApiResponse;
+#[cfg(dev)]
+use crate::structs::{AppState, Favorite, User, World};
+#[cfg(dev)]
 use crate::{load_cookies, save_cookies, CLIENT, COOKIE_STORE};
-use log::{debug, error, trace};
+use log::debug;
+#[cfg(dev)]
+use log::{error, trace};
+#[cfg(dev)]
 use once_cell::sync::Lazy;
+#[cfg(dev)]
 use reqwest::Response;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+#[cfg(dev)]
+use serde::Deserialize;
+#[cfg(dev)]
 use serde_json::json;
 use std::fmt::Display;
+#[cfg(dev)]
 use std::sync::Arc;
+#[cfg(dev)]
 use std::time;
 use tauri::ipc::Invoke;
 use tauri::path::BaseDirectory;
 use tauri::{generate_handler, Manager};
+#[cfg(dev)]
 use tokio::sync::RwLock;
 
+#[cfg(dev)]
 const VRCHAT_API_BASE_URL: &str = "https://api.vrchat.cloud/api";
 
 pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
     generate_handler![
         #[cfg(desktop)]
-        crate::beta_updates::check_beta_update,
-        login,
-        email_otp,
-        two_factor_auth,
-        verify_auth_token,
-        cookie_clear,
-        get_current_user_info,
-        get_current_user_friends,
-        get_world_by_id,
-        get_raw_world_by_id,
-        get_instance,
-        get_user_by_id,
-        get_user_profile_by_id,
-        invite_myself_to_instance,
+        crate::updates::check_app_update,
+        #[cfg(desktop)]
+        crate::updates::install_app_update,
+        crate::preferences::settings_get,
+        crate::preferences::settings_set,
+        crate::social::social_switch,
+        crate::social::social_login,
+        crate::social::social_otp,
+        crate::social::social_cancel,
+        crate::social::social_logout,
+        crate::social::social_request,
         get_licenses,
-        debug_api_request,
-        get_group_by_id,
-        get_user_group_instances,
-        switch_user,
         get_release_note,
+        #[cfg(all(dev, debug_assertions))]
+        debug_api_request,
+        #[cfg(all(dev, debug_assertions))]
+        get_current_user_friends,
+        #[cfg(all(dev, debug_assertions))]
+        get_current_user_info,
+        #[cfg(all(dev, debug_assertions))]
+        get_raw_world_by_id,
+        #[cfg(all(dev, debug_assertions))]
+        get_instance,
+        #[cfg(all(dev, debug_assertions))]
         get_favorites_user_instances,
     ]
 }
 
-// 呼び出し側（lib.rs）と同じ条件にそろえる
-#[cfg(all(dev, desktop))]
+#[cfg(all(dev, not(any(target_os = "android", target_os = "ios"))))]
 pub(crate) fn export_ts() {
     tauri_specta::Builder::<tauri::Wry>::new()
         .commands(tauri_specta::collect_commands![
-            crate::beta_updates::check_beta_update,
+            crate::updates::check_app_update,
+            crate::updates::install_app_update,
+            crate::preferences::settings_get,
+            crate::preferences::settings_set,
+            crate::social::social_switch,
+            crate::social::social_login,
+            crate::social::social_otp,
+            crate::social::social_cancel,
+            crate::social::social_logout,
+            crate::social::social_request,
             login,
             email_otp,
             two_factor_auth,
@@ -77,6 +103,7 @@ pub(crate) fn export_ts() {
         .unwrap();
 }
 
+#[cfg(dev)]
 macro_rules! handle_raw_response {
     ($res:expr) => {{
         match $res.status() {
@@ -89,21 +116,24 @@ macro_rules! handle_raw_response {
                 Ok(res_text)
             }
             _ => {
-                error!("Failed to get response {:?}", $res);
+                error!("VRChat API HTTP {}", $res.status());
                 Err($res.status().into())
             },
         }
     }};
 }
 
+#[cfg(dev)]
 static APP_STATE: Lazy<Arc<RwLock<AppState>>> =
     Lazy::new(|| Arc::new(RwLock::new(AppState::default())));
 
+#[cfg(dev)]
 pub async fn insert_world(world_id: String, world: World) {
     let mut state = APP_STATE.write().await;
     state.worlds.world.insert(world_id, world);
 }
 
+#[cfg(dev)]
 pub async fn get_world(world_id: String) -> Option<World> {
     let state = APP_STATE.read().await;
     state.worlds.world.get(&world_id).cloned()
@@ -126,11 +156,11 @@ impl RustError {
 
 impl<E: Display> From<E> for RustError {
     fn from(value: E) -> Self {
-        error!("{value}");
         RustError::unrecoverable(value.to_string())
     }
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn cookie_clear(_app_handle: tauri::AppHandle) {
@@ -140,14 +170,16 @@ async fn cookie_clear(_app_handle: tauri::AppHandle) {
     cookie_store.lock().unwrap().clear();
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 fn switch_user(app_handle: tauri::AppHandle, user_id: &str) {
-    debug!("Switch user to {:?}", user_id);
+    debug!("登録済みアカウントの切り替え");
 
     let _ = load_cookies(&app_handle, user_id);
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn login(
@@ -184,16 +216,17 @@ async fn login(
             }
         }
         reqwest::StatusCode::UNAUTHORIZED => {
-            error!("Login failed: {:?}", res);
+            error!("VRChat API HTTP {}", res.status());
             Err("errors.loginFail".into())
         },
         _ => {
-            error!("Login failed: {:?}", res);
+            error!("VRChat API HTTP {}", res.status());
             Err(res.status().into())
         },
     }
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn email_otp(app_handle: tauri::AppHandle, otp: &str) -> Result<bool, RustError> {
@@ -212,6 +245,7 @@ async fn email_otp(app_handle: tauri::AppHandle, otp: &str) -> Result<bool, Rust
     otp_verified_check(app_handle, res).await
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn two_factor_auth(app_handle: tauri::AppHandle, otp: &str) -> Result<bool, RustError> {
@@ -230,6 +264,7 @@ async fn two_factor_auth(app_handle: tauri::AppHandle, otp: &str) -> Result<bool
     otp_verified_check(app_handle, res).await
 }
 
+#[cfg(dev)]
 async fn otp_verified_check(app_handle: tauri::AppHandle, r: Response) -> Result<bool, RustError> {
     match r.status() {
         reqwest::StatusCode::OK => {
@@ -246,7 +281,7 @@ async fn otp_verified_check(app_handle: tauri::AppHandle, r: Response) -> Result
                             return Ok(true);
                         },
                         _ => {
-                            error!("Failed to get current user info after 2FA: {:?}", res);
+                            error!("VRChat API HTTP {}", res.status());
                             return Err("errors.2faFail".into());
                         }
                     }
@@ -255,20 +290,21 @@ async fn otp_verified_check(app_handle: tauri::AppHandle, r: Response) -> Result
             Ok(false)
         }
         reqwest::StatusCode::UNAUTHORIZED => {
-            error!("2FA failed: {:?}", r);
+            error!("VRChat API HTTP {}", r.status());
             Err("errors.2faFail".into())
         },
         reqwest::StatusCode::BAD_REQUEST => {
-            error!("2FA failed: {:?}", r);
+            error!("VRChat API HTTP {}", r.status());
             Err("errors.2faFail".into())
         },
         _ => {
-            error!("2FA failed: {:?}", r);
+            error!("VRChat API HTTP {}", r.status());
             Err(r.status().into())
         },
     }
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn verify_auth_token() -> Result<bool, RustError> {
@@ -294,16 +330,17 @@ async fn verify_auth_token() -> Result<bool, RustError> {
             Ok(false)
         }
         reqwest::StatusCode::UNAUTHORIZED => {
-            error!("Verify auth token failed: {:?}", res);
+            error!("VRChat API HTTP {}", res.status());
             Err("errors.unauthorized".into())
         },
         _ => {
-            error!("Verify auth token failed: {:?}", res);
+            error!("VRChat API HTTP {}", res.status());
             Err(res.status().into())
         },
     }
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn get_current_user_info() -> Result<String, RustError> {
@@ -314,6 +351,7 @@ async fn get_current_user_info() -> Result<String, RustError> {
     handle_raw_response!(res)
 }
 
+#[cfg(dev)]
 async fn get_current_user_info_inner() -> Response {
     let client = CLIENT.clone();
 
@@ -325,6 +363,7 @@ async fn get_current_user_info_inner() -> Response {
     res
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn get_current_user_friends(offset: i32, n: i32, offline: bool) -> Result<String, RustError> {
@@ -345,10 +384,11 @@ async fn get_current_user_friends(offset: i32, n: i32, offline: bool) -> Result<
     handle_raw_response!(res)
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn get_user_by_id(user_id: &str) -> Result<String, RustError> {
-    debug!("Call get_user_by_id {:?}", user_id);
+    debug!("Call get_user_by_id");
 
     let clinet = CLIENT.clone();
 
@@ -360,10 +400,11 @@ async fn get_user_by_id(user_id: &str) -> Result<String, RustError> {
     handle_raw_response!(res)
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn get_user_profile_by_id(user_id: &str) -> Result<String, RustError> {
-    debug!("Call get_user_profile_by_id {:?}", user_id);
+    debug!("Call get_user_profile_by_id");
 
     let client = CLIENT.clone();
 
@@ -375,10 +416,11 @@ async fn get_user_profile_by_id(user_id: &str) -> Result<String, RustError> {
     handle_raw_response!(res)
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn get_group_by_id(group_id: &str) -> Result<String, RustError> {
-    debug!("Call get_group_by_id {:?}", group_id);
+    debug!("Call get_group_by_id");
 
     let clinet = CLIENT.clone();
 
@@ -390,10 +432,11 @@ async fn get_group_by_id(group_id: &str) -> Result<String, RustError> {
     handle_raw_response!(res)
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn get_world_by_id(worldid: &str) -> Result<String, RustError> {
-    debug!("Call get_world_by_id {:?}", worldid);
+    debug!("Call get_world_by_id");
 
     if worldid == "private" {
         let w = World {
@@ -434,11 +477,7 @@ async fn get_world_by_id(worldid: &str) -> Result<String, RustError> {
 
     match world {
         Some(result) => {
-            trace!(
-                "Receive cached get_world_by_id {:?} time: {:?}",
-                worldid,
-                now.elapsed()
-            );
+            trace!("cached get_world_by_id {:?}", now.elapsed());
             return Ok(serde_json::to_string(&result).unwrap());
         }
         None => {
@@ -462,22 +501,14 @@ async fn get_world_by_id(worldid: &str) -> Result<String, RustError> {
                             insert_world((&worldid).to_string(), o).await;
                         }
                         Err(_e) => {
-                            error!("Failed to parse World {:?}", _e);
+                            error!("ワールド情報を読み取れませんでした");
                         }
                     }
-                    trace!(
-                        "Receive get_world_by_id {:?} time: {:?}",
-                        worldid,
-                        now.elapsed()
-                    );
+                    trace!("get_world_by_id {:?}", now.elapsed());
                     Ok(res_text)
                 }
                 _ => {
-                    error!(
-                        "Receive Error get_world_by_id {:?} time: {:?}",
-                        worldid,
-                        now.elapsed()
-                    );
+                    error!("Error get_world_by_id {:?}", now.elapsed());
                     Err("Failed...".into())
                 }
             }
@@ -485,10 +516,11 @@ async fn get_world_by_id(worldid: &str) -> Result<String, RustError> {
     }
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn get_raw_world_by_id(worldid: &str) -> Result<String, RustError> {
-    debug!("Call get_raw_world_by_id {:?}", worldid);
+    debug!("Call get_raw_world_by_id");
 
     let client = CLIENT.clone();
 
@@ -500,13 +532,11 @@ async fn get_raw_world_by_id(worldid: &str) -> Result<String, RustError> {
     handle_raw_response!(res)
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn get_instance(worldid: &str, instanceid: &str) -> Result<String, RustError> {
-    debug!(
-        "Call get_instance {:?} {:?}",
-        worldid, instanceid
-    );
+    debug!("Call get_instance");
 
     let client = CLIENT.clone();
 
@@ -520,13 +550,11 @@ async fn get_instance(worldid: &str, instanceid: &str) -> Result<String, RustErr
     handle_raw_response!(res)
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn invite_myself_to_instance(world_id: &str, instance_id: &str) -> Result<bool, RustError> {
-    debug!(
-        "Call invite_myself_to_instance {:?} {:?}",
-        world_id, instance_id
-    );
+    debug!("Call invite_myself_to_instance");
 
     let client = CLIENT.clone();
 
@@ -540,7 +568,7 @@ async fn invite_myself_to_instance(world_id: &str, instance_id: &str) -> Result<
     match res.status() {
         reqwest::StatusCode::OK => Ok(true),
         _ => {
-            error!("Failed to invite myself to instance {:?}", res,);
+            error!("VRChat API HTTP {}", res.status());
             Err(res.status().into())
         }
     }
@@ -568,8 +596,8 @@ pub async fn get_licenses(app_handle: tauri::AppHandle) -> Result<ApiResponse, R
 #[tauri::command]
 #[specta::specta]
 pub async fn get_release_note(tag_name: &str) -> Result<String, RustError> {
-    debug!("Call get_release_note {:?}", tag_name);
-    let client = CLIENT.clone();
+    debug!("Call get_release_note");
+    let client = reqwest::Client::builder().user_agent(crate::USER_AGENT).build()?;
 
     let res = client
         .get(format!(
@@ -578,9 +606,10 @@ pub async fn get_release_note(tag_name: &str) -> Result<String, RustError> {
         .send()
         .await?;
 
-    handle_raw_response!(res)
+    Ok(res.error_for_status()?.text().await?)
 }
 
+#[cfg(dev)]
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[specta(export)]
 pub struct DebugApiRequest {
@@ -590,6 +619,7 @@ pub struct DebugApiRequest {
     pub data: Option<String>,
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn debug_api_request(request: DebugApiRequest) -> Result<ApiResponse, RustError> {
@@ -631,6 +661,7 @@ async fn debug_api_request(request: DebugApiRequest) -> Result<ApiResponse, Rust
     }
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn get_user_group_instances() -> Result<String, RustError> {
@@ -662,12 +693,13 @@ async fn get_user_group_instances() -> Result<String, RustError> {
             Err("errors.unauthorized".into())
         }
         _ => {
-            error!("Failed to get current user info for group instances: {:?}", current_user_res);
+            error!("VRChat API HTTP {}", current_user_res.status());
             Err(current_user_res.status().into())
         }
     }
 }
 
+#[cfg(dev)]
 #[tauri::command]
 #[specta::specta]
 async fn get_favorites_user_instances(offset: i32, n: i32) -> Result<String, RustError> {
@@ -704,7 +736,7 @@ async fn get_favorites_user_instances(offset: i32, n: i32) -> Result<String, Rus
             Err("errors.unauthorized".into())
         }
         _ => {
-            error!("Failed to get favorites: {:?}", res);
+            error!("VRChat API HTTP {}", res.status());
             Err(res.status().into())
         }
     }

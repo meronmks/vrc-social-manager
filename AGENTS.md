@@ -5,6 +5,7 @@
 - ユーザー向けの説明、ドキュメント、コードコメントは日本語で記述する。
 - TypeScript/React、Rust、Tauri の既存規約を尊重し、必要以上に複雑な実装を避ける。
 - `src/bindings.ts` は `tauri-specta` の生成物であるため、手動編集しない。
+- VRChat API の仕様を調べる際は、[VRChat.community の API リファレンス](https://vrchat.community/) の該当エンドポイントを参照する。
 - 認証 Cookie、パスワード、OTP、VRChat の個人データをリポジトリやログへ保存しない。
 - 作業開始時に既存の未コミット変更を確認し、依頼と無関係な変更を上書きしない。
 - コミットごとに、変更内容を `CHANGELOG.md` の `[Unreleased]` の該当区分に日本語で記載し、同じコミットに含める。同じ変更の続きは既存の項目を更新する。

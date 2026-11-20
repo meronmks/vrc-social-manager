@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+#[cfg(dev)]
 use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, specta::Type)]
@@ -8,6 +9,7 @@ pub struct ApiResponse {
     pub data: String,
 }
 
+#[cfg(dev)]
 #[derive(Serialize, Deserialize, Clone)]
 #[allow(non_snake_case)]
 pub(crate) struct World {
@@ -16,6 +18,7 @@ pub(crate) struct World {
     pub(crate) thumbnailImageUrl: String,
 }
 
+#[cfg(dev)]
 #[derive(Serialize, Deserialize)]
 pub(crate) struct Favorite {
     #[serde(rename = "favoriteId")]
@@ -26,6 +29,7 @@ pub(crate) struct Favorite {
     pub(crate) favorite_type: String,
 }
 
+#[cfg(dev)]
 #[derive(Serialize, Deserialize)]
 pub(crate) struct User {
     pub(crate) id: String,
@@ -37,11 +41,13 @@ pub(crate) struct User {
     pub(crate) instance_id: String,
 }
 
+#[cfg(dev)]
 #[derive(Default, Clone)]
 pub(crate) struct Worlds {
     pub(crate) world: HashMap<String, World>,
 }
 
+#[cfg(dev)]
 #[derive(Default, Clone)]
 pub(crate) struct AppState {
     pub(crate) is_login: bool,
