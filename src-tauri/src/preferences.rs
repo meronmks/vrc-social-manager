@@ -9,6 +9,7 @@ pub enum Preference {
     Language,
     FetchFriendsCount,
     AutoCheckUpdates,
+    BetaUpdates,
     ShowAllFriends { account: String },
     FavoriteGroup { account: String },
     Accounts,
@@ -21,6 +22,7 @@ impl Preference {
             Self::Theme => "data-theme".into(),
             Self::Language => "lang".into(),
             Self::FetchFriendsCount => "fetch-friends-count".into(),
+            Self::BetaUpdates => "beta-updates".into(),
             Self::AutoCheckUpdates => "auto-check-updates".into(),
             Self::ShowAllFriends { account } => format!("show-all-friends-{account}"),
             Self::FavoriteGroup { account } => format!("favorite-group-{account}"),
@@ -34,7 +36,7 @@ impl Preference {
             Self::Theme => matches!(value.as_str(), Some("light" | "dark")),
             Self::Language => matches!(value.as_str(), Some("ja" | "en")),
             Self::FetchFriendsCount => value.as_u64().is_some_and(|n| (1..=100).contains(&n)),
-            Self::AutoCheckUpdates | Self::ShowAllFriends { .. } => value.is_boolean(),
+            Self::AutoCheckUpdates | Self::BetaUpdates | Self::ShowAllFriends { .. } => value.is_boolean(),
             Self::FavoriteGroup { .. } => value
                 .as_str()
                 .is_some_and(|s| !s.is_empty() && s.len() <= 256),

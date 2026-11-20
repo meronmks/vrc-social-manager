@@ -103,7 +103,10 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
 
   function applyFriend(person: Person) {
     const location = locationOf(person);
-    if (location) person = { ...person, online: location !== "offline" };
+    // Web利用中は現在地が offline でも接続中のため、詳細では接続状態を使う。
+    if (person.state === "offline" || person.state === "active" || person.state === "online") {
+      person = { ...person, online: person.state !== "offline" };
+    }
     scheduleWorld.current(location);
     details.current.set(person.id, { version: ++version.current, person });
     setFriends((prev) => ({ ...prev, [person.id]: { ...prev[person.id], ...person } }));
@@ -263,17 +266,12 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
     async function loadFavorites() {
       try {
         const saved = selectedGroup.current || (await userDataStore.getFavoriteGroup(account));
-        const { favoriteGroups } = await request(account, { kind: "groups" });
-        const slots = favoriteGroups.sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
-        const entries = await pages(
-          (offset) => request(account, { kind: "favorites", offset }),
-          (f) => f.favoriteId,
-        );
+        const favoriteGroups = await request(account, { kind: "groups" });
         if (!live) return;
+        const slots = favoriteGroups.sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
         const preferred = selectedGroup.current || saved;
         const next = slots.find((g) => g.name === preferred)?.name ?? slots[0]?.name ?? "";
         setGroups(slots);
-        setFavorites(entries);
         selectedGroup.current = next;
         setGroup(next);
         if (next && next !== saved)
@@ -286,6 +284,12 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
                 true,
               ),
             );
+        const entries = await pages(
+          (offset) => request(account, { kind: "favorites", offset }),
+          (f) => f.favoriteId,
+        );
+        if (!live) return;
+        setFavorites(entries);
         phase("favorites", "ready");
       } catch (e) {
         fail("favorites", e, "お気に入りを取得できませんでした", "Could not load favorites");

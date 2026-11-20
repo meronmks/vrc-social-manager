@@ -115,7 +115,7 @@ function RemoteImage({ urls, account }: { urls: string[]; account?: string }) {
   );
 }
 
-export function Presence({ status }: { status?: string }) {
+export function Presence({ status, description }: { status?: string; description?: string }) {
   const t = useText();
   const names: Record<string, string> = {
     "join me": t("合流歓迎", "Join me"),
@@ -124,10 +124,13 @@ export function Presence({ status }: { status?: string }) {
     "ask me": t("先に聞いて", "Ask me"),
     offline: t("オフライン", "Offline"),
   };
+  const standard = names[status ?? ""] ?? t("状態不明", "Unknown");
+  const label = description?.trim() || standard;
   return (
-    <span className="presence" data-status={status}>
-      <i />
-      {names[status ?? ""] ?? t("状態不明", "Unknown")}
+    <span className="presence" data-status={status} title={label === standard ? standard : `${standard} · ${label}`}>
+      <i aria-hidden="true" />
+      {label !== standard && <span className="sr-only">{standard}　</span>}
+      <span className="presence-label">{label}</span>
     </span>
   );
 }

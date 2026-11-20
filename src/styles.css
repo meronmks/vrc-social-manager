@@ -344,9 +344,10 @@
   border-radius: 8px;
 }
 .friend-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) min(34%, 10rem) 12px;
   gap: 8px;
-  align-items: flex-start;
+  align-items: center;
 }
 .friend-row:hover,
 .place-row:hover,
@@ -356,7 +357,6 @@
 }
 .friend-copy {
   min-width: 0;
-  flex: 1;
   display: grid;
 }
 .friend-copy strong,
@@ -365,17 +365,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.star,
-.note svg {
+.star {
   display: inline-block;
   vertical-align: middle;
-}
-.star {
   color: #ac6c20;
   width: 14px;
-}
-.note svg {
-  margin-right: 4px;
 }
 .social-avatar {
   background: #c8dfd5;
@@ -399,16 +393,23 @@
   object-fit: cover;
 }
 .presence {
+  /* 読み上げ用の状態名を各行の中に配置する。 */
+  position: relative;
   gap: 5px;
   white-space: nowrap;
   font-size: 11px;
   color: var(--sub);
 }
 .presence i {
+  flex-shrink: 0;
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: #879393;
+}
+.friend-row .presence-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .presence[data-status="active"] i {
   background: #218566;
@@ -424,7 +425,6 @@
 }
 .row-chevron {
   width: 12px;
-  margin-top: 6px;
   color: var(--sub);
 }
 .list-state,
@@ -728,7 +728,72 @@
 .settings-box .form-error {
   color: var(--warn-ink);
 }
+.licenses-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.license-back {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  margin-bottom: 12px;
+  color: var(--accent);
+}
+.license-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+}
+.license-tools .search-box {
+  flex: 1 1 190px;
+  min-width: 0;
+  margin: 0;
+}
+.license-list {
+  min-height: 0;
+  overflow-y: auto;
+  border-radius: 8px;
+  background: var(--surface);
+}
+.license-item + .license-item {
+  border-top: 1px solid var(--line);
+}
+.license-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto) 14px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.license-row:hover, .license-row[aria-expanded="true"] {
+  background: var(--pale);
+}
+.license-row small, .license-id {
+  color: var(--sub);
+  font-size: 12px;
+}
+.license-row[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+.license-item pre {
+  margin: 0;
+  padding: 16px;
+  font: 13px/1.6 ui-monospace, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 @media (max-width: 650px) {
+  .licenses-page { padding: 14px; }
+  .license-row { grid-template-columns: minmax(0, 1fr) 14px; gap: 3px 8px; }
+  .license-id { grid-column: 1; }
+  .license-row > svg { grid-column: 2; grid-row: 1 / 3; }
   .social-nav {
     width: 62px;
     padding-inline: 3px;

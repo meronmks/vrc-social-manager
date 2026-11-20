@@ -421,6 +421,7 @@ fn visible_person(mut value: Value) -> Outcome<Value> {
             "id" | "displayName"
                 | "status"
                 | "statusDescription"
+                | "state"
                 | "location"
                 | "worldId"
                 | "instanceId"
@@ -481,8 +482,8 @@ pub async fn social_request(account: String, resource: Resource) -> Result<Value
                 .map(Value::Array);
         }
         Resource::Groups => client
-            .get(endpoint(&["favorites", "groups", "friend"])?)
-            .query(&[("ownerId", &account)]),
+            .get(endpoint(&["favorite", "groups"])?)
+            .query(&[("ownerId", account.as_str()), ("type", "friend"), ("n", "100")]),
         Resource::Icon { url } => return read_icon(&client, &url).await,
         Resource::Favorites { offset } => client
             .get(endpoint(&["favorites"])?)

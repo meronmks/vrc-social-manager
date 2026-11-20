@@ -27,6 +27,7 @@ export interface Account extends UserImages {
 
 export interface Person extends UserImages {
   online?: boolean;
+  state?: "online" | "active" | "offline";
   id: string;
   displayName: string;
   status?: string;
@@ -76,7 +77,7 @@ export const session = {
 
 interface Resources {
   friends: Person[];
-  groups: { favoriteGroups: FavoriteGroup[] };
+  groups: FavoriteGroup[];
   icon: string;
   favorites: Favorite[];
   memberInstances: { instances: Place[] };

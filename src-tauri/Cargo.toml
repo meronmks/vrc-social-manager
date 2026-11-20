@@ -43,4 +43,5 @@ keyring = "4.0.0-rc.1"
 custom-protocol = ["tauri/custom-protocol"]
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+semver = "1"
 tauri-plugin-updater = "2"

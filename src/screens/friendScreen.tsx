@@ -5,7 +5,6 @@ import {
   FiSearch,
   FiStar,
   FiX,
-  FiMessageCircle,
   FiChevronRight,
 } from "react-icons/fi";
 import { Avatar, Occupancy, Presence, SocialDetail, WorldPhoto } from "@/components/ui/socialDetail";
@@ -129,10 +128,9 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
   const groups = data.groups.map((g, index) => {
     const slot = /^group_(\d+)$/.exec(g.name);
     const number = slot ? Number(slot[1]) : index;
-    const name = g.displayName?.trim();
-    const profileName = slot && account.friendGroupNames?.[number]?.trim();
-    const label = (name && name !== g.name && name) || (profileName !== g.name && profileName);
-    return { name: g.name, label: label || t(`お気に入り ${number + 1}`, `Favorites ${number + 1}`) };
+    const names = [g.displayName, slot ? account.friendGroupNames?.[number] : g.name];
+    const label = names.map(name => name?.trim()).find(name => name && name !== slot?.[0]);
+    return { name: g.name, label: label || `Group ${number + 1}` };
   });
   const scopes = [
     ["all", t("全フレンド", "All friends")],
@@ -319,14 +317,8 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
                     {(search || data.showAll) && starred.has(p.id) && <FiStar className="star" />}
                   </strong>
                   {p.online && <small>{where(locationOf(p), data.placeAt(locationOf(p)), t)}</small>}
-                  {p.statusDescription && (
-                    <small className="note">
-                      <FiMessageCircle />
-                      {p.statusDescription}
-                    </small>
-                  )}
                 </span>
-                <Presence status={p.online ? p.status : "offline"} />
+                <Presence status={p.online ? p.status : "offline"} description={p.statusDescription} />
                 <FiChevronRight className="row-chevron" />
               </button>
             ))}

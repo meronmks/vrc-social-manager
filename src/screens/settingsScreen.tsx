@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
-import { ThirdPartyLicenses } from "@/components/ui/dialogs/license";
+import { useTranslation } from "react-i18next";
+import type { AppUpdates } from "@/libs/useAppUpdates";
+import { useNavigate } from "react-router";
 import { Account, useText } from "@/libs/social";
 import { userDataStore } from "@/libs/userDataStore";
 import i18n from "@/libs/i18n";
@@ -8,11 +10,9 @@ import i18n from "@/libs/i18n";
 interface Props {
   account: Account;
   logout: () => void;
-  checkUpdate: () => Promise<void>;
-  checking: boolean;
-  updateStatus: string;
+  updates: AppUpdates;
 }
-export default function SettingsScreen({ account, logout, checkUpdate, checking, updateStatus }: Props) {
+export default function SettingsScreen({ account, logout, updates }: Props) {
   const [theme, setTheme] = useState("light");
   const [auto, setAuto] = useState(true);
   const [count, setCount] = useState("50");
@@ -21,6 +21,8 @@ export default function SettingsScreen({ account, logout, checkUpdate, checking,
   const [error, setError] = useState(false);
   const [ready, setReady] = useState(false);
   const t = useText();
+  const { t: translate } = useTranslation();
+  const navigate = useNavigate();
   useEffect(() => {
     let live = true;
     Promise.all([
@@ -132,15 +134,27 @@ export default function SettingsScreen({ account, logout, checkUpdate, checking,
               }}
             />
           </label>
+          <label>
+            {translate("settingScreen.betaUpdates")}
+            <input
+              className="toggle"
+              type="checkbox"
+              checked={updates.beta === true}
+              disabled={updates.busy || updates.beta === null}
+              aria-describedby="beta-updates-help"
+              onChange={(e) => void updates.changeBeta(e.target.checked)}
+            />
+          </label>
+          <p id="beta-updates-help">{translate("settingScreen.betaUpdatesHelp")}</p>
           <div>
             <span>
               {t("現在のバージョン", "Current version")}　{version}
             </span>
-            <button className="quiet-action" disabled={checking} onClick={() => void checkUpdate()}>
-              {checking ? t("確認中…", "Checking…") : t("今すぐ確認", "Check now")}
+            <button className="quiet-action" disabled={updates.busy} onClick={() => void updates.checkNow()}>
+              {updates.busy ? t("確認中…", "Checking…") : t("今すぐ確認", "Check now")}
             </button>
           </div>
-          {updateStatus && <p role="status">{updateStatus}</p>}
+          {updates.message && <p role="status">{updates.message}</p>}
         </div>
         <h3>{t("詳細設定", "Advanced")}</h3>
         <details className="settings-box">
@@ -175,7 +189,7 @@ export default function SettingsScreen({ account, logout, checkUpdate, checking,
         </details>
         <h3>{t("このアプリについて", "About")}</h3>
         <div className="settings-box">
-          <button onClick={() => ThirdPartyLicenses.call({})}>
+          <button onClick={() => navigate("/settings/licenses", { state: { fromSettings: true } })}>
             {t("サードパーティライセンス", "Third-party licenses")}　›
           </button>
         </div>

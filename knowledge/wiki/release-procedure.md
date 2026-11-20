@@ -2,13 +2,15 @@
 title: リリース手順書
 kind: operations
 status: verified
-updated: 2026-09-20
+updated: 2026-11-20
 sources:
   - ../../.github/workflows/bump-version.yml
   - ../../.github/workflows/release-pr.yml
   - ../../.github/workflows/publish.yml
   - ../../CHANGELOG.md
   - ../../src-tauri/tauri.conf.json
+  - ../../src-tauri/src/beta_updates.rs
+  - ../../src/libs/useAppUpdates.ts
 ---
 
 # リリース手順書
@@ -144,9 +146,18 @@ GitHub の `Releases` を開き、対象タグのドラフトで次を確認し�
 確認が完了したら GitHub Releases の `Publish release` を実行します。
 
 - 正式版は、公開後に `/releases/latest/download/latest.json` から取得できることを確認する。
-- ベータ版と RC 版はプレリリースとして公開する。現在の updater endpoint は `releases/latest` を
-  使用するため、プレリリースは通常の自動更新対象になりません。
+- ベータ版と RC 版はプレリリースとして公開し、タグ固有の `/releases/download/vX.Y.Z-beta.N/latest.json` とその中の各 OS の成果物を確認する。
 - 公開後、実機で更新確認画面のバージョンとリリースノートを確認する。
+
+### 旧UIから新UIのベータ配信を始める
+
+1. ベータ参加設定を備えた旧UIを、まず安定版として公開する（例 `v0.10.3`）。配布済みの `0.10.2` は従来の安定版更新でこの入口を受け取る。
+2. 新UIのコミットで `tauri.conf.json` のバージョンを合わせ、例えば `v0.11.0-beta.1` のタグを push する。[タグの配信処理](../../.github/workflows/publish.yml)で作成されたドラフトを確認し、プレリリースとして公開する。
+3. 旧UIの設定で「ベータ版の更新を受け取る」をオンにし、その場で新UIのバージョンと変更内容を確認する。「後で」を選んだ場合も参加設定は保存される。
+
+参加は端末の `store.json` に `beta-updates` として保存する。未設定・オフの場合は安定版の `releases/latest` を参照する。オンの場合は公開済みの正式版・ベータ・RCをバージョン順に比較し、インストール済みより新しい最大の版を提示する。インストールには既存の Tauri 署名検証を使う。更新の確認・適用に失敗した場合は設定の「今すぐ確認」から再試行できる。[更新候補の選択](../../src-tauri/src/beta_updates.rs)・[参加設定と更新確認](../../src/libs/useAppUpdates.ts)
+
+参加を解除するとその場で安定版を確認する。インストール済みのベータより安定版が古い間は現在の版を使い続け、同じベースバージョンの正式版またはそれより新しい安定版が出れば更新できる。
 
 ## 失敗時の対応
 

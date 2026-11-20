@@ -2,10 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { BrowserRouter, useLocation, useNavigate } from "react-router";
 import { FiBell, FiChevronDown, FiLayers, FiSettings, FiTool, FiUsers } from "react-icons/fi";
 import { ToastContainer, toast } from "react-toastify";
-import { check, type Update } from "@tauri-apps/plugin-updater";
-import { relaunch } from "@tauri-apps/plugin-process";
-import { commands } from "@/bindings";
-import { ThirdPartyLicenses } from "@/components/ui/dialogs/license";
+import { useAppUpdates } from "@/libs/useAppUpdates";
+import LicensesScreen from "@/screens/licensesScreen";
 import { UpdateConfirm } from "@/components/ui/dialogs/updateConfirm";
 import { Avatar } from "@/components/ui/socialDetail";
 import { SessionForm } from "@/components/ui/sessionForm";
@@ -31,10 +29,7 @@ function Workspace() {
   const [busy, setBusy] = useState(true);
   const [problem, setProblem] = useState<Problem>();
   const [history, setHistory] = useState<Record<string, Notice[]>>({});
-  const [update, setUpdate] = useState<Update | null>(null);
-  const [checking, setChecking] = useState(false);
-  const [updateStatus, setUpdateStatus] = useState("");
-  const checkingRef = useRef(false);
+  const updates = useAppUpdates(false);
   const accountLock = useRef(false);
   const popover = useRef<HTMLDivElement>(null);
 
@@ -147,53 +142,6 @@ function Workspace() {
       setBusy(false);
     }
   }
-  async function showUpdate(found: Update) {
-    let notes = found.body;
-    if (!notes) {
-      try {
-        const r = await commands.getReleaseNote(found.version);
-        if (r.status === "ok") notes = JSON.parse(r.data).body;
-      } catch {
-        /* 更新情報だけでも確認できる */
-      }
-    }
-    if (await UpdateConfirm.call({ version: found.version, releaseNotes: notes })) {
-      await found.downloadAndInstall();
-      await relaunch();
-    }
-  }
-  async function checkUpdate(manual: boolean) {
-    if (checkingRef.current) return;
-    checkingRef.current = true;
-    setChecking(true);
-    setUpdateStatus("");
-    try {
-      const found = await check();
-      setUpdate(found);
-      if (manual && found) await showUpdate(found);
-      else if (manual) setUpdateStatus(t("最新のバージョンです", "You are up to date"));
-    } catch {
-      const message = t("アプリの更新を確認できませんでした", "Could not check for app updates");
-      setUpdateStatus(message);
-      if (manual) toast.error(message);
-      void logging.warn("アプリの更新を確認できませんでした").catch(() => {});
-    } finally {
-      checkingRef.current = false;
-      setChecking(false);
-    }
-  }
-  useEffect(() => {
-    let live = true;
-    void userDataStore
-      .getAutoCheckUpdates()
-      .then((on) => {
-        if (on && live) void checkUpdate(false);
-      })
-      .catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, []);
   useEffect(() => {
     if (!menu) return;
     const close = (e: PointerEvent) => {
@@ -210,7 +158,8 @@ function Workspace() {
     };
   }, [menu]);
 
-  const settings = pathname === "/settings",
+  const licenses = pathname === "/settings/licenses",
+    settings = pathname === "/settings" || licenses,
     instances = pathname === "/instances";
   const gated = !!problem && (!active || (problem.target?.id === active.id && isExpired(problem.reason)));
   const notices = active ? (history[active.id] ?? []) : [];
@@ -230,14 +179,11 @@ function Workspace() {
           VRC Social Manager
         </div>
         <div className="app-controls" ref={popover}>
-          {update && (
+          {updates.available && (
             <button
               className="quiet-action update-notice"
-              onClick={() =>
-                void showUpdate(update).catch(() =>
-                  toast.error(t("更新できませんでした", "Could not apply update")),
-                )
-              }
+              disabled={updates.busy}
+              onClick={() => void updates.showAvailable()}
             >
               {t("アップデートがあります", "Update available")}
             </button>
@@ -350,7 +296,7 @@ function Workspace() {
             {tabs.map(({ url, icon: Icon, label }) => (
               <button
                 key={url}
-                aria-current={url === pathname ? "page" : undefined}
+                aria-current={url === pathname || (url === "/settings" && licenses) ? "page" : undefined}
                 onClick={() => navigate(url)}
               >
                 <Icon />
@@ -377,13 +323,12 @@ function Workspace() {
                 expire={() => expired(active.id)}
               />
             </div>
-            {settings && (
+            {licenses && <LicensesScreen />}
+            {settings && !licenses && (
               <SettingsScreen
                 account={active}
                 logout={() => void logout()}
-                checkUpdate={() => checkUpdate(true)}
-                checking={checking}
-                updateStatus={updateStatus}
+                updates={updates}
               />
             )}
           </main>
@@ -397,7 +342,6 @@ export default function App() {
     <>
       <ToastContainer />
       <UpdateConfirm.Root />
-      <ThirdPartyLicenses.Root />
       <BrowserRouter>
         <Workspace />
       </BrowserRouter>

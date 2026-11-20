@@ -46,6 +46,10 @@ export const userDataStore = {
     return typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= 100 ? n : 50;
   },
   setFetchFriendsCount: (value: number) => write({ kind: "fetchFriendsCount" }, value),
+  async getBetaUpdates() {
+    return (await read({ kind: "betaUpdates" })) === true;
+  },
+  setBetaUpdates: (value: boolean) => write({ kind: "betaUpdates" }, value),
   async getAutoCheckUpdates() {
     return (await read({ kind: "autoCheckUpdates" })) === true;
   },

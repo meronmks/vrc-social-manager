@@ -14,6 +14,8 @@ use tauri_plugin_store::StoreExt;
 #[cfg(dev)]
 use keyring::Entry;
 
+#[cfg(desktop)]
+mod beta_updates;
 mod commands;
 mod structs;
 mod social;
