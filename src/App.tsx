@@ -11,8 +11,7 @@ import { Login } from "@/components/ui/dialogs/login";
 import "@/libs/i18n";
 import { UpdateConfirm } from "@/components/ui/dialogs/updateConfirm";
 import { ThirdPartyLicenses } from "@/components/ui/dialogs/license";
-import { userDataStore } from "./libs/userDataStore";
-
+import { userDataStore } from "@/libs/userDataStore";
 import { useAppUpdates } from "@/libs/useAppUpdates";
 
 export default function App() {

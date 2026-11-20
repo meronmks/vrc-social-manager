@@ -49,7 +49,7 @@ fn load_cookies(app_handle: &tauri::AppHandle, user_id: &str) -> Result<(), Box<
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    #[cfg(all(dev, not(any(target_os = "android", target_os = "ios"))))]
+    #[cfg(all(dev, desktop))]
     commands::export_ts();
 
     tauri::Builder::default()

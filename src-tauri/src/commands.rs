@@ -42,7 +42,8 @@ pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
     ]
 }
 
-#[cfg(all(debug_assertions, desktop))]
+// 呼び出し側（lib.rs）と同じ条件にそろえる
+#[cfg(all(dev, desktop))]
 pub(crate) fn export_ts() {
     tauri_specta::Builder::<tauri::Wry>::new()
         .commands(tauri_specta::collect_commands![

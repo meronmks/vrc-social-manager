@@ -8,7 +8,6 @@ import { getVersion } from "@tauri-apps/api/app";
 import { ThirdPartyLicenses } from "@/components/ui/dialogs/license";
 import { userDataStore, UserData } from "@/libs/userDataStore";
 import { FaArrowLeft } from 'react-icons/fa';
-
 import type { AppUpdates } from "@/libs/useAppUpdates";
 
 export default function SettingsScreen({ updates }: { updates: AppUpdates }) {
