@@ -5,6 +5,9 @@
 
 
 export const commands = {
+/**
+ * 保存済みの更新チャンネルに従って更新を確認する。
+ */
 async checkAppUpdate() : Promise<Result<AppUpdate | null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("check_app_update") };
@@ -13,6 +16,9 @@ async checkAppUpdate() : Promise<Result<AppUpdate | null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * 直前に確認した更新をダウンロード・署名検証してインストールし、アプリを再起動する。
+ */
 async installAppUpdate() : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("install_app_update") };

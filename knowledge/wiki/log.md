@@ -248,3 +248,7 @@ sources:
 ## [2026-11-20] maintenance | 新UIのフロントエンドを整理
 
 - 旧UIの未使用コンポーネントと型定義を削除し、[App](../../src/App.tsx) のアカウント操作・通知履歴を [useAccounts](../../src/libs/useAccounts.ts)・[useNotices](../../src/libs/useNotices.ts) へ、一覧の絞り込みを [friendView](../../src/libs/friendView.ts) へ分離。詳細パネルの部品は `src/components/social/` に分割した。[アーキテクチャ](architecture.md)と[UI仕様](friend-ui-spec.md)の参照先を更新。
+
+## [2026-11-21] maintenance | VRChat API の送信間隔を Rust 側へ集約
+
+- 画面側の取得ループにあった待機を外し、[通常画面のAPI](../../src-tauri/src/social.rs)で全リクエスト共通の送信間隔と 429 時の待機・再試行を行うよう変更。[アーキテクチャ](architecture.md)に記載。

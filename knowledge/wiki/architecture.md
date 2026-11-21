@@ -2,7 +2,7 @@
 title: アーキテクチャ
 kind: architecture
 status: verified
-updated: 2026-11-20
+updated: 2026-11-21
 sources:
   - ../../src/App.tsx
   - ../../src/screens/friendScreen.tsx
@@ -77,7 +77,9 @@ IPC の TypeScript 側インターフェースは `tauri-specta` が生成しま
 - ライセンス表示と更新内容の取得には `get_licenses` と `get_release_note` を使う。汎用の `debug_api_request` とデバッグ画面用の取得コマンドは開発時に限定する。
 
 コマンドの戻り値は `tauri-specta` によって TypeScript の `Result` と型へ変換されます。
-通常画面の `social_*` コマンドは認証切れ・HTTP応答・通信失敗・保存失敗を区別する。従来のコマンドのエラーは `RustError::Unrecoverable` に集約され、UI が翻訳キーまたはメッセージを扱います。
+通常画面の `social_*` コマンドは認証切れ・HTTP応答・通信失敗・保存失敗を区別する。
+
+VRChat API への送信間隔は Rust 側の共通処理でまとめて管理する。全アカウント・全リクエストで送信開始を 200ms 以上あけ、HTTP 429 を受けたら `Retry-After`（秒数指定のみ。なければ 5 秒から倍々）だけ以降の送信をすべて遅らせて最大 3 回再試行する。60 秒を超える待機を求められた場合や本文を複製できない要求は再試行せずに 429 を返す。フロントエンド側では取得ループに待機を入れない。[送信間隔と再試行](../../src-tauri/src/social.rs)従来のコマンドのエラーは `RustError::Unrecoverable` に集約され、UI が翻訳キーまたはメッセージを扱います。
 
 ## キャッシュ
 

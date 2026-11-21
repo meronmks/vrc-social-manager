@@ -33,7 +33,6 @@ const loadingPhases: Record<Source, Phase> = {
   members: "loading",
   places: "loading",
 };
-const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function useSocialData(account: string, notify: Notify, expire: () => void) {
   const [friends, setFriends] = useState<Record<string, Person>>({});
@@ -171,7 +170,6 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
         fresh.forEach((row) => seen.add(key(row)));
         all.push(...fresh);
         onPage?.(fresh);
-        await pause(500);
       }
       return all;
     }
@@ -195,7 +193,6 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
           }
         }
         if (live) setWorlds((prev) => ({ ...prev, [id]: { ...prev[id], ...world, loading: false } }));
-        if (!stopWorldRequests) await pause(150);
       });
     }
     scheduleWorld.current = queueWorld;
@@ -235,7 +232,6 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
             incomplete = true;
             if (isExpired(e) || isRateLimited(e)) stopped = e;
           }
-          await pause(150);
         });
       }
       try {

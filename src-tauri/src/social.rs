@@ -55,17 +55,74 @@ struct Challenge {
 static ACTIVE: Lazy<RwLock<Option<(String, Session)>>> = Lazy::new(|| RwLock::new(None));
 static LOGIN: Lazy<Mutex<Option<Challenge>>> = Lazy::new(|| Mutex::new(None));
 
-async fn response(req: RequestBuilder) -> Outcome<reqwest::Response> {
-    let res = req.send().await.map_err(|_| {
-        log::warn!("VRChat API の応答を受信できませんでした");
-        "network"
-    })?;
-    if !res.status().is_success() {
-        let status = res.status().as_u16();
-        log::warn!("VRChat API HTTP {status}");
-        return Err(format!("http:{status}"));
+// VRChat API へのリクエストは、種類を問わずこの間隔以上あけて送信を始める。
+const REQUEST_INTERVAL: Duration = Duration::from_millis(200);
+// 429 を受けたときに再試行する最大回数。
+const MAX_RETRIES: u32 = 3;
+// Retry-After がない・読めないときの待機時間（再試行ごとに倍にする）。
+const FALLBACK_RETRY_AFTER: Duration = Duration::from_secs(5);
+// これより長い待機を求められたときは再試行せず、そのまま 429 を返す。
+const MAX_RETRY_AFTER: Duration = Duration::from_secs(60);
+
+// 次のリクエストを送信してよい時刻。全アカウント・全リクエストで共有する。
+static NEXT_SLOT: Lazy<Mutex<tokio::time::Instant>> =
+    Lazy::new(|| Mutex::new(tokio::time::Instant::now()));
+
+// 送信枠を一つ予約し、その開始時刻を返す。
+async fn reserve_slot() -> tokio::time::Instant {
+    let mut next = NEXT_SLOT.lock().await;
+    let start = (*next).max(tokio::time::Instant::now());
+    *next = start + REQUEST_INTERVAL;
+    start
+}
+
+// 429 を受けたとき、以降のすべてのリクエストの開始を指定時間だけ遅らせる。
+async fn hold_off(wait: Duration) {
+    let mut next = NEXT_SLOT.lock().await;
+    *next = (*next).max(tokio::time::Instant::now() + wait);
+}
+
+// Retry-After の秒数指定を読む。HTTP 日付形式など読めない値は None。
+fn parse_retry_after(value: &str) -> Option<Duration> {
+    value.trim().parse::<u64>().ok().map(Duration::from_secs)
+}
+
+async fn response(mut req: RequestBuilder) -> Outcome<reqwest::Response> {
+    let mut attempt = 0;
+    loop {
+        // 再試行に備えて送信前に複製しておく（本文が複製できない要求は再試行しない）。
+        let retry = req.try_clone();
+        tokio::time::sleep_until(reserve_slot().await).await;
+        let res = req.send().await.map_err(|_| {
+            log::warn!("VRChat API の応答を受信できませんでした");
+            "network"
+        })?;
+        let status = res.status();
+        if status == reqwest::StatusCode::TOO_MANY_REQUESTS && attempt < MAX_RETRIES {
+            let wait = res
+                .headers()
+                .get(reqwest::header::RETRY_AFTER)
+                .and_then(|v| v.to_str().ok())
+                .and_then(parse_retry_after)
+                .unwrap_or(FALLBACK_RETRY_AFTER * 2u32.pow(attempt));
+            if let (Some(next), true) = (retry, wait <= MAX_RETRY_AFTER) {
+                attempt += 1;
+                log::warn!(
+                    "VRChat API HTTP 429: {} 秒待って再試行します（{attempt}/{MAX_RETRIES}）",
+                    wait.as_secs_f32()
+                );
+                hold_off(wait).await;
+                req = next;
+                continue;
+            }
+        }
+        if !status.is_success() {
+            let status = status.as_u16();
+            log::warn!("VRChat API HTTP {status}");
+            return Err(format!("http:{status}"));
+        }
+        return Ok(res);
     }
-    Ok(res)
 }
 
 async fn json_body(req: RequestBuilder) -> Outcome<Value> {
@@ -545,5 +602,28 @@ mod security_tests {
             json!({"id":"usr_demo","bio":"demo","location":"private"})
         );
         assert!(visible_person(Value::Null).is_err());
+    }
+}
+
+#[cfg(test)]
+mod pacing_tests {
+    use super::*;
+
+    #[test]
+    fn retry_after_reads_seconds_only() {
+        assert_eq!(parse_retry_after("12"), Some(Duration::from_secs(12)));
+        assert_eq!(parse_retry_after(" 0 "), Some(Duration::ZERO));
+        assert_eq!(parse_retry_after("Wed, 21 Oct 2015 07:28:00 GMT"), None);
+        assert_eq!(parse_retry_after("-1"), None);
+    }
+
+    #[tokio::test]
+    async fn slots_are_spaced_and_hold_off_delays_them() {
+        let first = reserve_slot().await;
+        let second = reserve_slot().await;
+        assert!(second - first >= REQUEST_INTERVAL);
+        let before = tokio::time::Instant::now();
+        hold_off(Duration::from_secs(3)).await;
+        assert!(reserve_slot().await - before >= Duration::from_secs(3));
     }
 }

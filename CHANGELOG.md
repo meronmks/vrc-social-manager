@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
+- VRChat APIへのリクエストを、アカウントや種類を問わず一定の間隔をあけて送るようにしました。アクセスが集中してVRChatから待機を求められた場合は、指定された時間だけ待って自動で再試行します。
 
 ### Deprecated
 
