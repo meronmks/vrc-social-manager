@@ -94,7 +94,7 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
       <section className="social-list">
         <div className="list-tools">
           <small>
-            {t("最終確認", "Last checked")}　{checked ? clock(checked) : "—"}
+            {t("最終確認", "Last checked")} {checked ? clock(checked) : "—"}
           </small>
           <button className="quiet-action" onClick={data.refresh} disabled={busy && !failed}>
             <FiRefreshCw />

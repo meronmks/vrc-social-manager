@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FiStar } from "react-icons/fi";
+import { FiArrowLeft, FiStar } from "react-icons/fi";
 import {
   access,
   Account,
@@ -138,19 +138,24 @@ export function SocialDetail(props: Props) {
     <aside className="social-detail">
       {props.backToInstance && (
         <button type="button" className="text-action" onClick={props.backToInstance} autoFocus>
+          <FiArrowLeft aria-hidden="true" />
           {t("インスタンス詳細に戻る", "Back to instance")}
         </button>
       )}
       <div className="detail-bar">
         <b>{title}</b>
-        {person && (
-          <button className="text-action" onClick={() => setShowProfile(!showProfile)}>
-            {showProfile ? t("フレンド詳細に戻る", "Back to details") : t("プロフィールを見る", "View profile")}
+        <span className="detail-actions">
+          {person && (
+            <button className="text-action" onClick={() => setShowProfile(!showProfile)}>
+              {showProfile ? t("フレンド詳細に戻る", "Back to details") : t("プロフィールを見る", "View profile")}
+            </button>
+          )}
+          {/* インスタンス詳細では「現在地」の見出しを出さないため、確認時刻はここに置く */}
+          {!person && current.confirmed && <CheckedAt time={current.confirmed.time} />}
+          <button className="mobile-close quiet-action" onClick={props.close}>
+            {t("閉じる", "Close")}
           </button>
-        )}
-        <button className="mobile-close" onClick={props.close}>
-          {t("閉じる", "Close")}
-        </button>
+        </span>
       </div>
       {person && (
         <header className="person-head">
@@ -180,15 +185,13 @@ export function SocialDetail(props: Props) {
         <ProfileSection {...profile} />
       ) : (
         <>
-          <div className="detail-bar">
-            {/* インスタンス詳細では見出しが冗長なため、フレンド詳細のときだけ表示する */}
-            {person && <h3>{t("現在地", "Location")}</h3>}
-            {current.confirmed && (
-              <small>
-                {clock(current.confirmed.time)} {t("確認", "checked")}
-              </small>
-            )}
-          </div>
+          {/* インスタンス詳細では見出しが冗長なため、フレンド詳細のときだけ表示する */}
+          {person && (
+            <div className="detail-bar">
+              <h3>{t("現在地", "Location")}</h3>
+              {current.confirmed && <CheckedAt time={current.confirmed.time} />}
+            </div>
+          )}
           {current.phase === "loading" ? (
             <p role="status">
               {person
@@ -204,7 +207,7 @@ export function SocialDetail(props: Props) {
           ) : (
             <>
               {target && <WorldPhoto world={place?.world} account={account.id} />}
-              <h2>{where(location, place, t)}</h2>
+              <h2 className={person ? "place-title" : undefined}>{where(location, place, t)}</h2>
               {target && (
                 <>
                   <div className="place-info">
@@ -256,6 +259,16 @@ export function SocialDetail(props: Props) {
         </>
       )}
     </aside>
+  );
+}
+
+// 最後に確認した時刻。
+function CheckedAt({ time }: { time: number }) {
+  const t = useText();
+  return (
+    <small>
+      {clock(time)} {t("確認", "checked")}
+    </small>
   );
 }
 

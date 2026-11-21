@@ -10,9 +10,11 @@
   opacity: 0;
   transition: opacity 0.5s;
 }
-/* 配色トークン。トースト（.Toastify）はアプリの外側に描画されるため同じ値を渡す。 */
+/* 配色・角丸のトークン。トースト（.Toastify）と更新ダイアログ（.app-dialog）はアプリの外側に描画されるため同じ値を渡す。
+   色はここに定義した値だけを使い、個別のルールに直接書かない（ダークテーマで浮かないようにするため）。 */
 .social-app,
-.Toastify {
+.Toastify,
+.app-dialog {
   --paper: #f9faf7;
   --surface: #fff;
   --ink: #182f32;
@@ -20,8 +22,23 @@
   --line: #d9e3de;
   --pale: #e4f3e9;
   --accent: #116552;
+  --on-accent: #fff;
   --warn: #fff1d8;
   --warn-ink: #744813;
+  --nav: #163235;
+  --nav-ink: #d6e2de;
+  --nav-active: #2a5052;
+  --nav-active-ink: #dcf5e5;
+  --avatar: #c8dfd5;
+  --avatar-ink: #284039;
+  --star: #ac6c20;
+  --shadow: 0 8px 25px #142d3020;
+  /* 選択中（--pale）より薄い、ホバー時の背景 */
+  --hover: color-mix(in srgb, var(--pale) 55%, transparent);
+  /* 角丸は 3 段階。小：チップ・入力欄、中：ボタン・行・枠、大：カード・ポップオーバー */
+  --radius-s: 6px;
+  --radius: 8px;
+  --radius-l: 12px;
 }
 .social-app {
   display: flex;
@@ -35,7 +52,7 @@
     "Yu Gothic UI",
     sans-serif;
 }
-[data-theme="dark"] :is(.social-app, .Toastify) {
+[data-theme="dark"] :is(.social-app, .Toastify, .app-dialog) {
   --paper: #172627;
   --surface: #203334;
   --ink: #ecf4ef;
@@ -43,8 +60,17 @@
   --line: #39514c;
   --pale: #27493f;
   --accent: #95dfbd;
+  --on-accent: #10302a;
   --warn: #473921;
   --warn-ink: #f5d69d;
+  --nav: #0f1d1e;
+  --nav-ink: #c3d4cf;
+  --nav-active: #24413f;
+  --nav-active-ink: #dcf5e5;
+  --avatar: #2d4a45;
+  --avatar-ink: #cfe6dc;
+  --star: #e2b061;
+  --shadow: 0 8px 25px #00000055;
 }
 .social-app [hidden] {
   display: none !important;
@@ -64,14 +90,27 @@
 .social-app a svg {
   flex-shrink: 0;
 }
-.social-app button:hover:not(:disabled),
-.social-app a:hover {
-  filter: brightness(0.93);
+/* ホバー時は明るさを一律に落とさず（文字やアイコン画像まで暗くなるため）、要素ごとに背景や下線で示す。 */
+:is(.social-app, .app-dialog) :is(.quiet-action, .icon-action, .account-trigger, .popover button, .segmented button):hover:not(:disabled) {
+  background: var(--pale);
+}
+:is(.social-app, .app-dialog) .primary-action:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 86%, var(--ink));
+}
+.social-app :is(.text-action, .license-back, .list-state button, .problem button):hover:not(:disabled) {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.social-app button,
+.social-app a {
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
 }
 .social-app h1 {
   font-size: 24px;
   line-height: 1.3;
-  font-weight: 750;
+  font-weight: 700;
   margin: 0 0 10px;
 }
 .social-app h2 {
@@ -95,7 +134,7 @@
 .social-app h4 {
   margin: 14px 0 6px;
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 600;
 }
 .app-header {
   display: flex;
@@ -131,9 +170,10 @@
   white-space: nowrap;
 }
 .branding > span {
-  background: #163235;
-  color: #b7e7d2;
-  border-radius: 8px;
+  display: grid;
+  background: var(--nav);
+  color: var(--nav-active-ink);
+  border-radius: var(--radius);
   padding: 7px;
 }
 .app-controls {
@@ -142,7 +182,7 @@
 .account-trigger,
 .icon-action,
 .quiet-action {
-  border-radius: 7px;
+  border-radius: var(--radius);
   background: var(--paper);
   padding: 5px 10px;
   font-weight: 600;
@@ -153,13 +193,11 @@
 }
 .account-trigger .social-avatar,
 .popover .social-avatar {
-  background: var(--pale);
-  color: var(--accent);
-  border-radius: 7px;
-  width: 25px;
-  height: 25px;
+  border-radius: var(--radius-s);
+  width: 24px;
+  height: 24px;
   align-self: center;
-  font-size: 14px;
+  font-size: 13px;
 }
 .icon-action {
   padding: 9px;
@@ -169,17 +207,17 @@
   color: var(--accent);
 }
 .primary-action {
-  border-radius: 7px;
-  color: white;
-  background: #116552;
-  font-weight: 650;
+  border-radius: var(--radius);
+  color: var(--on-accent);
+  background: var(--accent);
+  font-weight: 600;
   padding: 9px 14px;
 }
 .text-action {
   display: inline-flex;
   padding: 3px 0;
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 .popover {
@@ -191,8 +229,8 @@
   overflow: auto;
   background: var(--surface);
   border: 1px solid var(--line);
-  box-shadow: 0 8px 25px #142d3020;
-  border-radius: 10px;
+  box-shadow: var(--shadow);
+  border-radius: var(--radius-l);
   padding: 10px;
 }
 .popover h3 {
@@ -202,11 +240,16 @@
 .popover button {
   display: flex;
   gap: 8px;
-  align-items: baseline;
+  align-items: center;
   width: 100%;
   text-align: left;
   padding: 8px;
   border-top: 1px solid var(--line);
+}
+.popover button svg {
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
 }
 .popover button[aria-current="true"] {
   background: var(--pale);
@@ -259,8 +302,8 @@
 }
 .social-nav {
   width: 78px;
-  background: #163235;
-  color: #d6e2de;
+  background: var(--nav);
+  color: var(--nav-ink);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -274,15 +317,18 @@
   font-size: 11px;
   font-weight: 600;
   padding: 10px 0;
-  border-radius: 9px;
+  border-radius: var(--radius);
+}
+.social-nav button:hover:not([aria-current="page"]) {
+  background: color-mix(in srgb, var(--nav-active) 55%, transparent);
 }
 .social-nav button svg {
   width: 21px;
   height: 21px;
 }
 .social-nav button[aria-current="page"] {
-  background: #2a5052;
-  color: #dcf5e5;
+  background: var(--nav-active);
+  color: var(--nav-active-ink);
 }
 .social-nav button:nth-child(3) {
   margin-top: auto;
@@ -326,12 +372,11 @@
 .search-box,
 .select-row {
   background: var(--surface);
-  border-radius: 7px;
+  border-radius: var(--radius);
   margin: 6px 0;
   padding: 7px 10px;
 }
-.search-box input,
-.group-picker select {
+.search-box input {
   flex: 1;
   min-width: 0;
   color: var(--ink);
@@ -345,25 +390,127 @@
   gap: 4px;
   color: var(--sub);
 }
-.social-app select {
+/* プルダウン（components/ui/dropdown.tsx）。<select> の一覧は OS ごとに見た目が変わるため、
+   ボタンと一覧を自前で描き、一覧はポップオーバーと同じカード調にする。 */
+.dropdown {
+  position: relative;
+  min-width: 0;
+}
+.dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
   color: var(--ink);
   font-weight: 600;
+  text-align: left;
 }
-.social-app option {
-  color: var(--ink);
+.dropdown-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dropdown-chevron {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--sub);
+  transition: transform 0.15s ease;
+}
+.dropdown-trigger[aria-expanded="true"] .dropdown-chevron {
+  transform: rotate(180deg);
+}
+.dropdown-list {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  max-width: min(320px, 90vw);
+  max-height: min(320px, 60vh);
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  font-size: 13px;
 }
+.dropdown-list.align-end {
+  left: auto;
+  right: 0;
+}
+/* 一覧そのものではなく、キーで移動中の項目（data-active）の背景でフォーカス位置を示す */
+.social-app .dropdown-list:focus-visible {
+  outline: none;
+}
+.dropdown-list [role="option"] {
+  padding: 6px 10px;
+  border-radius: var(--radius-s);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.dropdown-list [data-active] {
+  background: var(--hover);
+}
+.dropdown-list [aria-selected="true"] {
+  background: var(--pale);
+  color: var(--accent);
+  font-weight: 600;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dropdown-chevron {
+    transition: none;
+  }
+}
+/* お気に入りグループの選択は、枠全体を押せるようにボタン側に余白を持たせる */
+.dropdown.group-picker {
+  display: block;
+  padding: 0;
+}
+.group-picker .dropdown-trigger {
+  padding: 7px 10px;
+  border-radius: var(--radius);
+}
+.group-picker .dropdown-trigger:hover:not(:disabled) {
+  background: var(--hover);
+}
+.group-picker .dropdown-trigger > svg:first-child {
+  flex: none;
+  color: var(--sub);
+}
+/* 並び順・設定の言語など、文字の幅だけの小さなプルダウン */
+.sort-dropdown .dropdown-trigger {
+  font-size: 12px;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: var(--radius-s);
+}
+.sort-dropdown .dropdown-trigger:hover:not(:disabled) {
+  background: var(--hover);
+}
+/* 切り替えボタン群。置く場所の背景に溶けないよう、枠線つきの紙色の台に載せる。 */
 .segmented {
   display: inline-flex;
   flex-wrap: wrap;
-  background: var(--surface);
+  background: var(--paper);
+  border: 1px solid var(--line);
   gap: 2px;
-  border-radius: 6px;
-  padding: 3px;
+  border-radius: var(--radius-s);
+  padding: 2px;
 }
 .segmented button {
-  padding: 4px 8px;
-  font-size: 12px;
+  padding: 3px 10px;
+  font-size: 13px;
+  font-weight: 600;
   border-radius: 4px;
   color: var(--sub);
 }
@@ -376,7 +523,7 @@
   width: 100%;
   text-align: left;
   padding: 8px 7px;
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 .friend-row {
   display: grid;
@@ -385,7 +532,9 @@
   align-items: center;
 }
 .friend-row:hover,
-.place-row:hover,
+.place-row:hover {
+  background: var(--hover);
+}
 .friend-row[aria-pressed="true"],
 .place-row[aria-pressed="true"] {
   background: var(--pale);
@@ -403,12 +552,12 @@
 .star {
   display: inline-block;
   vertical-align: middle;
-  color: #ac6c20;
+  color: var(--star);
   width: 14px;
 }
 .social-avatar {
-  background: #c8dfd5;
-  color: #284039;
+  background: var(--avatar);
+  color: var(--avatar-ink);
   border-radius: 9px;
   width: 36px;
   height: 36px;
@@ -468,7 +617,7 @@
   font-size: 12px;
   padding: 8px 10px;
   background: var(--pale);
-  border-radius: 6px;
+  border-radius: var(--radius-s);
   margin: 7px 0;
 }
 .list-state.warn,
@@ -493,9 +642,8 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  column-gap: 8px;
+  column-gap: 10px;
   row-gap: 3px;
-  border-bottom: 1px solid var(--line);
 }
 .instance-filters {
   margin: 6px 0;
@@ -505,7 +653,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border-radius: 7px;
+  border-radius: var(--radius);
   background: var(--surface);
   cursor: pointer;
   font-size: 12px;
@@ -523,7 +671,7 @@
   display: grid;
   place-items: center;
   overflow: hidden;
-  border-radius: 5px;
+  border-radius: var(--radius-s);
   background: var(--pale);
   color: var(--sub);
 }
@@ -531,7 +679,8 @@
   width: clamp(44px, 7vw, 72px);
   aspect-ratio: 3 / 2;
   grid-column: 1;
-  grid-row: 1 / 3;
+  grid-row: 1 / span 3;
+  align-self: start;
 }
 .world-thumb img, .world-photo img {
   position: absolute;
@@ -549,13 +698,9 @@
   flex-wrap: wrap;
   gap: 4px 8px;
 }
-.instance-list-heading select {
-  font-size: 12px;
-  padding: 4px 6px;
-  border-radius: 5px;
-}
+/* 2 行目以降（インスタンス情報・いるフレンド）は、サムネイルの右でワールド名と左端を揃える。 */
 .place-row > small {
-  grid-column: 1/-1;
+  grid-column: 2 / -1;
   overflow-wrap: anywhere;
 }
 .place-friends {
@@ -572,10 +717,18 @@
   max-width: 100%;
 }
 .friend-detail-link {
-  color: var(--accent);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  padding: 3px 2px;
+  padding: 3px 8px 3px 3px;
+  border-radius: var(--radius-s);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-weight: 600;
+}
+.friend-detail-link:hover {
+  background: var(--pale);
+}
+.place-friend .star {
+  width: 12px;
 }
 .person-web { flex-basis: 100%; }
 .place-friend .social-avatar {
@@ -592,7 +745,7 @@
   background: var(--warn);
   color: var(--warn-ink);
   padding: 2px 5px;
-  border-radius: 5px;
+  border-radius: var(--radius-s);
   margin-left: 5px;
 }
 .detail-bar {
@@ -602,6 +755,25 @@
 }
 .detail-bar h3 {
   color: var(--ink);
+}
+.detail-bar > b {
+  font-weight: 600;
+}
+/* 詳細パネルの上部の操作（戻る・プロフィール切り替え）。 */
+.detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.text-action svg {
+  width: 14px;
+  height: 14px;
+}
+/* フレンド詳細の中の現在地は、名前（h2）より一段小さくする。 */
+.place-title {
+  font-size: 17px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 .person-head {
   margin: 24px 0 8px;
@@ -629,7 +801,7 @@
   width: 100%;
   height: clamp(90px, 18vh, 160px);
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: var(--radius);
   margin: 4px 0 10px;
 }
 .place-info {
@@ -641,7 +813,7 @@
   background: var(--pale);
   color: var(--accent);
   padding: 4px 6px;
-  border-radius: 6px;
+  border-radius: var(--radius-s);
 }
 .invite {
   margin: 18px 0 7px;
@@ -670,7 +842,7 @@
   max-width: 490px;
   margin: auto;
   background: var(--surface);
-  border-radius: 12px;
+  border-radius: var(--radius-l);
   padding: 26px 30px;
 }
 .login-notice {
@@ -679,7 +851,7 @@
   gap: 8px;
   margin: 12px 0;
   padding: 12px;
-  border-radius: 7px;
+  border-radius: var(--radius);
   background: var(--warn);
   color: var(--warn-ink);
   font-size: 13px;
@@ -700,11 +872,63 @@
 }
 .auth-card input,
 .settings-box input[type="number"],
-.settings-box select {
+.settings-box .dropdown-trigger {
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-s);
   background: var(--paper);
   padding: 7px 10px;
+}
+/* 設定の行に並ぶ操作部品は高さを揃える。 */
+.settings-box input[type="number"],
+.settings-box .dropdown-trigger {
+  padding: 4px 8px;
+  min-height: 30px;
+}
+.settings-box .dropdown {
+  min-width: 120px;
+}
+.settings-box .quiet-action {
+  min-height: 30px;
+}
+/* オン・オフの切り替え。DaisyUI の既定（黒いつまみ）ではなくアプリの配色にする。 */
+.social-app .switch {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 38px;
+  height: 22px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--sub) 35%, var(--surface));
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.social-app .switch::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px #0003;
+  transition: transform 0.15s ease;
+}
+.social-app .switch:checked {
+  background: var(--accent);
+}
+.social-app .switch:checked::before {
+  transform: translateX(16px);
+}
+.social-app .switch:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+@media (prefers-reduced-motion: reduce) {
+  .social-app .switch,
+  .social-app .switch::before {
+    transition: none;
+  }
 }
 .auth-card .primary-action {
   justify-content: center;
@@ -718,7 +942,7 @@
   overflow-y: auto;
 }
 .settings-box {
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--surface);
   padding: 0 12px;
 }
@@ -733,19 +957,34 @@
   padding: 7px 0;
   min-height: 38px;
 }
-.settings-box > div + div,
-.settings-box > label + div {
+/* 2 つ目以降の行の上に区切り線を引く。補足の文（p）は直前の行に付くため線を引かない。 */
+.settings-box > :is(div, label, button) ~ :is(div, label, button) {
   border-top: 1px solid var(--line);
+}
+.settings-box + .settings-box {
+  margin-top: 8px;
+}
+.settings-box > button {
+  width: 100%;
+  text-align: left;
+}
+.settings-box > button > svg {
+  width: 16px;
+  height: 16px;
+  color: var(--sub);
+}
+.settings-box > button:hover {
+  color: var(--accent);
 }
 /* 設定の折りたたみ見出しは、箱の端まで背景色が届くよう左右の余白を打ち消す。 */
 .settings-box > summary {
   margin: 0 -12px;
   padding: 7px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   font-weight: 600;
 }
 .settings-box[open] > summary {
-  border-radius: 8px 8px 0 0;
+  border-radius: var(--radius) var(--radius) 0 0;
   border-bottom: 1px solid var(--line);
   margin-bottom: 4px;
 }
@@ -825,7 +1064,7 @@
 .license-list {
   min-height: 0;
   overflow-y: auto;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--surface);
 }
 .license-item + .license-item {
@@ -915,10 +1154,10 @@
   gap: 10px;
   align-items: flex-start;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-l);
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 8px 25px #142d3020;
+  box-shadow: var(--shadow);
   font:
     13px/1.45 "Segoe UI",
     "Yu Gothic UI",
@@ -949,7 +1188,7 @@
   right: 7px;
   display: grid;
   padding: 4px;
-  border-radius: 6px;
+  border-radius: var(--radius-s);
   color: var(--sub);
   cursor: pointer;
 }
@@ -973,6 +1212,77 @@
   }
   .Toastify .app-toast {
     margin-bottom: 8px;
-    border-radius: 10px;
+    border-radius: var(--radius-l);
   }
+}
+
+/* アップデート確認ダイアログ。ポップオーバーと同じカード調で、画面全体を薄く覆う。 */
+.app-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: color-mix(in srgb, #0b1617 45%, transparent);
+  color: var(--ink);
+  font:
+    14px/1.45 "Segoe UI",
+    "Yu Gothic UI",
+    sans-serif;
+}
+.app-dialog-card {
+  width: min(520px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow);
+  padding: 22px 24px 18px;
+}
+.app-dialog-card h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.app-dialog-notes {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.app-dialog-notes h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sub);
+  margin-bottom: 6px;
+}
+.app-dialog-notes .prose {
+  --tw-prose-body: var(--ink);
+  --tw-prose-headings: var(--ink);
+  --tw-prose-bold: var(--ink);
+  --tw-prose-links: var(--accent);
+  --tw-prose-bullets: var(--sub);
+  --tw-prose-counters: var(--sub);
+  --tw-prose-code: var(--ink);
+  --tw-prose-hr: var(--line);
+  color: var(--ink);
+}
+.app-dialog-hint {
+  font-size: 12px;
+  color: var(--sub);
+}
+.app-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+.app-dialog button {
+  cursor: pointer;
+}
+.app-dialog .quiet-action {
+  background: var(--paper);
 }

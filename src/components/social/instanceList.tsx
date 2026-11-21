@@ -1,4 +1,5 @@
 import { FiChevronDown } from "react-icons/fi";
+import { Dropdown } from "@/components/ui/dropdown";
 import { InstanceKind, InstanceScope, SortOrder } from "@/libs/friendView";
 import { access, destination, instanceName, instanceNumber, Person, Place, Text, useText, where } from "@/libs/social";
 import { WorldPhoto } from "./media";
@@ -50,16 +51,15 @@ export function InstanceFilters({ scope, kind, groupLabel, groupPicker, onScope,
         <span title={summary}>{summary}</span>
         <FiChevronDown aria-hidden="true" />
       </summary>
-      <label className="select-row">
-        {t("探す対象", "Source")}
-        <select value={scope} onChange={(e) => onScope(e.target.value as InstanceScope)}>
-          {scopes.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="select-row">
+        <span aria-hidden="true">{t("探す対象", "Source")}</span>
+        <Dropdown
+          label={t("探す対象", "Source")}
+          value={scope}
+          options={scopes.map(([value, label]) => ({ value, label }))}
+          onChange={onScope}
+        />
+      </div>
       {scope === "favorite" && groupPicker}
       {!memberView && (
         <div className="segmented" role="group" aria-label={t("インスタンス種別", "Instance type")}>
@@ -97,16 +97,19 @@ export function InstanceList(props: ListProps) {
     <>
       <div className="instance-list-heading">
         <h4>
-          {t("インスタンス", "Instances")}　{locations.length || (!busy && !failed) ? locations.length : "—"}
+          {t("インスタンス", "Instances")} {locations.length || (!busy && !failed) ? locations.length : "—"}
         </h4>
-        <select
-          aria-label={t("並び順", "Sort order")}
+        <Dropdown
+          className="sort-dropdown"
+          alignEnd
+          label={t("並び順", "Sort order")}
           value={props.sortOrder}
-          onChange={(e) => props.onSort(e.target.value as SortOrder)}
-        >
-          <option value="friendCount">{t("フレンドが多い順", "Most friends first")}</option>
-          <option value="original">{t("取得順", "Fetch order")}</option>
-        </select>
+          options={[
+            { value: "friendCount" as SortOrder, label: t("フレンドが多い順", "Most friends first") },
+            { value: "original" as SortOrder, label: t("取得順", "Fetch order") },
+          ]}
+          onChange={props.onSort}
+        />
       </div>
       {locations.map((location) => {
         const place = props.placeAt(location);

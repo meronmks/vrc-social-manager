@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { FiChevronDown } from "react-icons/fi";
+import { FiChevronDown, FiChevronRight } from "react-icons/fi";
 import { getVersion } from "@tauri-apps/api/app";
 import { useTranslation } from "react-i18next";
 import type { AppUpdates } from "@/libs/useAppUpdates";
 import { useNavigate } from "react-router";
+import { Dropdown } from "@/components/ui/dropdown";
 import { Account, useText } from "@/libs/social";
 import { cacheLimits, userDataStore } from "@/libs/userDataStore";
 import { commands } from "@/bindings";
@@ -127,22 +128,24 @@ export default function SettingsScreen({ account, logout, updates }: Props) {
       <fieldset disabled={!ready}>
         <h3>{t("表示", "Display")}</h3>
         <div className="settings-box">
-          <label>
-            {t("表示言語", "Language")}
-            <select
+          <div>
+            <span aria-hidden="true">{t("表示言語", "Language")}</span>
+            <Dropdown
+              alignEnd
+              label={t("表示言語", "Language")}
               value={i18n.language.startsWith("en") ? "en" : "ja"}
-              onChange={(e) => {
-                const lang = e.target.value;
+              options={[
+                { value: "ja", label: "日本語" },
+                { value: "en", label: "English" },
+              ]}
+              onChange={(lang) =>
                 void save(async () => {
                   await userDataStore.setLanguage(lang);
                   await i18n.changeLanguage(lang);
-                });
-              }}
-            >
-              <option value="ja">日本語</option>
-              <option value="en">English</option>
-            </select>
-          </label>
+                })
+              }
+            />
+          </div>
           <div>
             {t("テーマ", "Theme")}
             <span className="segmented">
@@ -168,7 +171,7 @@ export default function SettingsScreen({ account, logout, updates }: Props) {
         <div className="settings-box">
           <div>
             <span>
-              {t("使用中", "Active")}　<strong>{account.displayName}</strong>
+              {t("使用中のアカウント", "Signed in as")} <strong>{account.displayName}</strong>
             </span>
             <button className="quiet-action" onClick={logout}>
               {t("ログアウト", "Log out")}
@@ -180,7 +183,7 @@ export default function SettingsScreen({ account, logout, updates }: Props) {
           <label>
             {t("起動時にアプリの更新を確認", "Check for updates on startup")}
             <input
-              className="toggle"
+              className="switch"
               type="checkbox"
               checked={auto}
               onChange={(e) => {
@@ -195,7 +198,7 @@ export default function SettingsScreen({ account, logout, updates }: Props) {
           <label>
             {translate("settingScreen.betaUpdates")}
             <input
-              className="toggle"
+              className="switch"
               type="checkbox"
               checked={updates.beta === true}
               disabled={updates.busy || updates.beta === null}
@@ -206,7 +209,7 @@ export default function SettingsScreen({ account, logout, updates }: Props) {
           <p id="beta-updates-help">{translate("settingScreen.betaUpdatesHelp")}</p>
           <div>
             <span>
-              {t("現在のバージョン", "Current version")}　{version}
+              {t("現在のバージョン", "Current version")} <strong>{version}</strong>
             </span>
             <button className="quiet-action" disabled={updates.busy} onClick={() => void updates.checkNow()}>
               {updates.busy ? t("確認中…", "Checking…") : t("今すぐ確認", "Check now")}
@@ -310,7 +313,8 @@ export default function SettingsScreen({ account, logout, updates }: Props) {
         <h3>{t("このアプリについて", "About")}</h3>
         <div className="settings-box">
           <button onClick={() => navigate("/settings/licenses", { state: { fromSettings: true } })}>
-            {t("サードパーティライセンス", "Third-party licenses")}　›
+            {t("サードパーティライセンス", "Third-party licenses")}
+            <FiChevronRight aria-hidden="true" />
           </button>
         </div>
       </fieldset>
