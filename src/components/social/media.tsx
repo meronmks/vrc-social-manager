@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { FiImage } from "react-icons/fi";
-import { httpsUrls, request, UserImages, WorldInfo } from "@/libs/social";
+import { httpsUrls, UserImages, WorldInfo } from "@/libs/social";
 
 // VRChat の API 経由でしか読めない画像（認証 Cookie が必要なもの）の URL。
 const authenticatedImage = /^https:\/\/api\.vrchat\.cloud\/api\/1\/(file|image)\/file_/;
@@ -54,47 +55,37 @@ export function WorldPhoto({
 // 仮想スクロールで行が出入りするたびに直接読み込みの失敗を繰り返さないよう、次からは最初から Rust 側で取得する。
 const nativeOnly = new Set<string>();
 
+// Rust 側の画像プロトコル（src-tauri の IMAGE_SCHEME）経由で読む URL。
+// IPC で base64 を受け渡さず、`<img>` が直接バイト列を受け取る。
+function nativeUrl(account: string, url: string) {
+  return `${convertFileSrc("image", "vrcimg")}?${new URLSearchParams({ account, url })}`;
+}
+
 // 候補の URL を順に試す画像。直接読めない VRChat の画像は、アカウントのセッションで Rust 側から取得し直す。
 function RemoteImage({ urls, account }: { urls: string[]; account?: string }) {
   const [index, setIndex] = useState(0);
   const [native, setNative] = useState(() => !!account && nativeOnly.has(urls[0]));
-  const [source, setSource] = useState("");
   const url = urls[index];
-  useEffect(() => {
-    if (!native || !account || !url) return;
-    let live = true;
-    void request(account, { kind: "icon", url }).then(
-      (data) => {
-        nativeOnly.add(url);
-        if (live) setSource(data);
-      },
-      () => {
-        nativeOnly.delete(url);
-        if (live) {
-          setNative(false);
-          setIndex(index + 1);
-        }
-      },
-    );
-    return () => {
-      live = false;
-    };
-  }, [account, index, native, url]);
-  if (!url || (native && !source)) return null;
+  if (!url) return null;
+  const source = native && account ? nativeUrl(account, url) : url;
   return (
     <img
-      key={source || url}
-      src={source || url}
+      key={source}
+      src={source}
       loading="lazy"
       alt=""
+      onLoad={() => {
+        if (native) nativeOnly.add(url);
+      }}
       onError={() => {
         if (!native && account && authenticatedImage.test(url)) {
           setNative(true);
-        } else {
-          setSource("");
-          setNative(false);
-          setIndex(index + 1);
+          return;
         }
+        if (native) nativeOnly.delete(url);
+        const next = urls[index + 1];
+        setNative(!!account && !!next && nativeOnly.has(next));
+        setIndex(index + 1);
       }}
     />
   );

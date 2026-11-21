@@ -264,3 +264,7 @@ sources:
 ## [2026-11-21] maintenance | 画面定義を実画面に合わせ、画面例PNGを管理対象から外す
 
 - [AltPenの画面定義](../../design/friend-home.pen)の37フレームを、モックデータで表示した現行の実画面から作り直し、色の変数を [styles.css](../../src/styles.css) のライトテーマに揃えた。画面例のPNGは `.gitignore` でリポジトリから外し、[UI仕様](friend-ui-spec.md#新uiの画面定義)の画面例リンクをフレーム名付きで画面定義へ向けた。人数表示・一覧の更新失敗・最近の通知の記述も現行の表示に合わせた。
+
+## [2026-11-22] maintenance | 認証が必要な画像をカスタムプロトコルで読む
+
+- 画像を `social_request` の `icon` で base64 の data URL として IPC で受け渡していたため、仮想スクロールで行が出入りするたびに大きな IPC が発生していた。Rust 側に画像プロトコル `vrcimg` を追加し、`<img>` から直接バイト列を読む形に変更。`Resource::Icon` は削除。[アーキテクチャ](architecture.md#ipc-と-rust-バックエンド)と[認証とローカル保存](authentication-and-storage.md)に記載。

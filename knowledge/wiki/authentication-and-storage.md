@@ -2,7 +2,7 @@
 title: 認証とローカル保存
 kind: security
 status: verified
-updated: 2026-11-19
+updated: 2026-11-22
 sources:
   - ../../src-tauri/src/lib.rs
   - ../../src-tauri/src/commands.rs
@@ -57,7 +57,7 @@ Windowsでは資格情報マネージャー、macOSではキーチェーン、Li
 - フレンド一覧・ユーザー詳細・プロフィールの応答は、画面で扱う項目だけを取り出して渡す。[プロフィールの返却](../../src-tauri/src/social.rs)
 - 配布版の WebView はアカウント専用の認証・参照コマンドを使用する。旧認証コマンドを登録せず、汎用APIテスターは開発用のデバッグ構成に限って登録する。[公開コマンド](../../src-tauri/src/commands.rs)
 - アプリのログはアプリ自身と画面のログが対象。HTTP・Cookie・keyringライブラリの診断を除外し、APIの失敗はHTTPステータスまたは固定のエラーとして扱う。[ログ設定](../../src-tauri/src/lib.rs)
-- 配布版の画面ではローカルのスクリプトとTauri IPCを許可し、外部フォーム送信を禁止する。リモート画像はHTTPSで表示する。[CSP設定](../../src-tauri/tauri.conf.json)
+- 配布版の画面ではローカルのスクリプトとTauri IPCを許可し、外部フォーム送信を禁止する。リモート画像はHTTPSで表示する。ログインが必要な画像は `img-src` に加えた画像プロトコル `vrcimg` で読み、Rust 側は GET だけを受け付け、利用中アカウントのセッションで `api.vrchat.cloud` の file・image の URL に限って取得する。応答は `Cache-Control: private` とする。[CSP設定](../../src-tauri/tauri.conf.json)・[画像プロトコル](../../src-tauri/src/social.rs)
 
 根拠: [`src-tauri/src/commands.rs`](../../src-tauri/src/commands.rs)
 

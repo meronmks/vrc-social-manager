@@ -115,7 +115,6 @@ export const session = {
 interface Resources {
   friends: Person[];
   groups: FavoriteGroup[];
-  icon: string;
   favorites: Favorite[];
   memberInstances: { instances: Place[] };
   friend: Person;

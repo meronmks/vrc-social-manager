@@ -98,6 +98,12 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(commands::handlers())
+        // 認証が必要な VRChat の画像を、IPC を通さず `<img>` から直接読めるようにする。
+        .register_asynchronous_uri_scheme_protocol(social::IMAGE_SCHEME, |_ctx, request, responder| {
+            tauri::async_runtime::spawn(async move {
+                responder.respond(social::image_response(request).await);
+            });
+        })
         .setup(move |app| {
             let store = app.store("store.json")?;
             account_migration::migrate(&store)?;

@@ -424,7 +424,6 @@ pub async fn social_logout(app: tauri::AppHandle, id: String) -> Result<(), Stri
 pub enum Resource {
     Friends { offset: u32, n: u32, offline: bool },
     Groups,
-    Icon { url: String },
     Favorites { offset: u32 },
     MemberInstances,
     Friend { id: String },
@@ -437,8 +436,7 @@ pub enum Resource {
     InstanceVibes,
 }
 
-async fn read_icon(client: &Client, source: &str) -> Outcome<String> {
-    use base64::{engine::general_purpose::STANDARD, Engine};
+async fn read_icon(client: &Client, source: &str) -> Outcome<cache::Image> {
     let url = Url::parse(source).map_err(|_| "invalid")?;
     let path: Vec<_> = url.path().split('/').collect();
     let valid_path = matches!(path.as_slice(), ["", "api", "1", route, id, version, size]
@@ -469,7 +467,91 @@ async fn read_icon(client: &Client, source: &str) -> Outcome<String> {
         [b'R', b'I', b'F', b'F', _, _, _, _, b'W', b'E', b'B', b'P', ..] => "image/webp",
         _ => return Err("invalid".into()),
     };
-    Ok(format!("data:{mime};base64,{}", STANDARD.encode(bytes)))
+    Ok(cache::Image { mime, bytes })
+}
+
+// 画像を返すカスタムプロトコルの名前。画面では `convertFileSrc("image", IMAGE_SCHEME)` で URL を作る。
+pub const IMAGE_SCHEME: &str = "vrcimg";
+
+// 指定アカウントが利用中ならそのセッションのクライアントを返す。
+fn client_for(account: &str) -> Outcome<Client> {
+    ACTIVE
+        .read()
+        .map_err(|_| "storage")?
+        .as_ref()
+        .filter(|(id, _)| id == account)
+        .map(|(_, s)| s.client.clone())
+        .ok_or_else(|| "inactive".into())
+}
+
+// クエリの account（利用中アカウント）と url（VRChat の画像 URL）から画像を返す。
+async fn serve_image(query: &str) -> Outcome<cache::Image> {
+    let params = Url::parse(&format!("http://localhost/?{query}")).map_err(|_| "invalid")?;
+    let (mut account, mut source) = (None, None);
+    for (key, value) in params.query_pairs() {
+        match key.as_ref() {
+            "account" => account = Some(value.into_owned()),
+            "url" => source = Some(value.into_owned()),
+            _ => {}
+        }
+    }
+    let (Some(account), Some(source)) = (account, source) else {
+        return Err("invalid".into());
+    };
+    let client = client_for(&account)?;
+    // 画像 URL はファイルのバージョンごとに変わるため、同じ URL の中身は使い回せる。
+    if let Some(hit) = cache::icon(&account, &source) {
+        return Ok(hit);
+    }
+    let image = read_icon(&client, &source).await?;
+    cache::put_icon(&account, &source, image.clone());
+    Ok(image)
+}
+
+// エラー文字列を画像プロトコルの HTTP ステータスへ変える。失敗は `<img>` の onError で次の候補へ進む。
+fn image_error_status(error: &str) -> tauri::http::StatusCode {
+    use tauri::http::StatusCode;
+    match error {
+        "invalid" => StatusCode::BAD_REQUEST,
+        "inactive" => StatusCode::FORBIDDEN,
+        "storage" => StatusCode::INTERNAL_SERVER_ERROR,
+        _ => error
+            .strip_prefix("http:")
+            .and_then(|code| code.parse::<u16>().ok())
+            .and_then(|code| StatusCode::from_u16(code).ok())
+            .unwrap_or(StatusCode::BAD_GATEWAY),
+    }
+}
+
+// 画像用カスタムプロトコルの応答を作る。
+// Cookie が必要な VRChat の画像をアカウントのセッションで取得し、`<img>` へバイト列のまま返す。
+// IPC で base64 の文字列を受け渡さずに済み、同じ URL は WebView 側でも使い回される。
+pub async fn image_response(
+    request: tauri::http::Request<Vec<u8>>,
+) -> tauri::http::Response<Vec<u8>> {
+    use tauri::http::{header, Method, Response, StatusCode};
+    let built = if request.method() != Method::GET {
+        Response::builder()
+            .status(StatusCode::METHOD_NOT_ALLOWED)
+            .body(Vec::new())
+    } else {
+        match serve_image(request.uri().query().unwrap_or_default()).await {
+            Ok(image) => Response::builder()
+                .header(header::CONTENT_TYPE, image.mime)
+                // 内容は URL ごとに変わらないが、アカウントの画像なので共有キャッシュには置かせない。
+                .header(header::CACHE_CONTROL, "private, max-age=86400, immutable")
+                .header("X-Content-Type-Options", "nosniff")
+                .body(image.bytes),
+            Err(error) => Response::builder()
+                .status(image_error_status(&error))
+                .body(Vec::new()),
+        }
+    };
+    built.unwrap_or_else(|_| {
+        let mut fallback = Response::new(Vec::new());
+        *fallback.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+        fallback
+    })
 }
 
 // キャッシュがあればそれを返し、なければ取得して保持する。
@@ -522,13 +604,7 @@ fn visible_person(mut value: Value) -> Outcome<Value> {
 #[specta::specta]
 pub async fn social_request(account: String, resource: Resource) -> Result<Value, String> {
     // 送信開始時にアカウント専用のクライアントを確保する。
-    let client = ACTIVE
-        .read()
-        .map_err(|_| "storage")?
-        .as_ref()
-        .filter(|(id, _)| id == &account)
-        .map(|(_, s)| s.client.clone())
-        .ok_or("inactive")?;
+    let client = client_for(&account)?;
     let endpoint = |segments: &[&str]| -> Outcome<Url> {
         if segments
             .iter()
@@ -563,15 +639,6 @@ pub async fn social_request(account: String, resource: Resource) -> Result<Value
         Resource::Groups => client
             .get(endpoint(&["favorite", "groups"])?)
             .query(&[("ownerId", account.as_str()), ("type", "friend"), ("n", "100")]),
-        Resource::Icon { url } => {
-            // 画像 URL はファイルのバージョンごとに変わるため、同じ URL の中身は使い回せる。
-            if let Some(hit) = cache::icon(&account, &url) {
-                return Ok(Value::String(hit));
-            }
-            let data = read_icon(&client, &url).await?;
-            cache::put_icon(&account, &url, data.clone());
-            return Ok(Value::String(data));
-        }
         Resource::Favorites { offset } => client
             .get(endpoint(&["favorites"])?)
             .query(&[("type", "friend")])
@@ -656,6 +723,31 @@ mod security_tests {
             json!({"id":"usr_demo","bio":"demo","location":"private"})
         );
         assert!(visible_person(Value::Null).is_err());
+    }
+}
+
+#[cfg(test)]
+mod image_tests {
+    use super::*;
+    use tauri::http::StatusCode;
+
+    #[test]
+    fn errors_map_to_http_status() {
+        assert_eq!(image_error_status("invalid"), StatusCode::BAD_REQUEST);
+        assert_eq!(image_error_status("inactive"), StatusCode::FORBIDDEN);
+        assert_eq!(image_error_status("http:404"), StatusCode::NOT_FOUND);
+        assert_eq!(image_error_status("http:429"), StatusCode::TOO_MANY_REQUESTS);
+        assert_eq!(image_error_status("network"), StatusCode::BAD_GATEWAY);
+        assert_eq!(image_error_status("http:abc"), StatusCode::BAD_GATEWAY);
+    }
+
+    #[tokio::test]
+    async fn image_requests_need_both_params_and_an_active_account() {
+        assert_eq!(serve_image("").await, Err("invalid".into()));
+        assert_eq!(serve_image("account=usr_demo").await, Err("invalid".into()));
+        // ログインしていないアカウントのセッションでは取得しない。
+        let query = "account=usr_nobody&url=https%3A%2F%2Fapi.vrchat.cloud%2Fapi%2F1%2Ffile%2Ffile_ab%2F1%2Ffile";
+        assert_eq!(serve_image(query).await, Err("inactive".into()));
     }
 }
 

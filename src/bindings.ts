@@ -248,7 +248,7 @@ export type AppUpdate = { currentVersion: string; version: string; notes: string
 export type DebugApiRequest = { method: string; endpoint: string; data?: string | null }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 export type Preference = { kind: "theme" } | { kind: "language" } | { kind: "fetchFriendsCount" } | { kind: "imageCacheLimit" } | { kind: "cacheLifetime" } | { kind: "autoCheckUpdates" } | { kind: "betaUpdates" } | { kind: "showAllFriends"; account: string } | { kind: "favoriteGroup"; account: string } | { kind: "accounts" } | { kind: "currentAccount" }
-export type Resource = { kind: "friends"; offset: number; n: number; offline: boolean } | { kind: "groups" } | { kind: "icon"; url: string } | { kind: "favorites"; offset: number } | { kind: "memberInstances" } | { kind: "friend"; id: string } | { kind: "profile"; id: string } | { kind: "world"; id: string } | { kind: "group"; id: string } | { kind: "instance"; location: string } | { kind: "invite"; location: string } | { kind: "instanceCategories" } | { kind: "instanceVibes" }
+export type Resource = { kind: "friends"; offset: number; n: number; offline: boolean } | { kind: "groups" } | { kind: "favorites"; offset: number } | { kind: "memberInstances" } | { kind: "friend"; id: string } | { kind: "profile"; id: string } | { kind: "world"; id: string } | { kind: "group"; id: string } | { kind: "instance"; location: string } | { kind: "invite"; location: string } | { kind: "instanceCategories" } | { kind: "instanceVibes" }
 export type RustError = { type: "Unrecoverable"; message: string }
 
 /** tauri-specta globals **/

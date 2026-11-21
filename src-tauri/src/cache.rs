@@ -29,8 +29,15 @@ struct Record {
     stored: Instant,
 }
 
+// 画像の中身と形式。`<img>` へそのまま返せるよう、base64 にせずバイト列で持つ。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Image {
+    pub mime: &'static str,
+    pub bytes: Vec<u8>,
+}
+
 struct Icon {
-    data: String,
+    image: Image,
     used: u64,
 }
 
@@ -111,12 +118,12 @@ impl Store {
         }
     }
 
-    fn icon(&mut self, url: &str) -> Option<String> {
+    fn icon(&mut self, url: &str) -> Option<Image> {
         self.tick += 1;
         let tick = self.tick;
         let icon = self.icons.get_mut(url)?;
         icon.used = tick;
-        Some(icon.data.clone())
+        Some(icon.image.clone())
     }
 
     // 新しく incoming バイトを入れても上限に収まるよう、最後に使われてから最も時間がたったものから捨てる。
@@ -131,25 +138,26 @@ impl Store {
                 break;
             };
             if let Some(old) = self.icons.remove(&oldest) {
-                self.icon_bytes -= old.data.len();
+                self.icon_bytes -= old.image.bytes.len();
             }
         }
     }
 
-    fn put_icon(&mut self, url: &str, data: String) {
-        if data.len() > self.limits.image_bytes {
+    fn put_icon(&mut self, url: &str, image: Image) {
+        let size = image.bytes.len();
+        if size > self.limits.image_bytes {
             return;
         }
         if let Some(old) = self.icons.remove(url) {
-            self.icon_bytes -= old.data.len();
+            self.icon_bytes -= old.image.bytes.len();
         }
-        self.evict_icons(data.len());
+        self.evict_icons(size);
         self.tick += 1;
-        self.icon_bytes += data.len();
+        self.icon_bytes += size;
         self.icons.insert(
             url.to_string(),
             Icon {
-                data,
+                image,
                 used: self.tick,
             },
         );
@@ -223,13 +231,13 @@ pub fn put_embedded_world(account: &str, instance: &Value) {
     }
 }
 
-pub fn icon(account: &str, url: &str) -> Option<String> {
+pub fn icon(account: &str, url: &str) -> Option<Image> {
     store().of(account)?.icon(url)
 }
 
-pub fn put_icon(account: &str, url: &str, data: String) {
+pub fn put_icon(account: &str, url: &str, image: Image) {
     if let Some(store) = store().of(account) {
-        store.put_icon(url, data);
+        store.put_icon(url, image);
     }
 }
 
@@ -237,6 +245,14 @@ pub fn put_icon(account: &str, url: &str, data: String) {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    // 指定バイト数の画像。
+    fn image(size: usize) -> Image {
+        Image {
+            mime: "image/png",
+            bytes: vec![0; size],
+        }
+    }
 
     fn owned(account: &str) -> Store {
         Store {
@@ -317,17 +333,17 @@ mod tests {
     fn icons_evict_the_least_recently_used() {
         let mut store = owned("usr_a");
         store.set_image_limit(100);
-        store.put_icon("a", "x".repeat(50));
-        store.put_icon("b", "x".repeat(50));
+        store.put_icon("a", image(50));
+        store.put_icon("b", image(50));
         // a を使ったので、次に追い出されるのは b。
         assert!(store.icon("a").is_some());
-        store.put_icon("c", "x".repeat(50));
+        store.put_icon("c", image(50));
         assert!(store.icon("a").is_some());
         assert!(store.icon("b").is_none());
         assert!(store.icon("c").is_some());
         assert_eq!(store.icon_bytes, 100);
         // 上限を超える単体の画像は保持しない。
-        store.put_icon("huge", "x".repeat(101));
+        store.put_icon("huge", image(101));
         assert!(store.icon("huge").is_none());
         assert_eq!(store.icon_bytes, 100);
     }
@@ -336,8 +352,8 @@ mod tests {
     fn lowering_the_image_limit_evicts_immediately() {
         let mut store = owned("usr_a");
         store.set_image_limit(100);
-        store.put_icon("a", "x".repeat(50));
-        store.put_icon("b", "x".repeat(50));
+        store.put_icon("a", image(50));
+        store.put_icon("b", image(50));
         assert!(store.icon("b").is_some());
         store.set_image_limit(60);
         assert!(store.icon("a").is_none());
@@ -345,7 +361,7 @@ mod tests {
         // 0 にすると画像をキャッシュしない。
         store.set_image_limit(0);
         assert_eq!(store.icon_bytes, 0);
-        store.put_icon("c", "x".repeat(1));
+        store.put_icon("c", image(1));
         assert!(store.icon("c").is_none());
     }
 
@@ -371,7 +387,7 @@ mod tests {
         assert_eq!(store().limits.image_bytes, 2 * MB);
         // 削除すると中身だけが消え、アカウントと上限の設定は残る。
         put("usr_embedded", Kind::Group, "grp_1", json!({"name":"g"}));
-        put_icon("usr_embedded", "https://example.invalid/a", "data".into());
+        put_icon("usr_embedded", "https://example.invalid/a", image(4));
         cache_purge();
         assert!(get("usr_embedded", Kind::Group, "grp_1").is_none());
         assert!(icon("usr_embedded", "https://example.invalid/a").is_none());
