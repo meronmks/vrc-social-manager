@@ -92,13 +92,6 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
   return (
     <div className={"social-columns" + (person || location ? " with-selection" : "")}>
       <section className="social-list">
-        <h1>
-          {instances
-            ? t("インスタンス", "Instances")
-            : search
-              ? t("フレンド検索", "Friend search")
-              : t("フレンド", "Friends")}
-        </h1>
         <div className="list-tools">
           <small>
             {t("最終確認", "Last checked")}　{checked ? clock(checked) : "—"}

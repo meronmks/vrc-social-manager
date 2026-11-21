@@ -64,7 +64,6 @@ export default function SettingsScreen({ account, logout, updates }: Props) {
   }
   return (
     <section className="settings-page">
-      <h1>{t("設定", "Settings")}</h1>
       {error && <p role="alert">{t("設定を読み書きできませんでした", "Could not read or save settings")}</p>}
       <fieldset disabled={!ready}>
         <h3>{t("表示", "Display")}</h3>

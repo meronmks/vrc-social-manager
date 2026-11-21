@@ -181,7 +181,8 @@ export function SocialDetail(props: Props) {
       ) : (
         <>
           <div className="detail-bar">
-            <h3>{t("現在地", "Location")}</h3>
+            {/* インスタンス詳細では見出しが冗長なため、フレンド詳細のときだけ表示する */}
+            {person && <h3>{t("現在地", "Location")}</h3>}
             {current.confirmed && (
               <small>
                 {clock(current.confirmed.time)} {t("確認", "checked")}
@@ -189,9 +190,17 @@ export function SocialDetail(props: Props) {
             )}
           </div>
           {current.phase === "loading" ? (
-            <p role="status">{t("現在地を取得中…", "Checking location…")}</p>
+            <p role="status">
+              {person
+                ? t("現在地を取得中…", "Checking location…")
+                : t("インスタンス情報を取得中…", "Loading instance details…")}
+            </p>
           ) : current.phase === "failed" ? (
-            <p role="alert">{t("現在地を確認できませんでした", "Could not check location")}</p>
+            <p role="alert">
+              {person
+                ? t("現在地を確認できませんでした", "Could not check location")
+                : t("インスタンス情報を取得できませんでした", "Could not load instance details")}
+            </p>
           ) : (
             <>
               {target && <WorldPhoto world={place?.world} account={account.id} />}
@@ -217,7 +226,7 @@ export function SocialDetail(props: Props) {
           )}
           {current.metadataError && (
             <button className="text-action" onClick={current.retry}>
-              {current.phase === "failed"
+              {current.phase === "failed" && person
                 ? t("現在地を再取得", "Retry location")
                 : t("インスタンス情報を再取得", "Retry instance details")}
             </button>

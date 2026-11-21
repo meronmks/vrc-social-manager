@@ -128,7 +128,7 @@ export function where(value: string, place: Place | undefined, t: Text) {
   if (place?.worldLoading) return t("ワールド名を取得中…", "Loading world name…");
   switch (value) {
     case "private":
-      return t("居場所は非公開", "Private location");
+      return t("プライベートインスタンス", "Private instance");
     case "traveling":
       return t("移動中", "Traveling");
     case "offline":
