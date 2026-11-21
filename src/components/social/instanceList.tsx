@@ -6,6 +6,7 @@ import { access, destination, instanceName, instanceNumber, Person, Place, Text,
 import { WorldPhoto } from "./media";
 import { PlaceFriends } from "./placeFriends";
 import { Occupancy } from "./presence";
+import { RegionFlag } from "./region";
 
 function scopeOptions(t: Text): [InstanceScope, string][] {
   return [
@@ -136,7 +137,8 @@ export function InstanceList(props: ListProps) {
                 <Occupancy place={place} />
                 <small className="instance-info">
                   {name && name + " · "}
-                  {access(place, t)} · #{instanceNumber(destination(location)?.instanceId ?? "")} {place?.groupName}
+                  {access(place, t)} · #{instanceNumber(destination(location)?.instanceId ?? "")}{" "}
+                  <RegionFlag region={place?.region} /> {place?.groupName}
                 </small>
                 <PlaceFriends
                   friends={props.byPlace.get(location)}

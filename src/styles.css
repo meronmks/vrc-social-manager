@@ -690,6 +690,20 @@
   object-fit: cover;
 }
 .place-row > .instance-info { grid-column: 2 / -1; }
+/* リージョンの国旗と、US の東西を見分ける添え字 */
+.region {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  vertical-align: -0.1em;
+}
+.region svg {
+  height: 0.85em;
+  width: auto;
+  border-radius: 1px;
+  /* 白地の日本国旗が背景に溶けないよう細い縁取りを付ける */
+  box-shadow: 0 0 0 0.5px var(--line);
+}
 .place-row > strong { overflow-wrap: anywhere; }
 .instance-list-heading {
   display: flex;

@@ -21,6 +21,7 @@ import {
 import { ExternalLink } from "./externalLink";
 import { Avatar, WorldPhoto } from "./media";
 import { Occupancy, Presence } from "./presence";
+import { RegionFlag } from "./region";
 import { SelfInvite } from "./selfInvite";
 
 interface Props {
@@ -214,7 +215,7 @@ export function SocialDetail(props: Props) {
                     <span className="access">{access(place, t)}</span>
                     <span>
                       {instanceName(place) && instanceName(place) + " · "}#{instanceNumber(target.instanceId)}{" "}
-                      {place?.region?.toUpperCase()}
+                      <RegionFlag region={place?.region} />
                     </span>
                     <Occupancy place={place} />
                   </div>
