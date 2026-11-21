@@ -433,6 +433,8 @@ pub enum Resource {
     Group { id: String },
     Instance { location: String },
     Invite { location: String },
+    InstanceCategories,
+    InstanceVibes,
 }
 
 async fn read_icon(client: &Client, source: &str) -> Outcome<String> {
@@ -470,14 +472,20 @@ async fn read_icon(client: &Client, source: &str) -> Outcome<String> {
     Ok(format!("data:{mime};base64,{}", STANDARD.encode(bytes)))
 }
 
-// キャッシュがあればそれを返し、なければ取得して保持する（オブジェクト以外の応答は保持しない）。
+// キャッシュがあればそれを返し、なければ取得して保持する。
+// 想定と異なる形の応答（一覧以外はオブジェクト、一覧は配列）は保持しない。
 async fn cached(account: &str, kind: Kind, id: &str, req: RequestBuilder) -> Outcome<Value> {
     if let Some(hit) = cache::get(account, kind, id) {
         log::trace!("キャッシュ利用: {kind:?} {id}");
         return Ok(hit);
     }
     let value = json_body(req).await?;
-    if value.is_object() {
+    let expected = if kind == Kind::Catalog {
+        value.is_array()
+    } else {
+        value.is_object()
+    };
+    if expected {
         cache::put(account, kind, id, value.clone());
     }
     Ok(value)
@@ -605,6 +613,15 @@ pub async fn social_request(account: String, resource: Resource) -> Result<Value
         Resource::Invite { location } => {
             response(client.post(endpoint(&["invite", "myself", "to", &location])?)).await?;
             return Ok(Value::Bool(true));
+        }
+        // インスタンスの categoryId・vibeIds を表示名に変えるための一覧。内容はほとんど変わらないため保持する。
+        Resource::InstanceCategories => {
+            let req = client.get(endpoint(&["instanceCategories"])?);
+            return cached(&account, Kind::Catalog, "instanceCategories", req).await;
+        }
+        Resource::InstanceVibes => {
+            let req = client.get(endpoint(&["instanceVibes"])?);
+            return cached(&account, Kind::Catalog, "instanceVibes", req).await;
         }
     };
     json_body(req).await

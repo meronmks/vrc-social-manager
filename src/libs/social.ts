@@ -45,10 +45,25 @@ export interface Favorite {
   favoriteId: string;
   tags: string[];
 }
+// インスタンス内で使えるコンテンツの許可設定。未指定の項目はワールドの既定に従う。
+export type ContentSettings = Partial<Record<string, boolean | null>>;
 export interface WorldInfo {
   name?: string;
   thumbnailImageUrl?: string;
   imageUrl?: string;
+  tags?: string[];
+  defaultContentSettings?: ContentSettings | null;
+  /** アイテムに禁止している機能（"player_movement" など） */
+  disabledPropAbilities?: string[];
+}
+// インスタンスのカテゴリ・バイブスの一覧 API の項目。
+export interface InstanceCategory {
+  id: string;
+  name: string;
+}
+export interface InstanceVibe {
+  id: string;
+  title: string;
 }
 // インスタンス API の応答のうち、画面で使う項目。
 export interface Place {
@@ -64,6 +79,17 @@ export interface Place {
   queueSize?: number;
   canRequestInvite?: boolean;
   groupAccessType?: string;
+  /** インスタンス作成者が付けた説明 */
+  description?: string | null;
+  ageGate?: boolean | null;
+  closedAt?: string | null;
+  photonRegion?: string;
+  platforms?: { standalonewindows?: number; android?: number; ios?: number };
+  contentSettings?: ContentSettings | null;
+  disabledPropAbilities?: string[];
+  categoryId?: string | null;
+  vibeIds?: string[];
+  displayVibeId?: string | null;
   /** 主催グループの名前（グループ API から補完する） */
   groupName?: string;
   world?: WorldInfo;
@@ -98,6 +124,8 @@ interface Resources {
   instance: Place;
   invite: boolean;
   group: { name: string };
+  instanceCategories: InstanceCategory[];
+  instanceVibes: InstanceVibe[];
 }
 export function request<Q extends Resource>(account: string, resource: Q) {
   return data<Resources[Q["kind"]]>(commands.socialRequest(account, resource));

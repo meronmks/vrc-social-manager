@@ -839,6 +839,64 @@
   width: 100%;
   margin-top: 8px;
 }
+/* インスタンス詳細の「その他の情報」。設定画面の折りたたみ（.settings-box）を詳細欄向けに詰める。 */
+.instance-extras {
+  margin-top: 18px;
+  background: var(--paper);
+}
+.instance-extras > div {
+  min-height: 32px;
+  padding: 5px 0;
+  font-size: 12px;
+}
+.instance-extras > div > :first-child {
+  color: var(--sub);
+}
+.instance-extras > div > :last-child {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.instance-extras h4 {
+  margin: 10px 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+}
+/* 説明は複数行になりうるため、見出しの下に本文を置く。 */
+.extras-description {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.extras-description h4 {
+  margin-top: 4px;
+}
+.extras-description p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* インスタンス詳細の常時表示の分類（カテゴリ・雰囲気）。 */
+.place-tags {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0;
+  font-size: 12px;
+}
+.place-tags > div {
+  display: flex;
+  gap: 8px;
+}
+.place-tags dt {
+  flex: none;
+  color: var(--sub);
+}
+.place-tags dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.instance-extras .denied {
+  color: var(--warn-ink);
+  font-weight: 600;
+}
 .mobile-close {
   display: none;
 }

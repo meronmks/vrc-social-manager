@@ -20,6 +20,8 @@ const MB: usize = 1024 * 1024;
 pub enum Kind {
     World,
     Group,
+    // インスタンスのカテゴリ・バイブスの一覧（ID と表示名の対応表）。
+    Catalog,
 }
 
 struct Record {

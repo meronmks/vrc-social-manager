@@ -19,6 +19,7 @@ import {
   where,
 } from "@/libs/social";
 import { ExternalLink } from "./externalLink";
+import { InstanceExtras, PlaceTags } from "./instanceExtras";
 import { Avatar, WorldPhoto } from "./media";
 import { Occupancy, Presence } from "./presence";
 import { RegionFlag } from "./region";
@@ -224,6 +225,7 @@ export function SocialDetail(props: Props) {
                       {t("主催", "Host")} · {place.groupName}
                     </p>
                   )}
+                  <PlaceTags key={location} account={account.id} place={place} expire={expire} />
                 </>
               )}
             </>
@@ -255,6 +257,8 @@ export function SocialDetail(props: Props) {
                   {t("ブラウザで開く", "Open in browser")}
                 </ExternalLink>
               )}
+              {/* 権限やカテゴリなど、必要なときだけ見る情報は折りたたんで最後に置く */}
+              <InstanceExtras place={place} />
             </>
           )}
         </>

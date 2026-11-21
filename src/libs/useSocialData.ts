@@ -110,6 +110,10 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
         ...place,
         worldLoading: world.loading,
         world: {
+          // 権限の判定に使うタグと既定値は、インスタンス API に含まれるワールド情報を優先する。
+          tags: place?.world?.tags ?? world.tags,
+          defaultContentSettings: place?.world?.defaultContentSettings ?? world.defaultContentSettings,
+          disabledPropAbilities: place?.world?.disabledPropAbilities ?? world.disabledPropAbilities,
           name: world.name || place?.world?.name,
           thumbnailImageUrl: world.thumbnailImageUrl || place?.world?.thumbnailImageUrl,
           imageUrl: world.imageUrl || place?.world?.imageUrl,
