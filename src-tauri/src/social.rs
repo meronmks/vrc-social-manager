@@ -1,3 +1,4 @@
+use crate::cache::{self, Kind};
 use keyring::Entry;
 use once_cell::sync::Lazy;
 use reqwest::{Client, RequestBuilder, Url};
@@ -245,6 +246,7 @@ fn activate(
             .unwrap_or_else(|e| e.into_inner()) = jar;
     }
     *active = Some((id.into(), session));
+    crate::cache::reset(Some(id));
     if let Some(names) = user
         .get("friendGroupNames")
         .filter(|value| value.is_array())
@@ -395,6 +397,7 @@ pub async fn social_logout(app: tauri::AppHandle, id: String) -> Result<(), Stri
             // 復元できないセッションを終了時に再保存しない。
             *active = None;
             *pending = None;
+            crate::cache::reset(None);
             #[cfg(all(dev, debug_assertions))]
             crate::COOKIE_STORE
                 .lock()
@@ -405,6 +408,7 @@ pub async fn social_logout(app: tauri::AppHandle, id: String) -> Result<(), Stri
     }
     *pending = None;
     *active = None;
+    crate::cache::reset(None);
     #[cfg(all(dev, debug_assertions))]
     crate::COOKIE_STORE
         .lock()
@@ -431,7 +435,7 @@ pub enum Resource {
     Invite { location: String },
 }
 
-async fn read_icon(client: &Client, source: &str) -> Outcome<Value> {
+async fn read_icon(client: &Client, source: &str) -> Outcome<String> {
     use base64::{engine::general_purpose::STANDARD, Engine};
     let url = Url::parse(source).map_err(|_| "invalid")?;
     let path: Vec<_> = url.path().split('/').collect();
@@ -463,10 +467,20 @@ async fn read_icon(client: &Client, source: &str) -> Outcome<Value> {
         [b'R', b'I', b'F', b'F', _, _, _, _, b'W', b'E', b'B', b'P', ..] => "image/webp",
         _ => return Err("invalid".into()),
     };
-    Ok(json!(format!(
-        "data:{mime};base64,{}",
-        STANDARD.encode(bytes)
-    )))
+    Ok(format!("data:{mime};base64,{}", STANDARD.encode(bytes)))
+}
+
+// キャッシュがあればそれを返し、なければ取得して保持する（オブジェクト以外の応答は保持しない）。
+async fn cached(account: &str, kind: Kind, id: &str, req: RequestBuilder) -> Outcome<Value> {
+    if let Some(hit) = cache::get(account, kind, id) {
+        log::trace!("キャッシュ利用: {kind:?} {id}");
+        return Ok(hit);
+    }
+    let value = json_body(req).await?;
+    if value.is_object() {
+        cache::put(account, kind, id, value.clone());
+    }
+    Ok(value)
 }
 
 // ユーザー取得APIの応答には画面に不要な非公開項目が含まれる場合がある。
@@ -541,13 +555,29 @@ pub async fn social_request(account: String, resource: Resource) -> Result<Value
         Resource::Groups => client
             .get(endpoint(&["favorite", "groups"])?)
             .query(&[("ownerId", account.as_str()), ("type", "friend"), ("n", "100")]),
-        Resource::Icon { url } => return read_icon(&client, &url).await,
+        Resource::Icon { url } => {
+            // 画像 URL はファイルのバージョンごとに変わるため、同じ URL の中身は使い回せる。
+            if let Some(hit) = cache::icon(&account, &url) {
+                return Ok(Value::String(hit));
+            }
+            let data = read_icon(&client, &url).await?;
+            cache::put_icon(&account, &url, data.clone());
+            return Ok(Value::String(data));
+        }
         Resource::Favorites { offset } => client
             .get(endpoint(&["favorites"])?)
             .query(&[("type", "friend")])
             .query(&[("offset", offset), ("n", 100)]),
         Resource::MemberInstances => {
-            client.get(endpoint(&["users", &account, "instances", "groups"])?)
+            let result =
+                json_body(client.get(endpoint(&["users", &account, "instances", "groups"])?))
+                    .await?;
+            if let Some(instances) = result["instances"].as_array() {
+                instances
+                    .iter()
+                    .for_each(|instance| cache::put_embedded_world(&account, instance));
+            }
+            return Ok(result);
         }
         Resource::Friend { id } => {
             return visible_person(json_body(client.get(endpoint(&["users", &id])?)).await?)
@@ -555,11 +585,18 @@ pub async fn social_request(account: String, resource: Resource) -> Result<Value
         Resource::Profile { id } => {
             return visible_person(json_body(client.get(endpoint(&["profile", &id])?)).await?)
         }
-        Resource::World { id } => client.get(endpoint(&["worlds", &id])?),
-        Resource::Group { id } => client.get(endpoint(&["groups", &id])?),
+        Resource::World { id } => {
+            let req = client.get(endpoint(&["worlds", &id])?);
+            return cached(&account, Kind::World, &id, req).await;
+        }
+        Resource::Group { id } => {
+            let req = client.get(endpoint(&["groups", &id])?);
+            return cached(&account, Kind::Group, &id, req).await;
+        }
         Resource::Instance { location } => {
             let instance = json_body(client.get(endpoint(&["instances", &location])?)).await?;
             return if instance.is_object() {
+                cache::put_embedded_world(&account, &instance);
                 Ok(instance)
             } else {
                 Err("invalid".into())

@@ -11,6 +11,17 @@ async function write(setting: Preference, value: JsonValue) {
   if (result.status === "error") throw result.error;
 }
 
+/** キャッシュ上限の既定値と最大値（src-tauri/src/cache.rs の定数と揃える） */
+export const cacheLimits = {
+  image: { fallback: 64, max: 1024 },
+  lifetime: { fallback: 6, max: 168 },
+} as const;
+
+// 0 以上 max 以下の整数ならその値を、そうでなければ既定値を返す。
+function wholeNumber(value: JsonValue, { fallback, max }: { fallback: number; max: number }) {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= max ? value : fallback;
+}
+
 export const userDataStore = {
   async getUsers() {
     const rows = await read({ kind: "accounts" });
@@ -46,6 +57,14 @@ export const userDataStore = {
     return typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= 100 ? n : 50;
   },
   setFetchFriendsCount: (value: number) => write({ kind: "fetchFriendsCount" }, value),
+  async getImageCacheLimit() {
+    return wholeNumber(await read({ kind: "imageCacheLimit" }), cacheLimits.image);
+  },
+  setImageCacheLimit: (mb: number) => write({ kind: "imageCacheLimit" }, mb),
+  async getCacheLifetime() {
+    return wholeNumber(await read({ kind: "cacheLifetime" }), cacheLimits.lifetime);
+  },
+  setCacheLifetime: (hours: number) => write({ kind: "cacheLifetime" }, hours),
   async getBetaUpdates() {
     return (await read({ kind: "betaUpdates" })) === true;
   },

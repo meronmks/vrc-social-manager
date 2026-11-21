@@ -19,6 +19,7 @@ mod updates;
 mod commands;
 mod structs;
 mod social;
+mod cache;
 mod account_migration;
 mod preferences;
 
@@ -100,6 +101,7 @@ pub fn run() {
         .setup(move |app| {
             let store = app.store("store.json")?;
             account_migration::migrate(&store)?;
+            preferences::apply_cache_limits(app.handle());
 
             #[cfg(all(dev, debug_assertions))]
             {

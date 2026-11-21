@@ -511,21 +511,12 @@
   font-size: 12px;
   list-style: none;
 }
-.instance-filters summary::-webkit-details-marker {
-  display: none;
-}
 .instance-filters summary span {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--sub);
-}
-.instance-filters summary svg {
-  flex: none;
-}
-.instance-filters[open] > summary svg {
-  transform: rotate(90deg);
 }
 .world-thumb, .world-photo {
   position: relative;
@@ -746,11 +737,54 @@
 .settings-box > label + div {
   border-top: 1px solid var(--line);
 }
-.settings-box summary {
-  cursor: pointer;
+/* 設定の折りたたみ見出しは、箱の端まで背景色が届くよう左右の余白を打ち消す。 */
+.settings-box > summary {
+  margin: 0 -12px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-weight: 600;
 }
-.settings-box summary::after {
-  content: "⌄";
+.settings-box[open] > summary {
+  border-radius: 8px 8px 0 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+}
+/* 折りたたみ項目の見出し。閉じているときは下向き矢印、開いているときは上向きにして背景色を変える。
+   一覧の右向き矢印（詳細へ進む）と見分けられるよう、開閉には下向き矢印だけを使う。 */
+.instance-filters > summary,
+.settings-box > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+.instance-filters > summary::-webkit-details-marker,
+.settings-box > summary::-webkit-details-marker {
+  display: none;
+}
+.instance-filters > summary > svg,
+.settings-box > summary > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+  transition: transform 0.15s ease;
+}
+.instance-filters[open] > summary > svg,
+.settings-box[open] > summary > svg {
+  transform: rotate(180deg);
+}
+.instance-filters > summary:hover,
+.instance-filters[open] > summary,
+.settings-box > summary:hover,
+.settings-box[open] > summary {
+  background: var(--pale);
+  color: var(--accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .instance-filters > summary > svg,
+  .settings-box > summary > svg {
+    transition: none;
+  }
 }
 .settings-box input[type="number"] {
   width: 74px;

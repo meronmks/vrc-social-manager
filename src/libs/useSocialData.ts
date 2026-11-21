@@ -218,12 +218,17 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
       let incomplete = false;
       let stopped: unknown;
       function queuePlace(location: string) {
-        if (!destination(location) || seen.has(location)) return;
+        const worldId = destination(location)?.worldId;
+        if (!worldId || seen.has(location)) return;
         seen.add(location);
-        queueWorld(location);
+        // ワールド情報はインスタンスの応答にも含まれ、Rust 側でキャッシュされる。
+        // インスタンスを先に取得し、その後のワールド取得はキャッシュから返るようにする。
+        if (!queuedWorlds.has(worldId)) {
+          setWorlds((prev) => ({ ...prev, [worldId]: { ...prev[worldId], loading: true } }));
+        }
         placeQueue = placeQueue.then(async () => {
-          if (!live || stopped) return;
           try {
+            if (!live || stopped) return;
             const place = await request(account, { kind: "instance", location });
             if (!live) return;
             setPlaces((prev) => ({ ...prev, [location]: place }));
@@ -231,6 +236,9 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
           } catch (e) {
             incomplete = true;
             if (isExpired(e) || isRateLimited(e)) stopped = e;
+          } finally {
+            // 取得中の表示を必ず解除するため、失敗時もワールドの取得を予約する。
+            queueWorld(location);
           }
         });
       }

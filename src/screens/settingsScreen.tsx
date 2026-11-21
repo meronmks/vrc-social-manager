@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { FiChevronDown } from "react-icons/fi";
 import { getVersion } from "@tauri-apps/api/app";
 import { useTranslation } from "react-i18next";
 import type { AppUpdates } from "@/libs/useAppUpdates";
 import { useNavigate } from "react-router";
 import { Account, useText } from "@/libs/social";
-import { userDataStore } from "@/libs/userDataStore";
+import { cacheLimits, userDataStore } from "@/libs/userDataStore";
+import { commands } from "@/bindings";
 import i18n from "@/libs/i18n";
 
 interface Props {
@@ -12,10 +14,63 @@ interface Props {
   logout: () => void;
   updates: AppUpdates;
 }
+// 0〜max の整数を入力し、確定したとき（フォーカスが外れたとき）に保存する入力欄。
+function WholeNumberSetting(props: {
+  label: string;
+  value: number;
+  max: number;
+  help: string;
+  onSave: (value: number) => Promise<void>;
+}) {
+  const { label, value, max, help, onSave } = props;
+  const [text, setText] = useState(String(value));
+  const [invalid, setInvalid] = useState(false);
+  const t = useText();
+  useEffect(() => setText(String(value)), [value]);
+  function commit() {
+    const n = Number(text);
+    if (!/^\d+$/.test(text) || n > max) {
+      setInvalid(true);
+      return;
+    }
+    setInvalid(false);
+    if (n !== value) void onSave(n);
+  }
+  return (
+    <>
+      <label>
+        {label}
+        <input
+          type="number"
+          min={0}
+          max={max}
+          step={1}
+          value={text}
+          aria-invalid={invalid}
+          onChange={(e) => {
+            setText(e.target.value);
+            setInvalid(false);
+          }}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+          }}
+        />
+      </label>
+      <p className={invalid ? "form-error" : ""}>
+        {invalid ? t(`0〜${max}の整数を入力してください`, `Enter a whole number from 0 to ${max}`) : help}
+      </p>
+    </>
+  );
+}
+
 export default function SettingsScreen({ account, logout, updates }: Props) {
   const [theme, setTheme] = useState("light");
   const [auto, setAuto] = useState(true);
   const [count, setCount] = useState("50");
+  const [imageLimit, setImageLimit] = useState<number>(cacheLimits.image.fallback);
+  const [lifetime, setLifetime] = useState<number>(cacheLimits.lifetime.fallback);
+  const [purged, setPurged] = useState(false);
   const [version, setVersion] = useState("");
   const [invalid, setInvalid] = useState(false);
   const [error, setError] = useState(false);
@@ -29,13 +84,17 @@ export default function SettingsScreen({ account, logout, updates }: Props) {
       userDataStore.getTheme(),
       userDataStore.getAutoCheckUpdates(),
       userDataStore.getFetchFriendsCount(),
+      userDataStore.getImageCacheLimit(),
+      userDataStore.getCacheLifetime(),
       getVersion(),
     ])
-      .then(([v, a, c, version]) => {
+      .then(([v, a, c, image, hours, version]) => {
         if (live) {
           setTheme(v);
           setAuto(a);
           setCount(String(c));
+          setImageLimit(image);
+          setLifetime(hours);
           setVersion(version);
           setReady(true);
         }
@@ -157,7 +216,10 @@ export default function SettingsScreen({ account, logout, updates }: Props) {
         </div>
         <h3>{t("詳細設定", "Advanced")}</h3>
         <details className="settings-box">
-          <summary>{t("フレンド一覧の取得設定", "Friend list settings")}</summary>
+          <summary>
+            {t("フレンド一覧の取得設定", "Friend list settings")}
+            <FiChevronDown aria-hidden="true" />
+          </summary>
           <label>
             {t("1回の通信で取得するフレンド数", "Friends per request")}
             <input
@@ -183,6 +245,65 @@ export default function SettingsScreen({ account, logout, updates }: Props) {
               : t(
                   "1〜100人で指定できます。次回の一覧取得から適用します。",
                   "Enter 1–100. Applies to the next refresh.",
+                )}
+          </p>
+        </details>
+        <details className="settings-box">
+          <summary>
+            {t("キャッシュの上限", "Cache limits")}
+            <FiChevronDown aria-hidden="true" />
+          </summary>
+          <WholeNumberSetting
+            label={t("画像キャッシュの上限（MB）", "Image cache limit (MB)")}
+            value={imageLimit}
+            max={cacheLimits.image.max}
+            help={t(
+              `0〜${cacheLimits.image.max}MBで指定できます。0にすると画像をキャッシュしません。`,
+              `Enter 0–${cacheLimits.image.max} MB. 0 turns off image caching.`,
+            )}
+            onSave={(mb) =>
+              save(async () => {
+                await userDataStore.setImageCacheLimit(mb);
+                setImageLimit(mb);
+              })
+            }
+          />
+          <WholeNumberSetting
+            label={t("ワールド・グループ情報の保持時間（時間）", "Keep world and group info (hours)")}
+            value={lifetime}
+            max={cacheLimits.lifetime.max}
+            help={t(
+              `0〜${cacheLimits.lifetime.max}時間で指定できます。0にするとキャッシュしません。`,
+              `Enter 0–${cacheLimits.lifetime.max} hours. 0 turns off caching.`,
+            )}
+            onSave={(hours) =>
+              save(async () => {
+                await userDataStore.setCacheLifetime(hours);
+                setLifetime(hours);
+              })
+            }
+          />
+          <div>
+            <span>{t("保持しているキャッシュ", "Cached data")}</span>
+            <button
+              className="quiet-action"
+              onClick={() =>
+                void save(async () => {
+                  setPurged(false);
+                  await commands.cachePurge();
+                  setPurged(true);
+                })
+              }
+            >
+              {t("キャッシュを削除", "Clear cache")}
+            </button>
+          </div>
+          <p role="status">
+            {purged
+              ? t("キャッシュを削除しました", "Cache cleared")
+              : t(
+                  "画像・ワールド・グループ情報のキャッシュを削除します。次回の表示から取得し直します。",
+                  "Clears cached images, worlds, and groups. They will be fetched again when shown.",
                 )}
           </p>
         </details>

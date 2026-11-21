@@ -1,4 +1,4 @@
-import { FiChevronRight } from "react-icons/fi";
+import { FiChevronDown } from "react-icons/fi";
 import { InstanceKind, InstanceScope, SortOrder } from "@/libs/friendView";
 import { access, destination, instanceName, instanceNumber, Person, Place, Text, useText, where } from "@/libs/social";
 import { WorldPhoto } from "./media";
@@ -48,7 +48,7 @@ export function InstanceFilters({ scope, kind, groupLabel, groupPicker, onScope,
       <summary>
         <strong>{t("絞り込み", "Filters")}</strong>
         <span title={summary}>{summary}</span>
-        <FiChevronRight aria-hidden="true" />
+        <FiChevronDown aria-hidden="true" />
       </summary>
       <label className="select-row">
         {t("探す対象", "Source")}
