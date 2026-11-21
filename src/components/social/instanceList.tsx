@@ -1,4 +1,5 @@
 import { FiChevronDown } from "react-icons/fi";
+import { Virtuoso } from "react-virtuoso";
 import { Dropdown } from "@/components/ui/dropdown";
 import { InstanceKind, InstanceScope, SortOrder } from "@/libs/friendView";
 import { access, destination, instanceName, instanceNumber, Person, Place, Text, useText, where } from "@/libs/social";
@@ -87,9 +88,12 @@ interface ListProps {
   onSort: (order: SortOrder) => void;
   selected?: string;
   onSelect: (location: string) => void;
+  /** 一覧をスクロールさせる親要素（画面に見えているカードだけを描画するために使う） */
+  scroller: HTMLElement | null;
 }
 
 // インスタンス一覧（件数と並び順、各カード、空のときの案内）。
+// カードは仮想スクロールで見えている範囲だけを描画する。
 export function InstanceList(props: ListProps) {
   const { locations, busy, failed } = props;
   const t = useText();
@@ -111,32 +115,40 @@ export function InstanceList(props: ListProps) {
           onChange={props.onSort}
         />
       </div>
-      {locations.map((location) => {
-        const place = props.placeAt(location);
-        const name = instanceName(place);
-        return (
-          <button
-            className="place-row"
-            key={location}
-            aria-pressed={location === props.selected}
-            onClick={() => props.onSelect(location)}
-          >
-            <WorldPhoto world={place?.world} account={props.account} compact />
-            <strong>{where(location, place, t)}</strong>
-            <Occupancy place={place} />
-            <small className="instance-info">
-              {name && name + " · "}
-              {access(place, t)} · #{instanceNumber(destination(location)?.instanceId ?? "")} {place?.groupName}
-            </small>
-            <PlaceFriends
-              friends={props.byPlace.get(location)}
-              account={props.account}
-              starred={props.starred}
-              friendsReady={props.friendsReady}
-            />
-          </button>
-        );
-      })}
+      {props.scroller && locations.length > 0 && (
+        <Virtuoso
+          customScrollParent={props.scroller}
+          data={locations}
+          computeItemKey={(_, location) => location}
+          defaultItemHeight={96}
+          increaseViewportBy={600}
+          itemContent={(_, location) => {
+            const place = props.placeAt(location);
+            const name = instanceName(place);
+            return (
+              <button
+                className="place-row"
+                aria-pressed={location === props.selected}
+                onClick={() => props.onSelect(location)}
+              >
+                <WorldPhoto world={place?.world} account={props.account} compact />
+                <strong>{where(location, place, t)}</strong>
+                <Occupancy place={place} />
+                <small className="instance-info">
+                  {name && name + " · "}
+                  {access(place, t)} · #{instanceNumber(destination(location)?.instanceId ?? "")} {place?.groupName}
+                </small>
+                <PlaceFriends
+                  friends={props.byPlace.get(location)}
+                  account={props.account}
+                  starred={props.starred}
+                  friendsReady={props.friendsReady}
+                />
+              </button>
+            );
+          }}
+        />
+      )}
       {!locations.length && !busy && !failed && (
         <p className="empty-text">{t("表示するインスタンスはありません", "No matching instances")}</p>
       )}

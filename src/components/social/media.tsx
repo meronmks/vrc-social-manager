@@ -50,10 +50,14 @@ export function WorldPhoto({
   );
 }
 
+// 直接読めず Rust 側から取得した画像の URL。
+// 仮想スクロールで行が出入りするたびに直接読み込みの失敗を繰り返さないよう、次からは最初から Rust 側で取得する。
+const nativeOnly = new Set<string>();
+
 // 候補の URL を順に試す画像。直接読めない VRChat の画像は、アカウントのセッションで Rust 側から取得し直す。
 function RemoteImage({ urls, account }: { urls: string[]; account?: string }) {
   const [index, setIndex] = useState(0);
-  const [native, setNative] = useState(false);
+  const [native, setNative] = useState(() => !!account && nativeOnly.has(urls[0]));
   const [source, setSource] = useState("");
   const url = urls[index];
   useEffect(() => {
@@ -61,9 +65,11 @@ function RemoteImage({ urls, account }: { urls: string[]; account?: string }) {
     let live = true;
     void request(account, { kind: "icon", url }).then(
       (data) => {
+        nativeOnly.add(url);
         if (live) setSource(data);
       },
       () => {
+        nativeOnly.delete(url);
         if (live) {
           setNative(false);
           setIndex(index + 1);

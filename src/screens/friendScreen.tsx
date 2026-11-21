@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { FiRefreshCw, FiSearch, FiX } from "react-icons/fi";
 import { FriendList } from "@/components/social/friendList";
 import { GroupPicker } from "@/components/social/groupPicker";
@@ -37,24 +37,33 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
   const [kind, setKind] = useState<InstanceKind>("all");
   const [selectedPerson, selectPerson] = useState("");
   const [instanceSelection, setInstanceSelection] = useState<{ location: string; friendId?: string }>();
+  // 一覧のスクロール領域。仮想スクロールはこの要素のスクロール位置に合わせて行を描画する。
+  const [scroller, setScroller] = useState<HTMLElement | null>(null);
   const t = useText();
 
-  const starred = new Set(data.favorites.map((f) => f.favoriteId));
-  const inGroup = favoriteIdsIn(data.favorites, data.group);
-  const search = query.trim().toLocaleLowerCase();
-  const everyone = Object.values(data.friends);
-  const people = visibleFriends(everyone, search, data.showAll, inGroup);
-  const byPlace = groupByPlace(everyone);
-  const locations = visibleLocations({
-    scope,
-    kind,
-    sortOrder,
-    members: data.members,
-    byPlace,
-    inGroup,
-    placeAt: data.placeAt,
-  });
-  const groups = favoriteGroupOptions(data.groups, account.friendGroupNames);
+  // フレンドが数千人いても軽く動くよう、絞り込みや並べ替えは元データが変わったときだけやり直す。
+  // 検索語は入力を優先し、一覧の絞り込みは少し遅れて反映する。
+  const search = useDeferredValue(query.trim().toLocaleLowerCase());
+  const { favorites, group, friends, showAll, members, placeAt } = data;
+  const starred = useMemo(() => new Set(favorites.map((f) => f.favoriteId)), [favorites]);
+  const inGroup = useMemo(() => favoriteIdsIn(favorites, group), [favorites, group]);
+  const everyone = useMemo(() => Object.values(friends), [friends]);
+  const people = useMemo(
+    () => (instances ? [] : visibleFriends(everyone, search, showAll, inGroup)),
+    [instances, everyone, search, showAll, inGroup],
+  );
+  const byPlace = useMemo(() => groupByPlace(everyone), [everyone]);
+  const locations = useMemo(
+    () =>
+      instances
+        ? visibleLocations({ scope, kind, sortOrder, members, byPlace, inGroup, placeAt })
+        : [],
+    [instances, scope, kind, sortOrder, members, byPlace, inGroup, placeAt],
+  );
+  const groups = useMemo(
+    () => favoriteGroupOptions(data.groups, account.friendGroupNames),
+    [data.groups, account.friendGroupNames],
+  );
 
   const view = viewKeyOf(instances, scope, !!search || data.showAll);
   const sources = viewSources[view];
@@ -91,7 +100,7 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
 
   return (
     <div className={"social-columns" + (person || location ? " with-selection" : "")}>
-      <section className="social-list">
+      <section className="social-list" ref={setScroller}>
         <div className="list-tools">
           <small>
             {t("最終確認", "Last checked")} {checked ? clock(checked) : "—"}
@@ -160,9 +169,11 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
             onSort={setSortOrder}
             selected={origin}
             onSelect={(l) => setInstanceSelection({ location: l })}
+            scroller={scroller}
           />
         ) : (
           <FriendList
+            scroller={scroller}
             people={people}
             account={account.id}
             query={query}

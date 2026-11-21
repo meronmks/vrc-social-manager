@@ -1,4 +1,5 @@
 import { FiChevronRight, FiStar } from "react-icons/fi";
+import { Virtuoso } from "react-virtuoso";
 import { locationOf, Person, Place, useText, where } from "@/libs/social";
 import { Avatar } from "./media";
 import { Presence } from "./presence";
@@ -16,9 +17,12 @@ interface Props {
   selected: string;
   onSelect: (id: string) => void;
   placeAt: (location: string) => Place | undefined;
+  /** 一覧をスクロールさせる親要素（画面に見えている行だけを描画するために使う） */
+  scroller: HTMLElement | null;
 }
 
 // フレンド一覧（人数の見出し、各行、空のときの案内）。
+// 数千人いても重くならないよう、行は仮想スクロールで見えている範囲だけを描画する。
 export function FriendList(props: Props) {
   const { people, query, showAll, busy, failed } = props;
   const t = useText();
@@ -35,24 +39,28 @@ export function FriendList(props: Props) {
           : t(`${people.length}人中 ${online}人がオンライン`, `${online} of ${people.length} online`)}
         {people.length > 0 && pending && t("（暫定）", " (provisional)")}
       </h4>
-      {people.map((p) => (
-        <button
-          key={p.id}
-          className="friend-row"
-          aria-pressed={p.id === props.selected}
-          onClick={() => props.onSelect(p.id)}
-        >
-          <Avatar person={p} account={props.account} />
-          <span className="friend-copy">
-            <strong>
-              {p.displayName} {(searching || showAll) && props.starred.has(p.id) && <FiStar className="star" />}
-            </strong>
-            {p.online && <small>{where(locationOf(p), props.placeAt(locationOf(p)), t)}</small>}
-          </span>
-          <Presence status={p.online ? p.status : "offline"} description={p.statusDescription} />
-          <FiChevronRight className="row-chevron" />
-        </button>
-      ))}
+      {props.scroller && people.length > 0 && (
+        <Virtuoso
+          customScrollParent={props.scroller}
+          data={people}
+          computeItemKey={(_, p) => p.id}
+          defaultItemHeight={52}
+          increaseViewportBy={400}
+          itemContent={(_, p) => (
+            <button className="friend-row" aria-pressed={p.id === props.selected} onClick={() => props.onSelect(p.id)}>
+              <Avatar person={p} account={props.account} />
+              <span className="friend-copy">
+                <strong>
+                  {p.displayName} {(searching || showAll) && props.starred.has(p.id) && <FiStar className="star" />}
+                </strong>
+                {p.online && <small>{where(locationOf(p), props.placeAt(locationOf(p)), t)}</small>}
+              </span>
+              <Presence status={p.online ? p.status : "offline"} description={p.statusDescription} />
+              <FiChevronRight className="row-chevron" />
+            </button>
+          )}
+        />
+      )}
       {!people.length && !pending && (
         <p className="empty-text">
           {searching

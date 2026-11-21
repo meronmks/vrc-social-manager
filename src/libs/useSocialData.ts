@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { userDataStore } from "./userDataStore";
 import {
   destination,
@@ -98,22 +98,26 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
     setPlaces((prev) => ({ ...prev, [location]: { ...prev[location], ...place } }));
   }
 
-  function placeAt(location: string): Place | undefined {
-    const place = places[location];
-    const target = destination(location);
-    const world = target && worlds[target.worldId];
-    if (!world || !target) return place;
-    return {
-      ...target,
-      ...place,
-      worldLoading: world.loading,
-      world: {
-        name: world.name || place?.world?.name,
-        thumbnailImageUrl: world.thumbnailImageUrl || place?.world?.thumbnailImageUrl,
-        imageUrl: world.imageUrl || place?.world?.imageUrl,
-      },
-    };
-  }
+  // インスタンス情報とワールド情報を合わせて返す。一覧の集計結果を使い回せるよう、取得データが変わるまで同じ関数を保つ。
+  const placeAt = useCallback(
+    (location: string): Place | undefined => {
+      const place = places[location];
+      const target = destination(location);
+      const world = target && worlds[target.worldId];
+      if (!world || !target) return place;
+      return {
+        ...target,
+        ...place,
+        worldLoading: world.loading,
+        world: {
+          name: world.name || place?.world?.name,
+          thumbnailImageUrl: world.thumbnailImageUrl || place?.world?.thumbnailImageUrl,
+          imageUrl: world.imageUrl || place?.world?.imageUrl,
+        },
+      };
+    },
+    [places, worlds],
+  );
 
   function applyFriend(person: Person) {
     const location = locationOf(person);
