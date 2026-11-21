@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FiBell, FiChevronDown, FiUsers } from "react-icons/fi";
 import { Avatar } from "@/components/social/media";
+import { NoticeIcon } from "@/components/ui/appToasts";
 import { Account, clock, Notice, useText } from "@/libs/social";
 import type { AppUpdates } from "@/libs/useAppUpdates";
 
@@ -118,13 +119,17 @@ export function AppHeader({ updates, accounts, active, busy, authOpen, notices, 
               {t("最近の通知", "Recent notifications")} · {active?.displayName}
             </h3>
             {notices.length ? (
-              notices.map((n, i) => (
-                <p key={i}>
-                  <small>{clock(n.time)}</small> {t(n.ja, n.en)}
-                </p>
-              ))
+              <ul className="notice-list">
+                {notices.map((n, i) => (
+                  <li key={i} data-error={n.error || undefined}>
+                    <NoticeIcon error={n.error} />
+                    <span>{t(n.ja, n.en)}</span>
+                    <small>{clock(n.time)}</small>
+                  </li>
+                ))}
+              </ul>
             ) : (
-              <p>{t("通知はありません", "No notifications")}</p>
+              <p className="notice-empty">{t("通知はありません", "No notifications")}</p>
             )}
           </section>
         )}

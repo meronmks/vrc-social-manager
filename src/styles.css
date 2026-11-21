@@ -10,7 +10,9 @@
   opacity: 0;
   transition: opacity 0.5s;
 }
-.social-app {
+/* 配色トークン。トースト（.Toastify）はアプリの外側に描画されるため同じ値を渡す。 */
+.social-app,
+.Toastify {
   --paper: #f9faf7;
   --surface: #fff;
   --ink: #182f32;
@@ -20,6 +22,8 @@
   --accent: #116552;
   --warn: #fff1d8;
   --warn-ink: #744813;
+}
+.social-app {
   display: flex;
   flex-direction: column;
   height: 100dvh;
@@ -31,7 +35,7 @@
     "Yu Gothic UI",
     sans-serif;
 }
-[data-theme="dark"] .social-app {
+[data-theme="dark"] :is(.social-app, .Toastify) {
   --paper: #172627;
   --surface: #203334;
   --ink: #ecf4ef;
@@ -206,6 +210,37 @@
 }
 .popover button[aria-current="true"] {
   background: var(--pale);
+}
+.notice-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.notice-list li {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+  padding: 8px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.notice-list li > svg {
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  color: var(--accent);
+}
+.notice-list li[data-error] > svg {
+  color: var(--warn-ink);
+}
+.notice-list small {
+  white-space: nowrap;
+  margin-top: 1px;
+}
+.popover .notice-empty {
+  color: var(--sub);
 }
 .app-body,
 .social-columns {
@@ -832,9 +867,78 @@
   }
 }
 
-.Toastify__toast-container--top-right {
-  top: max(62px, env(safe-area-inset-top));
+/* トースト。ヘッダーの下に、ポップオーバーと同じカード調で表示する。 */
+.Toastify {
+  --toastify-toast-top: max(62px, env(safe-area-inset-top));
+  --toastify-toast-right: max(14px, env(safe-area-inset-right));
+  --toastify-toast-width: min(340px, calc(100vw - 28px));
+  --toastify-z-index: 3;
 }
-.Toastify__toast-container {
-  z-index: 3;
+.Toastify .app-toast {
+  min-height: 0;
+  margin-bottom: 8px;
+  padding: 11px 38px 11px 12px;
+  gap: 10px;
+  align-items: flex-start;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 8px 25px #142d3020;
+  font:
+    13px/1.45 "Segoe UI",
+    "Yu Gothic UI",
+    sans-serif;
+}
+.Toastify .app-toast.Toastify__toast--error,
+.Toastify .app-toast.Toastify__toast--warning {
+  background: var(--warn);
+  color: var(--warn-ink);
+  border-color: color-mix(in srgb, var(--warn-ink) 25%, transparent);
+}
+.app-toast .Toastify__toast-icon {
+  width: 16px;
+  margin: 2px 0 0;
+  color: var(--accent);
+}
+.app-toast.Toastify__toast--error .Toastify__toast-icon,
+.app-toast.Toastify__toast--warning .Toastify__toast-icon {
+  color: inherit;
+}
+.app-toast .Toastify__toast-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.app-toast-close {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: grid;
+  padding: 4px;
+  border-radius: 6px;
+  color: var(--sub);
+  cursor: pointer;
+}
+.app-toast.Toastify__toast--error .app-toast-close {
+  color: inherit;
+}
+.app-toast-close:hover {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+.app-toast-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+@media (max-width: 480px) {
+  /* 既定では画面幅いっぱい・角なしになるため、デスクトップと同じカード調に揃える。 */
+  .Toastify .Toastify__toast-container {
+    width: auto;
+    left: 8px;
+    right: 8px;
+    top: var(--toastify-toast-top);
+  }
+  .Toastify .app-toast {
+    margin-bottom: 8px;
+    border-radius: 10px;
+  }
 }
