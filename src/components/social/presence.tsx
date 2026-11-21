@@ -26,7 +26,7 @@ export function Occupancy({ place }: { place?: Place }) {
   const t = useText();
   return (
     <span className="occupancy">
-      {t("全体", "Total")} {place?.userCount ?? "—"}／{place?.capacity ?? "—"}
+      {place?.userCount ?? "—"}／{place?.capacity ?? "—"}
       {t("人", "")}
       {place?.queueEnabled && (place.queueSize ?? 0) > 0 && (
         <small>

@@ -140,7 +140,6 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
         <ListStatus
           busy={busy}
           failed={failed}
-          checked={checked}
           message={
             instances
               ? t("一覧を更新できませんでした", "Could not refresh the list")
@@ -244,11 +243,10 @@ function SearchBox({ query, onChange }: { query: string; onChange: (query: strin
   );
 }
 
-// 取得中・取得失敗の帯。失敗時は最後に確認できた時刻と再試行ボタンを出す。
+// 取得中・取得失敗の帯。失敗時は再試行ボタンを出す（最終確認時刻は一覧上部に表示済み）。
 function ListStatus(props: {
   busy: boolean;
   failed: boolean;
-  checked?: number;
   message: string;
   loading: string;
   retry: () => void;
@@ -259,8 +257,7 @@ function ListStatus(props: {
     <div className={props.failed ? "list-state warn" : "list-state"} role="status">
       {props.failed ? (
         <>
-          {props.message}
-          {props.checked ? " · " + clock(props.checked) + t("時点", " as of last check") : ""}{" "}
+          {props.message}{" "}
           <button onClick={props.retry}>{t("再試行", "Retry")}</button>
         </>
       ) : (

@@ -93,9 +93,7 @@ export function AppHeader({ updates, accounts, active, busy, authOpen, notices, 
         )}
         {menu.open === "notices" && (
           <section className="popover">
-            <h3>
-              {t("最近の通知", "Recent notifications")} · {active?.displayName}
-            </h3>
+            <h3>{t("最近の通知", "Recent notifications")}</h3>
             {notices.length ? (
               <ul className="notice-list">
                 {notices.map((n, i) => (
