@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.0.0-beta.2] - 2026-11-22
+
+### Added
 - インスタンス詳細に、インスタンスのカテゴリと雰囲気（VRChatのVibes）を表示するようにしました。
 - インスタンス詳細の最後に折りたたみ式の「その他の情報」を追加しました（フレンド詳細の現在地には表示しません）。インスタンスの説明、権限（アバターのサイズ変更・絵文字・ステッカー・ペデスタル・プリント・ドローン・アイテム・プレイヤーの移動に影響するアイテム・フォーカスビュー・三人称視点）、年齢制限、プラットフォーム別の人数、閉鎖時刻を確認できます。
 - フレンド詳細の現在地に「インスタンス画面で見る」を追加しました。インスタンスタブでその場所を選んだ状態で開き、一覧もそのインスタンスまでスクロールします。今の絞り込みで一覧に出ない場所なら、絞り込みを「全フレンド・すべて」に戻します。
@@ -19,14 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ほかの表示と重なる説明を省きました。インスタンスの人数は「全体」を付けずに表示し、自己招待ボタン上の受け取りアカウント、「最近の通知」の見出しのアカウント名、一覧の更新に失敗したときの確認時刻は表示しません（いずれも画面右上や一覧上部で確認できます）。
 - ログインが必要なVRChatの画像（アイコン・ワールド画像）を、アプリ内の画像専用の経路で直接読み込むようにしました。一覧をスクロールしたときの画像の受け渡しが軽くなり、同じ画像の再表示も速くなります。画像キャッシュは画像そのままの大きさで数えるため、同じ上限でも以前より多くの画像を保持できます。
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 - フレンド詳細を開いたまま一覧を更新しても、現在地と確認時刻が開いたときのままになる問題を修正しました。一覧の更新で取得した新しい現在地が詳細にも表示されます。
-
-### Security
 
 ## [1.0.0-beta.1] - 2026-11-20
 
@@ -97,7 +105,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - CI設定の改善（TAURI_BUNDLER_DMG_IGNORE_CI設定追加）
 
-[Unreleased]: https://github.com/meronmks/vrc-social-manager/compare/v1.0.0-beta.1...HEAD
+[Unreleased]: https://github.com/meronmks/vrc-social-manager/compare/v1.0.0-beta.2...HEAD
+[1.0.0-beta.2]: https://github.com/meronmks/vrc-social-manager/releases/tag/v1.0.0-beta.2
 [1.0.0-beta.1]: https://github.com/meronmks/vrc-social-manager/releases/tag/v1.0.0-beta.1
 [0.11.0]: https://github.com/meronmks/vrc-social-manager/releases/tag/v0.11.0
 [0.10.2]: https://github.com/meronmks/vrc-social-manager/releases/tag/v0.10.2
