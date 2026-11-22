@@ -231,6 +231,7 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
           instanceOrigin={origin}
           openInstance={openInstance}
           placeAt={data.placeAt}
+          fetchedAt={data.fetchedAt}
           starred={!!person && starred.has(person.id)}
           onPerson={data.applyFriend}
           onPlace={data.updatePlace}

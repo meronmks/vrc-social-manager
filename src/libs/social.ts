@@ -200,6 +200,10 @@ export function clock(time: number) {
   return new Date(time).toLocaleTimeString([], { hour12: false, hour: "2-digit", minute: "2-digit" });
 }
 export type Phase = "loading" | "ready" | "failed";
+// 詳細を開いたとき、最後の取得からこの時間が経っていなければ API を呼ばず取得済みの情報を使う。
+export const RECHECK_AFTER_MS = 30_000;
+/** フレンド（ID）・インスタンス（location）の情報を最後に取得した時刻。未取得なら undefined */
+export type FetchedAt = (kind: "friend" | "place", key: string) => number | undefined;
 export function isExpired(error: unknown) {
   return String(error) === "http:401";
 }

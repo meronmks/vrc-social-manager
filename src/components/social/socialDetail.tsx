@@ -5,6 +5,7 @@ import {
   Account,
   clock,
   destination,
+  FetchedAt,
   instanceName,
   instanceNumber,
   isExpired,
@@ -14,6 +15,7 @@ import {
   Phase,
   Place,
   PublicProfile,
+  RECHECK_AFTER_MS,
   request,
   useText,
   where,
@@ -36,6 +38,7 @@ interface Props {
   /** フレンドの現在地のインスタンスを、インスタンス一覧で選択して表示する */
   openInstance?: (location: string) => void;
   placeAt: (location: string) => Place | undefined;
+  fetchedAt: FetchedAt;
   starred: boolean;
   onPerson: (p: Person) => void;
   onPlace: (location: string, place: Place) => void;
@@ -75,6 +78,8 @@ function useProfile(account: string, personId: string | undefined, enabled: bool
 }
 
 // フレンドの現在地（またはインスタンス）を確認し、インスタンス情報と主催グループ名を一覧のキャッシュへ反映する。
+// 一覧の更新などで最後に取得してから RECHECK_AFTER_MS 経っていなければ、取得済みの情報をそのまま使う。
+// 再取得ボタンからの確認は経過時間にかかわらず取得し直す。
 function useConfirmedLocation(props: Props) {
   const [confirmed, setConfirmed] = useState<{ location: string; time: number }>();
   const [phase, setPhase] = useState<Phase>("loading");
@@ -87,21 +92,36 @@ function useConfirmedLocation(props: Props) {
   useEffect(() => {
     let live = true;
     async function load() {
+      // 最後の取得が新しければその時刻を返す（再取得ボタンからの確認では使わない）
+      function recent(kind: "friend" | "place", key: string) {
+        const time = latest.current.fetchedAt(kind, key);
+        return attempt === 0 && time !== undefined && Date.now() - time < RECHECK_AFTER_MS ? time : undefined;
+      }
       setPhase("loading");
       setMetadataError(false);
       setConfirmed(undefined);
       try {
         let location = props.location ?? "";
-        if (personId) {
+        let time = Date.now();
+        const known = latest.current.person;
+        const friendTime = personId ? recent("friend", personId) : undefined;
+        if (personId && known && friendTime !== undefined) {
+          location = locationOf(known);
+          time = friendTime;
+        } else if (personId) {
           const p = await request(account, { kind: "friend", id: personId });
           if (!live) return;
           location = locationOf(p);
+          time = Date.now();
           latest.current.onPerson({ ...p, location });
         }
         if (!live) return;
-        setConfirmed({ location, time: Date.now() });
+        const placeTime = destination(location) ? recent("place", location) : undefined;
+        // インスタンス詳細では、取得済みのインスタンス情報の時刻を確認時刻として出す
+        if (!personId && placeTime !== undefined) time = placeTime;
+        setConfirmed({ location, time });
         setPhase("ready");
-        if (!destination(location)) return;
+        if (!destination(location) || placeTime !== undefined) return;
         const place = await request(account, { kind: "instance", location });
         if (!live) return;
         latest.current.onPlace(location, place);
@@ -136,7 +156,7 @@ function useConfirmedLocation(props: Props) {
     const location = locationOf(person);
     // 場所が変わった場合、前の場所のインスタンス情報の取得失敗はもう関係ないため消す
     if (latestState.current.confirmed?.location !== location) setMetadataError(false);
-    setConfirmed({ location, time: Date.now() });
+    setConfirmed({ location, time: latest.current.fetchedAt("friend", person.id) ?? Date.now() });
     setPhase("ready");
   }, [person]);
 

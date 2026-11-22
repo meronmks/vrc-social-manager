@@ -4,6 +4,7 @@ import {
   destination,
   Favorite,
   FavoriteGroup,
+  FetchedAt,
   isExpired,
   isInGame,
   isRateLimited,
@@ -50,6 +51,9 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
   const selectedGroup = useRef("");
   const details = useRef(new Map<string, { version: number; person: Person }>());
   const version = useRef(0);
+  // 項目ごとの最終取得時刻。詳細を開いたときに再取得が必要かの判断に使う（表示には使わないため ref で持つ）。
+  const fetched = useRef({ friend: new Map<string, number>(), place: new Map<string, number>() });
+  const fetchedAt = useCallback<FetchedAt>((kind, key) => fetched.current[kind].get(key), []);
   const callbacks = useRef({ notify, expire });
   callbacks.current = { notify, expire };
 
@@ -95,6 +99,7 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
 
   // 詳細パネルで取得したインスタンス情報を一覧のキャッシュへ反映する。
   function updatePlace(location: string, place: Place) {
+    fetched.current.place.set(location, Date.now());
     setPlaces((prev) => ({ ...prev, [location]: { ...prev[location], ...place } }));
   }
 
@@ -130,6 +135,7 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
       person = { ...person, online: isInGame(person) };
     }
     scheduleWorld.current(location);
+    fetched.current.friend.set(person.id, Date.now());
     details.current.set(person.id, { version: ++version.current, person });
     setFriends((prev) => ({ ...prev, [person.id]: { ...prev[person.id], ...person } }));
   }
@@ -239,6 +245,7 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
             if (!live || stopped) return;
             const place = await request(account, { kind: "instance", location });
             if (!live) return;
+            fetched.current.place.set(location, Date.now());
             setPlaces((prev) => ({ ...prev, [location]: place }));
             await attachGroupName(location, place);
           } catch (e) {
@@ -254,7 +261,9 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
         const n = await userDataStore.getFetchFriendsCount();
         const merge = (page: Person[], offline: boolean) => {
           const batch: Record<string, Person> = {};
+          const now = Date.now();
           for (const p of page) {
+            fetched.current.friend.set(p.id, now);
             // オンライン一覧には Web のみの接続も含まれるため、ゲーム内にいる人だけをオンラインにする。
             batch[p.id] = newer({ ...p, online: isInGame(p, !offline) });
             if (batch[p.id].online) queuePlace(locationOf(batch[p.id]));
@@ -313,10 +322,12 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
       try {
         const result = await request(account, { kind: "memberInstances" });
         const entries: Places = {};
+        const now = Date.now();
         for (const raw of result.instances) {
           if (!live) return;
           const location = raw.worldId + ":" + raw.instanceId;
           entries[location] = raw;
+          fetched.current.place.set(location, now);
           if (!raw.world?.name || !(raw.world.thumbnailImageUrl || raw.world.imageUrl)) queueWorld(location);
         }
         if (!live) return;
@@ -353,6 +364,7 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
     phases,
     checked,
     applyFriend,
+    fetchedAt,
     refresh: () => setRevision((v) => v + 1),
     updatePlace,
   };
