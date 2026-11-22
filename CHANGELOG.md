@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Fixed
+- フレンド詳細を開いたまま一覧を更新しても、現在地と確認時刻が開いたときのままになる問題を修正しました。一覧の更新で取得した新しい現在地が詳細にも表示されます。
 
 ### Security
 

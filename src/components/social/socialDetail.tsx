@@ -118,6 +118,24 @@ function useConfirmedLocation(props: Props) {
       live = false;
     };
   }, [account, personId, props.location, attempt]);
+
+  // 詳細を開いたまま一覧を更新したとき、届いた新しい情報で現在地と確認時刻を置き換える。
+  // 開いた直後（前回値なし）と確認中は、確認結果を優先するため何もしない。
+  const person = props.person;
+  const previousPerson = useRef(person);
+  const latestState = useRef({ phase, confirmed });
+  latestState.current = { phase, confirmed };
+  useEffect(() => {
+    const previous = previousPerson.current;
+    previousPerson.current = person;
+    if (!person || !previous || previous === person || latestState.current.phase === "loading") return;
+    const location = locationOf(person);
+    // 場所が変わった場合、前の場所のインスタンス情報の取得失敗はもう関係ないため消す
+    if (latestState.current.confirmed?.location !== location) setMetadataError(false);
+    setConfirmed({ location, time: Date.now() });
+    setPhase("ready");
+  }, [person]);
+
   return { confirmed, phase, metadataError, retry: () => setAttempt((n) => n + 1) };
 }
 
