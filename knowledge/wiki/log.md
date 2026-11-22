@@ -248,3 +248,27 @@ sources:
 ## [2026-11-20] maintenance | 新UIのフロントエンドを整理
 
 - 旧UIの未使用コンポーネントと型定義を削除し、[App](../../src/App.tsx) のアカウント操作・通知履歴を [useAccounts](../../src/libs/useAccounts.ts)・[useNotices](../../src/libs/useNotices.ts) へ、一覧の絞り込みを [friendView](../../src/libs/friendView.ts) へ分離。詳細パネルの部品は `src/components/social/` に分割した。[アーキテクチャ](architecture.md)と[UI仕様](friend-ui-spec.md)の参照先を更新。
+
+## [2026-11-21] maintenance | VRChat API の送信間隔を Rust 側へ集約
+
+- 画面側の取得ループにあった待機を外し、[通常画面のAPI](../../src-tauri/src/social.rs)で全リクエスト共通の送信間隔と 429 時の待機・再試行を行うよう変更。[アーキテクチャ](architecture.md)に記載。
+
+## [2026-11-21] maintenance | 通知の表示を新UIに統一
+
+- トーストを新UIの配色とカード調に合わせ、エラーも含めて自動で閉じる仕様に変更。「最近の通知」でエラーをアイコンで区別する。[UI仕様](friend-ui-spec.md#アプリ内の通知と履歴)に記載。
+
+## [2026-11-21] maintenance | インスタンス詳細に「その他の情報」を追加
+
+- 旧UIの権限表示と、カテゴリ・バイブスなどを折りたたみ欄にまとめた。カテゴリ・バイブスの一覧APIをRust側に追加し、[UI仕様](friend-ui-spec.md#インスタンス一覧の分類)と[アーキテクチャ](architecture.md#キャッシュ)に記載。
+
+## [2026-11-21] maintenance | 画面定義を実画面に合わせ、画面例PNGを管理対象から外す
+
+- [AltPenの画面定義](../../design/friend-home.pen)の37フレームを、モックデータで表示した現行の実画面から作り直し、色の変数を [styles.css](../../src/styles.css) のライトテーマに揃えた。画面例のPNGは `.gitignore` でリポジトリから外し、[UI仕様](friend-ui-spec.md#新uiの画面定義)の画面例リンクをフレーム名付きで画面定義へ向けた。人数表示・一覧の更新失敗・最近の通知の記述も現行の表示に合わせた。
+
+## [2026-11-22] maintenance | 認証が必要な画像をカスタムプロトコルで読む
+
+- 画像を `social_request` の `icon` で base64 の data URL として IPC で受け渡していたため、仮想スクロールで行が出入りするたびに大きな IPC が発生していた。Rust 側に画像プロトコル `vrcimg` を追加し、`<img>` から直接バイト列を読む形に変更。`Resource::Icon` は削除。[アーキテクチャ](architecture.md#ipc-と-rust-バックエンド)と[認証とローカル保存](authentication-and-storage.md)に記載。
+
+## [2026-11-22] maintenance | フレンド詳細からインスタンス画面へ移動する
+
+- フレンド詳細の現在地に「インスタンス画面で見る」を追加し、インスタンスタブで同じ場所を選択・スクロールして表示するようにした。フレンド詳細の現在地からは「その他の情報」を外した。[UI仕様](friend-ui-spec.md#フレンドのプロフィール)に記載。

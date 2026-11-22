@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import { FiRefreshCw, FiSearch, FiX } from "react-icons/fi";
+import { useNavigate } from "react-router";
 import { FriendList } from "@/components/social/friendList";
 import { GroupPicker } from "@/components/social/groupPicker";
 import { InstanceFilters, InstanceList } from "@/components/social/instanceList";
@@ -37,24 +38,37 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
   const [kind, setKind] = useState<InstanceKind>("all");
   const [selectedPerson, selectPerson] = useState("");
   const [instanceSelection, setInstanceSelection] = useState<{ location: string; friendId?: string }>();
+  // フレンド詳細から移動してきたとき、インスタンス一覧をそのカードまでスクロールさせる
+  const [reveal, setReveal] = useState<string>();
+  // 一覧のスクロール領域。仮想スクロールはこの要素のスクロール位置に合わせて行を描画する。
+  const [scroller, setScroller] = useState<HTMLElement | null>(null);
   const t = useText();
+  const navigate = useNavigate();
+  const clearReveal = useCallback(() => setReveal(undefined), []);
 
-  const starred = new Set(data.favorites.map((f) => f.favoriteId));
-  const inGroup = favoriteIdsIn(data.favorites, data.group);
-  const search = query.trim().toLocaleLowerCase();
-  const everyone = Object.values(data.friends);
-  const people = visibleFriends(everyone, search, data.showAll, inGroup);
-  const byPlace = groupByPlace(everyone);
-  const locations = visibleLocations({
-    scope,
-    kind,
-    sortOrder,
-    members: data.members,
-    byPlace,
-    inGroup,
-    placeAt: data.placeAt,
-  });
-  const groups = favoriteGroupOptions(data.groups, account.friendGroupNames);
+  // フレンドが数千人いても軽く動くよう、絞り込みや並べ替えは元データが変わったときだけやり直す。
+  // 検索語は入力を優先し、一覧の絞り込みは少し遅れて反映する。
+  const search = useDeferredValue(query.trim().toLocaleLowerCase());
+  const { favorites, group, friends, showAll, members, placeAt } = data;
+  const starred = useMemo(() => new Set(favorites.map((f) => f.favoriteId)), [favorites]);
+  const inGroup = useMemo(() => favoriteIdsIn(favorites, group), [favorites, group]);
+  const everyone = useMemo(() => Object.values(friends), [friends]);
+  const people = useMemo(
+    () => (instances ? [] : visibleFriends(everyone, search, showAll, inGroup)),
+    [instances, everyone, search, showAll, inGroup],
+  );
+  const byPlace = useMemo(() => groupByPlace(everyone), [everyone]);
+  const locations = useMemo(
+    () =>
+      instances
+        ? visibleLocations({ scope, kind, sortOrder, members, byPlace, inGroup, placeAt })
+        : [],
+    [instances, scope, kind, sortOrder, members, byPlace, inGroup, placeAt],
+  );
+  const groups = useMemo(
+    () => favoriteGroupOptions(data.groups, account.friendGroupNames),
+    [data.groups, account.friendGroupNames],
+  );
 
   const view = viewKeyOf(instances, scope, !!search || data.showAll);
   const sources = viewSources[view];
@@ -72,6 +86,19 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
   function clearSelection() {
     selectPerson("");
     setInstanceSelection(undefined);
+    setReveal(undefined);
+  }
+  // フレンドの現在地のインスタンスを、インスタンス一覧で選択して表示する。
+  // 今の絞り込みでは一覧に出ない場合は、絞り込みを「全フレンド・すべて」に戻して一覧上でも見つけられるようにする。
+  function openInstance(target: string) {
+    const listed = visibleLocations({ scope, kind, sortOrder, members, byPlace, inGroup, placeAt }).includes(target);
+    if (!listed) {
+      setScope("all");
+      setKind("all");
+    }
+    setInstanceSelection({ location: target });
+    setReveal(target);
+    if (!instances) navigate("/instances");
   }
 
   const groupPicker = (
@@ -91,17 +118,10 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
 
   return (
     <div className={"social-columns" + (person || location ? " with-selection" : "")}>
-      <section className="social-list">
-        <h1>
-          {instances
-            ? t("インスタンス", "Instances")
-            : search
-              ? t("フレンド検索", "Friend search")
-              : t("フレンド", "Friends")}
-        </h1>
+      <section className="social-list" ref={setScroller}>
         <div className="list-tools">
           <small>
-            {t("最終確認", "Last checked")}　{checked ? clock(checked) : "—"}
+            {t("最終確認", "Last checked")} {checked ? clock(checked) : "—"}
           </small>
           <button className="quiet-action" onClick={data.refresh} disabled={busy && !failed}>
             <FiRefreshCw />
@@ -138,7 +158,6 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
         <ListStatus
           busy={busy}
           failed={failed}
-          checked={checked}
           message={
             instances
               ? t("一覧を更新できませんでした", "Could not refresh the list")
@@ -166,10 +185,17 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
             sortOrder={sortOrder}
             onSort={setSortOrder}
             selected={origin}
-            onSelect={(l) => setInstanceSelection({ location: l })}
+            onSelect={(l) => {
+              setReveal(undefined);
+              setInstanceSelection({ location: l });
+            }}
+            reveal={reveal}
+            onRevealed={clearReveal}
+            scroller={scroller}
           />
         ) : (
           <FriendList
+            scroller={scroller}
             people={people}
             account={account.id}
             query={query}
@@ -202,7 +228,10 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
             ) : undefined
           }
           backToInstance={person && origin ? () => setInstanceSelection({ location: origin }) : undefined}
+          instanceOrigin={origin}
+          openInstance={openInstance}
           placeAt={data.placeAt}
+          fetchedAt={data.fetchedAt}
           starred={!!person && starred.has(person.id)}
           onPerson={data.applyFriend}
           onPlace={data.updatePlace}
@@ -240,11 +269,10 @@ function SearchBox({ query, onChange }: { query: string; onChange: (query: strin
   );
 }
 
-// 取得中・取得失敗の帯。失敗時は最後に確認できた時刻と再試行ボタンを出す。
+// 取得中・取得失敗の帯。失敗時は再試行ボタンを出す（最終確認時刻は一覧上部に表示済み）。
 function ListStatus(props: {
   busy: boolean;
   failed: boolean;
-  checked?: number;
   message: string;
   loading: string;
   retry: () => void;
@@ -255,8 +283,7 @@ function ListStatus(props: {
     <div className={props.failed ? "list-state warn" : "list-state"} role="status">
       {props.failed ? (
         <>
-          {props.message}
-          {props.checked ? " · " + clock(props.checked) + t("時点", " as of last check") : ""}{" "}
+          {props.message}{" "}
           <button onClick={props.retry}>{t("再試行", "Retry")}</button>
         </>
       ) : (

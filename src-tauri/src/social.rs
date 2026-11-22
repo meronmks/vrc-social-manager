@@ -1,3 +1,4 @@
+use crate::cache::{self, Kind};
 use keyring::Entry;
 use once_cell::sync::Lazy;
 use reqwest::{Client, RequestBuilder, Url};
@@ -55,17 +56,74 @@ struct Challenge {
 static ACTIVE: Lazy<RwLock<Option<(String, Session)>>> = Lazy::new(|| RwLock::new(None));
 static LOGIN: Lazy<Mutex<Option<Challenge>>> = Lazy::new(|| Mutex::new(None));
 
-async fn response(req: RequestBuilder) -> Outcome<reqwest::Response> {
-    let res = req.send().await.map_err(|_| {
-        log::warn!("VRChat API の応答を受信できませんでした");
-        "network"
-    })?;
-    if !res.status().is_success() {
-        let status = res.status().as_u16();
-        log::warn!("VRChat API HTTP {status}");
-        return Err(format!("http:{status}"));
+// VRChat API へのリクエストは、種類を問わずこの間隔以上あけて送信を始める。
+const REQUEST_INTERVAL: Duration = Duration::from_millis(200);
+// 429 を受けたときに再試行する最大回数。
+const MAX_RETRIES: u32 = 3;
+// Retry-After がない・読めないときの待機時間（再試行ごとに倍にする）。
+const FALLBACK_RETRY_AFTER: Duration = Duration::from_secs(5);
+// これより長い待機を求められたときは再試行せず、そのまま 429 を返す。
+const MAX_RETRY_AFTER: Duration = Duration::from_secs(60);
+
+// 次のリクエストを送信してよい時刻。全アカウント・全リクエストで共有する。
+static NEXT_SLOT: Lazy<Mutex<tokio::time::Instant>> =
+    Lazy::new(|| Mutex::new(tokio::time::Instant::now()));
+
+// 送信枠を一つ予約し、その開始時刻を返す。
+async fn reserve_slot() -> tokio::time::Instant {
+    let mut next = NEXT_SLOT.lock().await;
+    let start = (*next).max(tokio::time::Instant::now());
+    *next = start + REQUEST_INTERVAL;
+    start
+}
+
+// 429 を受けたとき、以降のすべてのリクエストの開始を指定時間だけ遅らせる。
+async fn hold_off(wait: Duration) {
+    let mut next = NEXT_SLOT.lock().await;
+    *next = (*next).max(tokio::time::Instant::now() + wait);
+}
+
+// Retry-After の秒数指定を読む。HTTP 日付形式など読めない値は None。
+fn parse_retry_after(value: &str) -> Option<Duration> {
+    value.trim().parse::<u64>().ok().map(Duration::from_secs)
+}
+
+async fn response(mut req: RequestBuilder) -> Outcome<reqwest::Response> {
+    let mut attempt = 0;
+    loop {
+        // 再試行に備えて送信前に複製しておく（本文が複製できない要求は再試行しない）。
+        let retry = req.try_clone();
+        tokio::time::sleep_until(reserve_slot().await).await;
+        let res = req.send().await.map_err(|_| {
+            log::warn!("VRChat API の応答を受信できませんでした");
+            "network"
+        })?;
+        let status = res.status();
+        if status == reqwest::StatusCode::TOO_MANY_REQUESTS && attempt < MAX_RETRIES {
+            let wait = res
+                .headers()
+                .get(reqwest::header::RETRY_AFTER)
+                .and_then(|v| v.to_str().ok())
+                .and_then(parse_retry_after)
+                .unwrap_or(FALLBACK_RETRY_AFTER * 2u32.pow(attempt));
+            if let (Some(next), true) = (retry, wait <= MAX_RETRY_AFTER) {
+                attempt += 1;
+                log::warn!(
+                    "VRChat API HTTP 429: {} 秒待って再試行します（{attempt}/{MAX_RETRIES}）",
+                    wait.as_secs_f32()
+                );
+                hold_off(wait).await;
+                req = next;
+                continue;
+            }
+        }
+        if !status.is_success() {
+            let status = status.as_u16();
+            log::warn!("VRChat API HTTP {status}");
+            return Err(format!("http:{status}"));
+        }
+        return Ok(res);
     }
-    Ok(res)
 }
 
 async fn json_body(req: RequestBuilder) -> Outcome<Value> {
@@ -188,6 +246,7 @@ fn activate(
             .unwrap_or_else(|e| e.into_inner()) = jar;
     }
     *active = Some((id.into(), session));
+    crate::cache::reset(Some(id));
     if let Some(names) = user
         .get("friendGroupNames")
         .filter(|value| value.is_array())
@@ -338,6 +397,7 @@ pub async fn social_logout(app: tauri::AppHandle, id: String) -> Result<(), Stri
             // 復元できないセッションを終了時に再保存しない。
             *active = None;
             *pending = None;
+            crate::cache::reset(None);
             #[cfg(all(dev, debug_assertions))]
             crate::COOKIE_STORE
                 .lock()
@@ -348,6 +408,7 @@ pub async fn social_logout(app: tauri::AppHandle, id: String) -> Result<(), Stri
     }
     *pending = None;
     *active = None;
+    crate::cache::reset(None);
     #[cfg(all(dev, debug_assertions))]
     crate::COOKIE_STORE
         .lock()
@@ -363,7 +424,6 @@ pub async fn social_logout(app: tauri::AppHandle, id: String) -> Result<(), Stri
 pub enum Resource {
     Friends { offset: u32, n: u32, offline: bool },
     Groups,
-    Icon { url: String },
     Favorites { offset: u32 },
     MemberInstances,
     Friend { id: String },
@@ -372,10 +432,11 @@ pub enum Resource {
     Group { id: String },
     Instance { location: String },
     Invite { location: String },
+    InstanceCategories,
+    InstanceVibes,
 }
 
-async fn read_icon(client: &Client, source: &str) -> Outcome<Value> {
-    use base64::{engine::general_purpose::STANDARD, Engine};
+async fn read_icon(client: &Client, source: &str) -> Outcome<cache::Image> {
     let url = Url::parse(source).map_err(|_| "invalid")?;
     let path: Vec<_> = url.path().split('/').collect();
     let valid_path = matches!(path.as_slice(), ["", "api", "1", route, id, version, size]
@@ -406,10 +467,110 @@ async fn read_icon(client: &Client, source: &str) -> Outcome<Value> {
         [b'R', b'I', b'F', b'F', _, _, _, _, b'W', b'E', b'B', b'P', ..] => "image/webp",
         _ => return Err("invalid".into()),
     };
-    Ok(json!(format!(
-        "data:{mime};base64,{}",
-        STANDARD.encode(bytes)
-    )))
+    Ok(cache::Image { mime, bytes })
+}
+
+// 画像を返すカスタムプロトコルの名前。画面では `convertFileSrc("image", IMAGE_SCHEME)` で URL を作る。
+pub const IMAGE_SCHEME: &str = "vrcimg";
+
+// 指定アカウントが利用中ならそのセッションのクライアントを返す。
+fn client_for(account: &str) -> Outcome<Client> {
+    ACTIVE
+        .read()
+        .map_err(|_| "storage")?
+        .as_ref()
+        .filter(|(id, _)| id == account)
+        .map(|(_, s)| s.client.clone())
+        .ok_or_else(|| "inactive".into())
+}
+
+// クエリの account（利用中アカウント）と url（VRChat の画像 URL）から画像を返す。
+async fn serve_image(query: &str) -> Outcome<cache::Image> {
+    let params = Url::parse(&format!("http://localhost/?{query}")).map_err(|_| "invalid")?;
+    let (mut account, mut source) = (None, None);
+    for (key, value) in params.query_pairs() {
+        match key.as_ref() {
+            "account" => account = Some(value.into_owned()),
+            "url" => source = Some(value.into_owned()),
+            _ => {}
+        }
+    }
+    let (Some(account), Some(source)) = (account, source) else {
+        return Err("invalid".into());
+    };
+    let client = client_for(&account)?;
+    // 画像 URL はファイルのバージョンごとに変わるため、同じ URL の中身は使い回せる。
+    if let Some(hit) = cache::icon(&account, &source) {
+        return Ok(hit);
+    }
+    let image = read_icon(&client, &source).await?;
+    cache::put_icon(&account, &source, image.clone());
+    Ok(image)
+}
+
+// エラー文字列を画像プロトコルの HTTP ステータスへ変える。失敗は `<img>` の onError で次の候補へ進む。
+fn image_error_status(error: &str) -> tauri::http::StatusCode {
+    use tauri::http::StatusCode;
+    match error {
+        "invalid" => StatusCode::BAD_REQUEST,
+        "inactive" => StatusCode::FORBIDDEN,
+        "storage" => StatusCode::INTERNAL_SERVER_ERROR,
+        _ => error
+            .strip_prefix("http:")
+            .and_then(|code| code.parse::<u16>().ok())
+            .and_then(|code| StatusCode::from_u16(code).ok())
+            .unwrap_or(StatusCode::BAD_GATEWAY),
+    }
+}
+
+// 画像用カスタムプロトコルの応答を作る。
+// Cookie が必要な VRChat の画像をアカウントのセッションで取得し、`<img>` へバイト列のまま返す。
+// IPC で base64 の文字列を受け渡さずに済み、同じ URL は WebView 側でも使い回される。
+pub async fn image_response(
+    request: tauri::http::Request<Vec<u8>>,
+) -> tauri::http::Response<Vec<u8>> {
+    use tauri::http::{header, Method, Response, StatusCode};
+    let built = if request.method() != Method::GET {
+        Response::builder()
+            .status(StatusCode::METHOD_NOT_ALLOWED)
+            .body(Vec::new())
+    } else {
+        match serve_image(request.uri().query().unwrap_or_default()).await {
+            Ok(image) => Response::builder()
+                .header(header::CONTENT_TYPE, image.mime)
+                // 内容は URL ごとに変わらないが、アカウントの画像なので共有キャッシュには置かせない。
+                .header(header::CACHE_CONTROL, "private, max-age=86400, immutable")
+                .header("X-Content-Type-Options", "nosniff")
+                .body(image.bytes),
+            Err(error) => Response::builder()
+                .status(image_error_status(&error))
+                .body(Vec::new()),
+        }
+    };
+    built.unwrap_or_else(|_| {
+        let mut fallback = Response::new(Vec::new());
+        *fallback.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+        fallback
+    })
+}
+
+// キャッシュがあればそれを返し、なければ取得して保持する。
+// 想定と異なる形の応答（一覧以外はオブジェクト、一覧は配列）は保持しない。
+async fn cached(account: &str, kind: Kind, id: &str, req: RequestBuilder) -> Outcome<Value> {
+    if let Some(hit) = cache::get(account, kind, id) {
+        log::trace!("キャッシュ利用: {kind:?} {id}");
+        return Ok(hit);
+    }
+    let value = json_body(req).await?;
+    let expected = if kind == Kind::Catalog {
+        value.is_array()
+    } else {
+        value.is_object()
+    };
+    if expected {
+        cache::put(account, kind, id, value.clone());
+    }
+    Ok(value)
 }
 
 // ユーザー取得APIの応答には画面に不要な非公開項目が含まれる場合がある。
@@ -443,13 +604,7 @@ fn visible_person(mut value: Value) -> Outcome<Value> {
 #[specta::specta]
 pub async fn social_request(account: String, resource: Resource) -> Result<Value, String> {
     // 送信開始時にアカウント専用のクライアントを確保する。
-    let client = ACTIVE
-        .read()
-        .map_err(|_| "storage")?
-        .as_ref()
-        .filter(|(id, _)| id == &account)
-        .map(|(_, s)| s.client.clone())
-        .ok_or("inactive")?;
+    let client = client_for(&account)?;
     let endpoint = |segments: &[&str]| -> Outcome<Url> {
         if segments
             .iter()
@@ -484,13 +639,20 @@ pub async fn social_request(account: String, resource: Resource) -> Result<Value
         Resource::Groups => client
             .get(endpoint(&["favorite", "groups"])?)
             .query(&[("ownerId", account.as_str()), ("type", "friend"), ("n", "100")]),
-        Resource::Icon { url } => return read_icon(&client, &url).await,
         Resource::Favorites { offset } => client
             .get(endpoint(&["favorites"])?)
             .query(&[("type", "friend")])
             .query(&[("offset", offset), ("n", 100)]),
         Resource::MemberInstances => {
-            client.get(endpoint(&["users", &account, "instances", "groups"])?)
+            let result =
+                json_body(client.get(endpoint(&["users", &account, "instances", "groups"])?))
+                    .await?;
+            if let Some(instances) = result["instances"].as_array() {
+                instances
+                    .iter()
+                    .for_each(|instance| cache::put_embedded_world(&account, instance));
+            }
+            return Ok(result);
         }
         Resource::Friend { id } => {
             return visible_person(json_body(client.get(endpoint(&["users", &id])?)).await?)
@@ -498,11 +660,18 @@ pub async fn social_request(account: String, resource: Resource) -> Result<Value
         Resource::Profile { id } => {
             return visible_person(json_body(client.get(endpoint(&["profile", &id])?)).await?)
         }
-        Resource::World { id } => client.get(endpoint(&["worlds", &id])?),
-        Resource::Group { id } => client.get(endpoint(&["groups", &id])?),
+        Resource::World { id } => {
+            let req = client.get(endpoint(&["worlds", &id])?);
+            return cached(&account, Kind::World, &id, req).await;
+        }
+        Resource::Group { id } => {
+            let req = client.get(endpoint(&["groups", &id])?);
+            return cached(&account, Kind::Group, &id, req).await;
+        }
         Resource::Instance { location } => {
             let instance = json_body(client.get(endpoint(&["instances", &location])?)).await?;
             return if instance.is_object() {
+                cache::put_embedded_world(&account, &instance);
                 Ok(instance)
             } else {
                 Err("invalid".into())
@@ -511,6 +680,15 @@ pub async fn social_request(account: String, resource: Resource) -> Result<Value
         Resource::Invite { location } => {
             response(client.post(endpoint(&["invite", "myself", "to", &location])?)).await?;
             return Ok(Value::Bool(true));
+        }
+        // インスタンスの categoryId・vibeIds を表示名に変えるための一覧。内容はほとんど変わらないため保持する。
+        Resource::InstanceCategories => {
+            let req = client.get(endpoint(&["instanceCategories"])?);
+            return cached(&account, Kind::Catalog, "instanceCategories", req).await;
+        }
+        Resource::InstanceVibes => {
+            let req = client.get(endpoint(&["instanceVibes"])?);
+            return cached(&account, Kind::Catalog, "instanceVibes", req).await;
         }
     };
     json_body(req).await
@@ -545,5 +723,53 @@ mod security_tests {
             json!({"id":"usr_demo","bio":"demo","location":"private"})
         );
         assert!(visible_person(Value::Null).is_err());
+    }
+}
+
+#[cfg(test)]
+mod image_tests {
+    use super::*;
+    use tauri::http::StatusCode;
+
+    #[test]
+    fn errors_map_to_http_status() {
+        assert_eq!(image_error_status("invalid"), StatusCode::BAD_REQUEST);
+        assert_eq!(image_error_status("inactive"), StatusCode::FORBIDDEN);
+        assert_eq!(image_error_status("http:404"), StatusCode::NOT_FOUND);
+        assert_eq!(image_error_status("http:429"), StatusCode::TOO_MANY_REQUESTS);
+        assert_eq!(image_error_status("network"), StatusCode::BAD_GATEWAY);
+        assert_eq!(image_error_status("http:abc"), StatusCode::BAD_GATEWAY);
+    }
+
+    #[tokio::test]
+    async fn image_requests_need_both_params_and_an_active_account() {
+        assert_eq!(serve_image("").await, Err("invalid".into()));
+        assert_eq!(serve_image("account=usr_demo").await, Err("invalid".into()));
+        // ログインしていないアカウントのセッションでは取得しない。
+        let query = "account=usr_nobody&url=https%3A%2F%2Fapi.vrchat.cloud%2Fapi%2F1%2Ffile%2Ffile_ab%2F1%2Ffile";
+        assert_eq!(serve_image(query).await, Err("inactive".into()));
+    }
+}
+
+#[cfg(test)]
+mod pacing_tests {
+    use super::*;
+
+    #[test]
+    fn retry_after_reads_seconds_only() {
+        assert_eq!(parse_retry_after("12"), Some(Duration::from_secs(12)));
+        assert_eq!(parse_retry_after(" 0 "), Some(Duration::ZERO));
+        assert_eq!(parse_retry_after("Wed, 21 Oct 2015 07:28:00 GMT"), None);
+        assert_eq!(parse_retry_after("-1"), None);
+    }
+
+    #[tokio::test]
+    async fn slots_are_spaced_and_hold_off_delays_them() {
+        let first = reserve_slot().await;
+        let second = reserve_slot().await;
+        assert!(second - first >= REQUEST_INTERVAL);
+        let before = tokio::time::Instant::now();
+        hold_off(Duration::from_secs(3)).await;
+        assert!(reserve_slot().await - before >= Duration::from_secs(3));
     }
 }

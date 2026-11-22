@@ -1,7 +1,8 @@
 import { BrowserRouter, useLocation, useNavigate } from "react-router";
 import { FiLayers, FiSettings, FiTool, FiUsers } from "react-icons/fi";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import { AppHeader } from "@/components/ui/appHeader";
+import { AppToasts } from "@/components/ui/appToasts";
 import { UpdateConfirm } from "@/components/ui/dialogs/updateConfirm";
 import { SessionForm } from "@/components/ui/sessionForm";
 import DebugScreen from "@/screens/debugScreen";
@@ -153,7 +154,7 @@ function ProblemBanner(props: {
 export default function App() {
   return (
     <>
-      <ToastContainer />
+      <AppToasts />
       <UpdateConfirm.Root />
       <BrowserRouter>
         <Workspace />

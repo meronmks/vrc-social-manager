@@ -52,9 +52,6 @@ export function SelfInvite({
   }[state];
   return (
     <section className="invite">
-      <small>
-        {t("受け取りアカウント", "Receiving account")} · {account.displayName}
-      </small>
       {(state === "unknown" || state === "failed") && (
         <p role="status">
           {state === "unknown"

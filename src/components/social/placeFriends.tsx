@@ -1,3 +1,4 @@
+import { FiStar } from "react-icons/fi";
 import { Person, useText } from "@/libs/social";
 import { Avatar } from "./media";
 
@@ -27,10 +28,8 @@ export function PlaceFriends({ friends, account, starred, friendsReady, onSelect
         const content = (
           <>
             <Avatar person={friend} account={account} />
-            <span>
-              {starred.has(friend.id) && "☆ "}
-              {friend.displayName}
-            </span>
+            <span>{friend.displayName}</span>
+            {starred.has(friend.id) && <FiStar className="star" aria-hidden="true" />}
           </>
         );
         return onSelect ? (

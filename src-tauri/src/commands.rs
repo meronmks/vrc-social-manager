@@ -1,11 +1,11 @@
 use crate::structs::ApiResponse;
 #[cfg(dev)]
-use crate::structs::{AppState, Favorite, User, World};
+use crate::structs::{AppState, Favorite, User};
 #[cfg(dev)]
 use crate::{load_cookies, save_cookies, CLIENT, COOKIE_STORE};
 use log::debug;
 #[cfg(dev)]
-use log::{error, trace};
+use log::error;
 #[cfg(dev)]
 use once_cell::sync::Lazy;
 #[cfg(dev)]
@@ -18,8 +18,6 @@ use serde_json::json;
 use std::fmt::Display;
 #[cfg(dev)]
 use std::sync::Arc;
-#[cfg(dev)]
-use std::time;
 use tauri::ipc::Invoke;
 use tauri::path::BaseDirectory;
 use tauri::{generate_handler, Manager};
@@ -43,6 +41,7 @@ pub(crate) fn handlers() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         crate::social::social_cancel,
         crate::social::social_logout,
         crate::social::social_request,
+        crate::cache::cache_purge,
         get_licenses,
         get_release_note,
         #[cfg(all(dev, debug_assertions))]
@@ -74,6 +73,7 @@ pub(crate) fn export_ts() {
             crate::social::social_cancel,
             crate::social::social_logout,
             crate::social::social_request,
+            crate::cache::cache_purge,
             login,
             email_otp,
             two_factor_auth,
@@ -81,7 +81,6 @@ pub(crate) fn export_ts() {
             cookie_clear,
             get_current_user_info,
             get_current_user_friends,
-            get_world_by_id,
             get_raw_world_by_id,
             get_instance,
             get_user_by_id,
@@ -126,18 +125,6 @@ macro_rules! handle_raw_response {
 #[cfg(dev)]
 static APP_STATE: Lazy<Arc<RwLock<AppState>>> =
     Lazy::new(|| Arc::new(RwLock::new(AppState::default())));
-
-#[cfg(dev)]
-pub async fn insert_world(world_id: String, world: World) {
-    let mut state = APP_STATE.write().await;
-    state.worlds.world.insert(world_id, world);
-}
-
-#[cfg(dev)]
-pub async fn get_world(world_id: String) -> Option<World> {
-    let state = APP_STATE.read().await;
-    state.worlds.world.get(&world_id).cloned()
-}
 
 #[derive(Debug, Clone, Serialize, specta::Type)]
 #[specta(export)]
@@ -430,90 +417,6 @@ async fn get_group_by_id(group_id: &str) -> Result<String, RustError> {
         .await?;
 
     handle_raw_response!(res)
-}
-
-#[cfg(dev)]
-#[tauri::command]
-#[specta::specta]
-async fn get_world_by_id(worldid: &str) -> Result<String, RustError> {
-    debug!("Call get_world_by_id");
-
-    if worldid == "private" {
-        let w = World {
-            id: "private".to_string(),
-            name: "In a private world".to_string(),
-            thumbnailImageUrl:
-                "https://assets.vrchat.com/www/images/user-location-private-world.png".to_string(),
-        };
-        return Ok(serde_json::to_string(&w).unwrap());
-    } else if worldid == "web_or_mobile" {
-        let w = World {
-            id: "web_or_mobile".to_string(),
-            name: "On Web or Mobile".to_string(),
-            thumbnailImageUrl:
-                "https://assets.vrchat.com/www/images/user-location-private-world.png".to_string(),
-        };
-        return Ok(serde_json::to_string(&w).unwrap());
-    } else if worldid == "offline" {
-        let w = World {
-            id: "offline".to_string(),
-            name: "Offline".to_string(),
-            thumbnailImageUrl: "https://assets.vrchat.com/www/images/user-location-offline.png"
-                .to_string(),
-        };
-        return Ok(serde_json::to_string(&w).unwrap());
-    } else if worldid == "traveling" {
-        let w = World {
-            id: "traveling".to_string(),
-            name: "In a traveling world".to_string(),
-            thumbnailImageUrl:
-                "https://assets.vrchat.com/www/images/user-location-private-world.png".to_string(),
-        };
-        return Ok(serde_json::to_string(&w).unwrap());
-    }
-    let now = time::Instant::now();
-
-    let world = get_world(worldid.to_string()).await;
-
-    match world {
-        Some(result) => {
-            trace!("cached get_world_by_id {:?}", now.elapsed());
-            return Ok(serde_json::to_string(&result).unwrap());
-        }
-        None => {
-            let client = CLIENT.clone();
-
-            let res = client
-                .get(format!("{VRCHAT_API_BASE_URL}/1/worlds/{worldid}"))
-                .send()
-                .await?;
-
-            match res.status() {
-                reqwest::StatusCode::OK => {
-                    let res_text = res
-                        .error_for_status()?
-                        .text()
-                        .await
-                        .map_err(|e| e.to_string())?;
-                    let json = serde_json::from_str::<World>(&res_text);
-                    match json {
-                        Ok(o) => {
-                            insert_world((&worldid).to_string(), o).await;
-                        }
-                        Err(_e) => {
-                            error!("ワールド情報を読み取れませんでした");
-                        }
-                    }
-                    trace!("get_world_by_id {:?}", now.elapsed());
-                    Ok(res_text)
-                }
-                _ => {
-                    error!("Error get_world_by_id {:?}", now.elapsed());
-                    Err("Failed...".into())
-                }
-            }
-        }
-    }
 }
 
 #[cfg(dev)]

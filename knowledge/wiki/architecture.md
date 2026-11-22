@@ -2,7 +2,7 @@
 title: アーキテクチャ
 kind: architecture
 status: verified
-updated: 2026-11-20
+updated: 2026-11-22
 sources:
   - ../../src/App.tsx
   - ../../src/screens/friendScreen.tsx
@@ -73,16 +73,19 @@ IPC の TypeScript 側インターフェースは `tauri-specta` が生成しま
 
 - ログイン・二要素認証・切り替え・ログアウトは `social_login`、`social_otp`、`social_cancel`、`social_switch`、`social_logout` を使う。
 - フレンド・グループ・インスタンスの取得と自己招待は、アカウントを指定する `social_request` を使う。
+- ログインが必要な VRChat の画像は IPC ではなく、Rust 側のカスタムプロトコル `vrcimg`（Windows では `http://vrcimg.localhost/image?account=…&url=…`）で `<img>` から直接読む。画面は `convertFileSrc("image", "vrcimg")` で URL を作り、Rust は利用中アカウントのセッションで取得した画像のバイト列を返す。失敗は HTTP ステータスで返し、`<img>` の onError で次の画像候補へ進む。[画像の取得](../../src/components/social/media.tsx)・[画像プロトコル](../../src-tauri/src/social.rs)
 - `settings_get` は登録一覧と設定を参照し、`settings_set` は書き込みが許可された設定値を検証して保存する。[設定操作](../../src-tauri/src/preferences.rs)
 - ライセンス表示と更新内容の取得には `get_licenses` と `get_release_note` を使う。汎用の `debug_api_request` とデバッグ画面用の取得コマンドは開発時に限定する。
 
 コマンドの戻り値は `tauri-specta` によって TypeScript の `Result` と型へ変換されます。
-通常画面の `social_*` コマンドは認証切れ・HTTP応答・通信失敗・保存失敗を区別する。従来のコマンドのエラーは `RustError::Unrecoverable` に集約され、UI が翻訳キーまたはメッセージを扱います。
+通常画面の `social_*` コマンドは認証切れ・HTTP応答・通信失敗・保存失敗を区別する。
+
+VRChat API への送信間隔は Rust 側の共通処理でまとめて管理する。全アカウント・全リクエストで送信開始を 200ms 以上あけ、HTTP 429 を受けたら `Retry-After`（秒数指定のみ。なければ 5 秒から倍々）だけ以降の送信をすべて遅らせて最大 3 回再試行する。60 秒を超える待機を求められた場合や本文を複製できない要求は再試行せずに 429 を返す。フロントエンド側では取得ループに待機を入れない。[送信間隔と再試行](../../src-tauri/src/social.rs)従来のコマンドのエラーは `RustError::Unrecoverable` に集約され、UI が翻訳キーまたはメッセージを扱います。
 
 ## キャッシュ
 
 Rust 側の `APP_STATE` は取得済みワールド情報をプロセス内で保持し、同じワールドへの API 呼び出しを減らします。
-新しいホームは、フレンド一覧のページを受け取るたびに、ワールドIDごとの名前・画像と、場所ごとのインスタンス詳細を並行して読み始めます。同じ更新中は各IDを一度だけ一覧用に取得し、結果を使用中のアカウントの画面メモリに保持します。公開プロフィールは、そのフレンドのプロフィールを開いた時点で取得します。[一覧の取得処理](../../src/libs/useSocialData.ts)・[通常画面のAPI](../../src-tauri/src/social.rs)旧版の `instances-data` は復元しません。
+新しいホームは、フレンド一覧のページを受け取るたびに、ワールドIDごとの名前・画像と、場所ごとのインスタンス詳細を並行して読み始めます。同じ更新中は各IDを一度だけ一覧用に取得し、結果を使用中のアカウントの画面メモリに保持します。公開プロフィールは、そのフレンドのプロフィールを開いた時点で取得します。[一覧の取得処理](../../src/libs/useSocialData.ts)・[通常画面のAPI](../../src-tauri/src/social.rs)旧版の `instances-data` は復元しません。インスタンスのカテゴリ・バイブスの一覧も、ワールド・グループ情報と同じ [cache.rs](../../src-tauri/src/cache.rs) の保持期間で使い回します。画像は URL ごとに形式とバイト列で保持し（base64 にしない）、設定画面の上限を超えたら最後に使われてから最も時間がたったものから捨てます。
 
 根拠: [`src-tauri/src/structs.rs`](../../src-tauri/src/structs.rs)、
 [`src-tauri/src/lib.rs`](../../src-tauri/src/lib.rs)、

@@ -21,12 +21,15 @@ export function favoriteIdsIn(favorites: Favorite[], group: string) {
   return new Set(favorites.filter((f) => f.tags.includes(group)).map((f) => f.favoriteId));
 }
 
+// 名前の比較に使う照合器。localeCompare を毎回呼ぶより速いため、一度だけ作って使い回す。
+const nameOrder = new Intl.Collator().compare;
+
 // フレンド一覧に出す人。検索中は全フレンドから名前で探し、それ以外は表示範囲（全員かグループ）で絞る。
 // オンラインの人を先に、同じ状態の中では名前順に並べる。
 export function visibleFriends(everyone: Person[], search: string, showAll: boolean, inGroup: Set<string>) {
   return everyone
     .filter((p) => (search ? p.displayName.toLocaleLowerCase().includes(search) : showAll || inGroup.has(p.id)))
-    .sort((a, b) => Number(b.online) - Number(a.online) || a.displayName.localeCompare(b.displayName));
+    .sort((a, b) => Number(!!b.online) - Number(!!a.online) || nameOrder(a.displayName, b.displayName));
 }
 
 // オンラインのフレンドを、ワールドとインスタンスが分かる現在地ごとにまとめる。

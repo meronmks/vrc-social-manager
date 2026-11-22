@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 src/assets/licenses.json
+
+# 画面例のPNG（design/friend-home.pen から書き出したもの）はリポジトリに含めない
+design/*.png

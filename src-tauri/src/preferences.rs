@@ -1,3 +1,4 @@
+use crate::cache;
 use serde::Deserialize;
 use serde_json::Value;
 use tauri_plugin_store::StoreExt;
@@ -8,6 +9,8 @@ pub enum Preference {
     Theme,
     Language,
     FetchFriendsCount,
+    ImageCacheLimit,
+    CacheLifetime,
     AutoCheckUpdates,
     BetaUpdates,
     ShowAllFriends { account: String },
@@ -22,6 +25,8 @@ impl Preference {
             Self::Theme => "data-theme".into(),
             Self::Language => "lang".into(),
             Self::FetchFriendsCount => "fetch-friends-count".into(),
+            Self::ImageCacheLimit => "image-cache-limit-mb".into(),
+            Self::CacheLifetime => "cache-lifetime-hours".into(),
             Self::BetaUpdates => "beta-updates".into(),
             Self::AutoCheckUpdates => "auto-check-updates".into(),
             Self::ShowAllFriends { account } => format!("show-all-friends-{account}"),
@@ -36,6 +41,12 @@ impl Preference {
             Self::Theme => matches!(value.as_str(), Some("light" | "dark")),
             Self::Language => matches!(value.as_str(), Some("ja" | "en")),
             Self::FetchFriendsCount => value.as_u64().is_some_and(|n| (1..=100).contains(&n)),
+            Self::ImageCacheLimit => value
+                .as_u64()
+                .is_some_and(|n| n <= cache::MAX_IMAGE_LIMIT_MB),
+            Self::CacheLifetime => value
+                .as_u64()
+                .is_some_and(|n| n <= cache::MAX_LIFETIME_HOURS),
             Self::AutoCheckUpdates | Self::BetaUpdates | Self::ShowAllFriends { .. } => value.is_boolean(),
             Self::FavoriteGroup { .. } => value
                 .as_str()
@@ -82,6 +93,25 @@ pub(crate) fn read(app: &tauri::AppHandle, setting: &Preference) -> Result<Value
     }
 }
 
+/// 保存済みのキャッシュ上限をキャッシュへ反映する。未設定・不正な値は既定値を使う。
+pub(crate) fn apply_cache_limits(app: &tauri::AppHandle) {
+    let number = |setting: Preference, default: u64| {
+        read(app, &setting)
+            .ok()
+            .filter(|value| setting.writable(value))
+            .and_then(|value| value.as_u64())
+            .unwrap_or(default)
+    };
+    cache::set_image_limit_mb(number(
+        Preference::ImageCacheLimit,
+        cache::DEFAULT_IMAGE_LIMIT_MB,
+    ));
+    cache::set_lifetime_hours(number(
+        Preference::CacheLifetime,
+        cache::DEFAULT_LIFETIME_HOURS,
+    ));
+}
+
 #[tauri::command]
 #[specta::specta]
 pub fn settings_get(app: tauri::AppHandle, setting: Preference) -> Result<Value, String> {
@@ -111,7 +141,14 @@ pub fn settings_set(
         }
     }
     store.set(setting.key(), value);
-    store.save().map_err(|_| "storage".into())
+    store.save().map_err(|_| "storage")?;
+    if matches!(
+        setting,
+        Preference::ImageCacheLimit | Preference::CacheLifetime
+    ) {
+        apply_cache_limits(&app);
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -125,6 +162,12 @@ mod tests {
         assert!(!Preference::CurrentAccount.writable(&json!("example")));
         assert!(Preference::FetchFriendsCount.writable(&json!(100)));
         assert!(!Preference::FetchFriendsCount.writable(&json!(101)));
+        assert!(Preference::ImageCacheLimit.writable(&json!(0)));
+        assert!(Preference::ImageCacheLimit.writable(&json!(cache::MAX_IMAGE_LIMIT_MB)));
+        assert!(!Preference::ImageCacheLimit.writable(&json!(cache::MAX_IMAGE_LIMIT_MB + 1)));
+        assert!(!Preference::ImageCacheLimit.writable(&json!(-1)));
+        assert!(!Preference::CacheLifetime.writable(&json!(1.5)));
+        assert!(!Preference::CacheLifetime.writable(&json!(cache::MAX_LIFETIME_HOURS + 1)));
         assert!(!Preference::ShowAllFriends {
             account: "example".into()
         }

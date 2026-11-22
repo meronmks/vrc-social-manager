@@ -11,38 +11,34 @@ type Response = boolean
 
 const UNMOUNTING_DELAY = 300;
 
+// アップデートの確認ダイアログ。見た目は styles.css の .app-dialog（アプリのカードと同じ配色）。
 export const UpdateConfirm = createCallable<Props, Response>(({ call, version, releaseNotes }) => {
   const { t } = useTranslation();
 
   return (
-    <div className="fixed inset-0 flex z-20 items-center justify-center" role="dialog">
-      <div className={`modal modal-open ${call.ended ? 'exit-animation' : ''}`}>
-        <div className="modal-box">
-          <h3 className="text-xl font-bold mb-4">{t('updateConfirm.title')}</h3>
-          <div className="space-y-4">
-            <p className="text-lg">{t('updateConfirm.newVersion', { version })}</p>
-            {releaseNotes && (
-              <div className="bg-base-200 p-4 rounded-lg">
-                <h4 className="font-semibold mb-2">{t('updateConfirm.releaseNotes')}</h4>
-                <MarkdownViewer content={releaseNotes} />
-              </div>
-            )}
-            <p className="text-sm opacity-75">{t('updateConfirm.restartMessage')}</p>
-          </div>
-          <div className="modal-action">
-            <button 
-              className="btn btn-primary"
-              onClick={() => call.end(true)}
-            >
-              {t('updateConfirm.updateNow')}
-            </button>
-            <button 
-              className="btn btn-ghost"
-              onClick={() => call.end(false)}
-            >
-              {t('updateConfirm.later')}
-            </button>
-          </div>
+    <div
+      className={`app-dialog ${call.ended ? 'exit-animation' : ''}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="update-confirm-title"
+    >
+      <div className="app-dialog-card">
+        <h2 id="update-confirm-title">{t('updateConfirm.title')}</h2>
+        <p>{t('updateConfirm.newVersion', { version })}</p>
+        {releaseNotes && (
+          <section className="app-dialog-notes">
+            <h3>{t('updateConfirm.releaseNotes')}</h3>
+            <MarkdownViewer content={releaseNotes} />
+          </section>
+        )}
+        <p className="app-dialog-hint">{t('updateConfirm.restartMessage')}</p>
+        <div className="app-dialog-actions">
+          <button className="quiet-action" onClick={() => call.end(false)}>
+            {t('updateConfirm.later')}
+          </button>
+          <button className="primary-action" onClick={() => call.end(true)} autoFocus>
+            {t('updateConfirm.updateNow')}
+          </button>
         </div>
       </div>
     </div>

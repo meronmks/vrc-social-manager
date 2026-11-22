@@ -5,6 +5,9 @@
 
 
 export const commands = {
+/**
+ * 保存済みの更新チャンネルに従って更新を確認する。
+ */
 async checkAppUpdate() : Promise<Result<AppUpdate | null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("check_app_update") };
@@ -13,6 +16,9 @@ async checkAppUpdate() : Promise<Result<AppUpdate | null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * 直前に確認した更新をダウンロード・署名検証してインストールし、アプリを再起動する。
+ */
 async installAppUpdate() : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("install_app_update") };
@@ -80,6 +86,9 @@ async socialRequest(account: string, resource: Resource) : Promise<Result<JsonVa
     else return { status: "error", error: e  as any };
 }
 },
+async cachePurge() : Promise<void> {
+    await TAURI_INVOKE("cache_purge");
+},
 async login(userName: string, password: string) : Promise<Result<string, RustError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("login", { userName, password }) };
@@ -126,14 +135,6 @@ async getCurrentUserInfo() : Promise<Result<string, RustError>> {
 async getCurrentUserFriends(offset: number, n: number, offline: boolean) : Promise<Result<string, RustError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_current_user_friends", { offset, n, offline }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async getWorldById(worldid: string) : Promise<Result<string, RustError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_world_by_id", { worldid }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -246,8 +247,8 @@ export type ApiResponse = { status: string; data: string }
 export type AppUpdate = { currentVersion: string; version: string; notes: string | null }
 export type DebugApiRequest = { method: string; endpoint: string; data?: string | null }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
-export type Preference = { kind: "theme" } | { kind: "language" } | { kind: "fetchFriendsCount" } | { kind: "autoCheckUpdates" } | { kind: "betaUpdates" } | { kind: "showAllFriends"; account: string } | { kind: "favoriteGroup"; account: string } | { kind: "accounts" } | { kind: "currentAccount" }
-export type Resource = { kind: "friends"; offset: number; n: number; offline: boolean } | { kind: "groups" } | { kind: "icon"; url: string } | { kind: "favorites"; offset: number } | { kind: "memberInstances" } | { kind: "friend"; id: string } | { kind: "profile"; id: string } | { kind: "world"; id: string } | { kind: "group"; id: string } | { kind: "instance"; location: string } | { kind: "invite"; location: string }
+export type Preference = { kind: "theme" } | { kind: "language" } | { kind: "fetchFriendsCount" } | { kind: "imageCacheLimit" } | { kind: "cacheLifetime" } | { kind: "autoCheckUpdates" } | { kind: "betaUpdates" } | { kind: "showAllFriends"; account: string } | { kind: "favoriteGroup"; account: string } | { kind: "accounts" } | { kind: "currentAccount" }
+export type Resource = { kind: "friends"; offset: number; n: number; offline: boolean } | { kind: "groups" } | { kind: "favorites"; offset: number } | { kind: "memberInstances" } | { kind: "friend"; id: string } | { kind: "profile"; id: string } | { kind: "world"; id: string } | { kind: "group"; id: string } | { kind: "instance"; location: string } | { kind: "invite"; location: string } | { kind: "instanceCategories" } | { kind: "instanceVibes" }
 export type RustError = { type: "Unrecoverable"; message: string }
 
 /** tauri-specta globals **/

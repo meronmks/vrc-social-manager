@@ -1,9 +1,13 @@
-import { FiChevronRight } from "react-icons/fi";
+import { useEffect, useRef } from "react";
+import { FiChevronDown } from "react-icons/fi";
+import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
+import { Dropdown } from "@/components/ui/dropdown";
 import { InstanceKind, InstanceScope, SortOrder } from "@/libs/friendView";
 import { access, destination, instanceName, instanceNumber, Person, Place, Text, useText, where } from "@/libs/social";
 import { WorldPhoto } from "./media";
 import { PlaceFriends } from "./placeFriends";
 import { Occupancy } from "./presence";
+import { RegionFlag } from "./region";
 
 function scopeOptions(t: Text): [InstanceScope, string][] {
   return [
@@ -48,18 +52,17 @@ export function InstanceFilters({ scope, kind, groupLabel, groupPicker, onScope,
       <summary>
         <strong>{t("絞り込み", "Filters")}</strong>
         <span title={summary}>{summary}</span>
-        <FiChevronRight aria-hidden="true" />
+        <FiChevronDown aria-hidden="true" />
       </summary>
-      <label className="select-row">
-        {t("探す対象", "Source")}
-        <select value={scope} onChange={(e) => onScope(e.target.value as InstanceScope)}>
-          {scopes.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="select-row">
+        <span aria-hidden="true">{t("探す対象", "Source")}</span>
+        <Dropdown
+          label={t("探す対象", "Source")}
+          value={scope}
+          options={scopes.map(([value, label]) => ({ value, label }))}
+          onChange={onScope}
+        />
+      </div>
       {scope === "favorite" && groupPicker}
       {!memberView && (
         <div className="segmented" role="group" aria-label={t("インスタンス種別", "Instance type")}>
@@ -87,53 +90,87 @@ interface ListProps {
   onSort: (order: SortOrder) => void;
   selected?: string;
   onSelect: (location: string) => void;
+  /** 一覧の中で見える位置までスクロールさせたいインスタンス（ほかの画面から移動してきたとき） */
+  reveal?: string;
+  /** `reveal` のインスタンスまでスクロールし終えたときに呼ぶ */
+  onRevealed: () => void;
+  /** 一覧をスクロールさせる親要素（画面に見えているカードだけを描画するために使う） */
+  scroller: HTMLElement | null;
 }
 
 // インスタンス一覧（件数と並び順、各カード、空のときの案内）。
+// カードは仮想スクロールで見えている範囲だけを描画する。
 export function InstanceList(props: ListProps) {
-  const { locations, busy, failed } = props;
+  const { locations, busy, failed, reveal, onRevealed } = props;
   const t = useText();
+  const virtuoso = useRef<VirtuosoHandle>(null);
+  // 移動してきたインスタンスのカードを一覧の中央に表示する。一覧の取得が終わる前なら、届いたときに改めてスクロールする。
+  useEffect(() => {
+    if (!reveal || !props.scroller) return;
+    const index = locations.indexOf(reveal);
+    if (index < 0) return;
+    // 一覧を描画し終えてからでないと位置を計算できないため、次のフレームでスクロールする
+    const frame = requestAnimationFrame(() => {
+      if (!virtuoso.current) return;
+      virtuoso.current.scrollToIndex({ index, align: "center" });
+      onRevealed();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [reveal, locations, props.scroller, onRevealed]);
   return (
     <>
       <div className="instance-list-heading">
         <h4>
-          {t("インスタンス", "Instances")}　{locations.length || (!busy && !failed) ? locations.length : "—"}
+          {t("インスタンス", "Instances")} {locations.length || (!busy && !failed) ? locations.length : "—"}
         </h4>
-        <select
-          aria-label={t("並び順", "Sort order")}
+        <Dropdown
+          className="sort-dropdown"
+          alignEnd
+          label={t("並び順", "Sort order")}
           value={props.sortOrder}
-          onChange={(e) => props.onSort(e.target.value as SortOrder)}
-        >
-          <option value="friendCount">{t("フレンドが多い順", "Most friends first")}</option>
-          <option value="original">{t("取得順", "Fetch order")}</option>
-        </select>
+          options={[
+            { value: "friendCount" as SortOrder, label: t("フレンドが多い順", "Most friends first") },
+            { value: "original" as SortOrder, label: t("取得順", "Fetch order") },
+          ]}
+          onChange={props.onSort}
+        />
       </div>
-      {locations.map((location) => {
-        const place = props.placeAt(location);
-        const name = instanceName(place);
-        return (
-          <button
-            className="place-row"
-            key={location}
-            aria-pressed={location === props.selected}
-            onClick={() => props.onSelect(location)}
-          >
-            <WorldPhoto world={place?.world} account={props.account} compact />
-            <strong>{where(location, place, t)}</strong>
-            <Occupancy place={place} />
-            <small className="instance-info">
-              {name && name + " · "}
-              {access(place, t)} · #{instanceNumber(destination(location)?.instanceId ?? "")} {place?.groupName}
-            </small>
-            <PlaceFriends
-              friends={props.byPlace.get(location)}
-              account={props.account}
-              starred={props.starred}
-              friendsReady={props.friendsReady}
-            />
-          </button>
-        );
-      })}
+      {props.scroller && locations.length > 0 && (
+        <Virtuoso
+          ref={virtuoso}
+          customScrollParent={props.scroller}
+          data={locations}
+          computeItemKey={(_, location) => location}
+          defaultItemHeight={96}
+          increaseViewportBy={600}
+          itemContent={(_, location) => {
+            const place = props.placeAt(location);
+            const name = instanceName(place);
+            return (
+              <button
+                className="place-row"
+                aria-pressed={location === props.selected}
+                onClick={() => props.onSelect(location)}
+              >
+                <WorldPhoto world={place?.world} account={props.account} compact />
+                <strong>{where(location, place, t)}</strong>
+                <Occupancy place={place} />
+                <small className="instance-info">
+                  {name && name + " · "}
+                  {access(place, t)} · #{instanceNumber(destination(location)?.instanceId ?? "")}{" "}
+                  <RegionFlag region={place?.region} /> {place?.groupName}
+                </small>
+                <PlaceFriends
+                  friends={props.byPlace.get(location)}
+                  account={props.account}
+                  starred={props.starred}
+                  friendsReady={props.friendsReady}
+                />
+              </button>
+            );
+          }}
+        />
+      )}
       {!locations.length && !busy && !failed && (
         <p className="empty-text">{t("表示するインスタンスはありません", "No matching instances")}</p>
       )}

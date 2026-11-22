@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import { FiBell, FiChevronDown, FiUsers } from "react-icons/fi";
+import { FiBell, FiChevronDown, FiPlus, FiUsers } from "react-icons/fi";
 import { Avatar } from "@/components/social/media";
+import { NoticeIcon } from "@/components/ui/appToasts";
 import { Account, clock, Notice, useText } from "@/libs/social";
 import type { AppUpdates } from "@/libs/useAppUpdates";
+import { usePopover } from "@/libs/usePopover";
 
 interface Props {
   updates: AppUpdates;
@@ -14,29 +15,6 @@ interface Props {
   notices: Notice[];
   onSwitch: (account: Account) => void;
   onAddAccount: () => void;
-}
-
-// 外側のクリックや Esc キーで閉じるポップオーバーの開閉状態。
-function usePopover<T extends string>() {
-  const [open, setOpen] = useState<T>();
-  const container = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: PointerEvent) => {
-      if (!container.current?.contains(e.target as Node)) setOpen(undefined);
-    };
-    const escape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(undefined);
-    };
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", escape);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", escape);
-    };
-  }, [open]);
-  const toggle = (name: T) => setOpen(open === name ? undefined : name);
-  return { open, toggle, close: () => setOpen(undefined), container };
 }
 
 // アプリ上部のバー。更新通知、最近の通知、アカウントの切り替えを置く。
@@ -108,23 +86,26 @@ export function AppHeader({ updates, accounts, active, busy, authOpen, notices, 
                 onAddAccount();
               }}
             >
-              ＋ {t("アカウントを追加", "Add account")}
+              <FiPlus aria-hidden="true" />
+              {t("アカウントを追加", "Add account")}
             </button>
           </div>
         )}
         {menu.open === "notices" && (
           <section className="popover">
-            <h3>
-              {t("最近の通知", "Recent notifications")} · {active?.displayName}
-            </h3>
+            <h3>{t("最近の通知", "Recent notifications")}</h3>
             {notices.length ? (
-              notices.map((n, i) => (
-                <p key={i}>
-                  <small>{clock(n.time)}</small> {t(n.ja, n.en)}
-                </p>
-              ))
+              <ul className="notice-list">
+                {notices.map((n, i) => (
+                  <li key={i} data-error={n.error || undefined}>
+                    <NoticeIcon error={n.error} />
+                    <span>{t(n.ja, n.en)}</span>
+                    <small>{clock(n.time)}</small>
+                  </li>
+                ))}
+              </ul>
             ) : (
-              <p>{t("通知はありません", "No notifications")}</p>
+              <p className="notice-empty">{t("通知はありません", "No notifications")}</p>
             )}
           </section>
         )}
