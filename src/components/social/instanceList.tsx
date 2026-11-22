@@ -1,5 +1,6 @@
+import { useEffect, useRef } from "react";
 import { FiChevronDown } from "react-icons/fi";
-import { Virtuoso } from "react-virtuoso";
+import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
 import { Dropdown } from "@/components/ui/dropdown";
 import { InstanceKind, InstanceScope, SortOrder } from "@/libs/friendView";
 import { access, destination, instanceName, instanceNumber, Person, Place, Text, useText, where } from "@/libs/social";
@@ -89,6 +90,10 @@ interface ListProps {
   onSort: (order: SortOrder) => void;
   selected?: string;
   onSelect: (location: string) => void;
+  /** 一覧の中で見える位置までスクロールさせたいインスタンス（ほかの画面から移動してきたとき） */
+  reveal?: string;
+  /** `reveal` のインスタンスまでスクロールし終えたときに呼ぶ */
+  onRevealed: () => void;
   /** 一覧をスクロールさせる親要素（画面に見えているカードだけを描画するために使う） */
   scroller: HTMLElement | null;
 }
@@ -96,8 +101,22 @@ interface ListProps {
 // インスタンス一覧（件数と並び順、各カード、空のときの案内）。
 // カードは仮想スクロールで見えている範囲だけを描画する。
 export function InstanceList(props: ListProps) {
-  const { locations, busy, failed } = props;
+  const { locations, busy, failed, reveal, onRevealed } = props;
   const t = useText();
+  const virtuoso = useRef<VirtuosoHandle>(null);
+  // 移動してきたインスタンスのカードを一覧の中央に表示する。一覧の取得が終わる前なら、届いたときに改めてスクロールする。
+  useEffect(() => {
+    if (!reveal || !props.scroller) return;
+    const index = locations.indexOf(reveal);
+    if (index < 0) return;
+    // 一覧を描画し終えてからでないと位置を計算できないため、次のフレームでスクロールする
+    const frame = requestAnimationFrame(() => {
+      if (!virtuoso.current) return;
+      virtuoso.current.scrollToIndex({ index, align: "center" });
+      onRevealed();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [reveal, locations, props.scroller, onRevealed]);
   return (
     <>
       <div className="instance-list-heading">
@@ -118,6 +137,7 @@ export function InstanceList(props: ListProps) {
       </div>
       {props.scroller && locations.length > 0 && (
         <Virtuoso
+          ref={virtuoso}
           customScrollParent={props.scroller}
           data={locations}
           computeItemKey={(_, location) => location}

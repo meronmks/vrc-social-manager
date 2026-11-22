@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FiArrowLeft, FiStar } from "react-icons/fi";
+import { FiArrowLeft, FiLayers, FiStar } from "react-icons/fi";
 import {
   access,
   Account,
@@ -31,6 +31,10 @@ interface Props {
   location?: string;
   instanceFriends?: React.ReactNode;
   backToInstance?: () => void;
+  /** 詳細を開いた元のインスタンス（インスタンス一覧からフレンドを開いたとき） */
+  instanceOrigin?: string;
+  /** フレンドの現在地のインスタンスを、インスタンス一覧で選択して表示する */
+  openInstance?: (location: string) => void;
   placeAt: (location: string) => Place | undefined;
   starred: boolean;
   onPerson: (p: Person) => void;
@@ -244,6 +248,13 @@ export function SocialDetail(props: Props) {
                     </p>
                   )}
                   <PlaceTags key={location} account={account.id} place={place} expire={expire} />
+                  {/* 開いた元のインスタンスと同じ場所なら「インスタンス詳細に戻る」と重複するため出さない */}
+                  {person && props.openInstance && location !== props.instanceOrigin && (
+                    <button className="text-action" onClick={() => props.openInstance?.(location)}>
+                      <FiLayers aria-hidden="true" />
+                      {t("インスタンス画面で見る", "View in Instances")}
+                    </button>
+                  )}
                 </>
               )}
             </>
@@ -275,8 +286,9 @@ export function SocialDetail(props: Props) {
                   {t("ブラウザで開く", "Open in browser")}
                 </ExternalLink>
               )}
-              {/* 権限やカテゴリなど、必要なときだけ見る情報は折りたたんで最後に置く */}
-              <InstanceExtras place={place} />
+              {/* 権限やカテゴリなど、必要なときだけ見る情報は折りたたんで最後に置く。
+                  フレンド詳細の現在地では「インスタンス画面で見る」から確認できるため出さない */}
+              {!person && <InstanceExtras place={place} />}
             </>
           )}
         </>

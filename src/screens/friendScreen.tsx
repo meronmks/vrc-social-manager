@@ -1,5 +1,6 @@
-import { useDeferredValue, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import { FiRefreshCw, FiSearch, FiX } from "react-icons/fi";
+import { useNavigate } from "react-router";
 import { FriendList } from "@/components/social/friendList";
 import { GroupPicker } from "@/components/social/groupPicker";
 import { InstanceFilters, InstanceList } from "@/components/social/instanceList";
@@ -37,9 +38,13 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
   const [kind, setKind] = useState<InstanceKind>("all");
   const [selectedPerson, selectPerson] = useState("");
   const [instanceSelection, setInstanceSelection] = useState<{ location: string; friendId?: string }>();
+  // フレンド詳細から移動してきたとき、インスタンス一覧をそのカードまでスクロールさせる
+  const [reveal, setReveal] = useState<string>();
   // 一覧のスクロール領域。仮想スクロールはこの要素のスクロール位置に合わせて行を描画する。
   const [scroller, setScroller] = useState<HTMLElement | null>(null);
   const t = useText();
+  const navigate = useNavigate();
+  const clearReveal = useCallback(() => setReveal(undefined), []);
 
   // フレンドが数千人いても軽く動くよう、絞り込みや並べ替えは元データが変わったときだけやり直す。
   // 検索語は入力を優先し、一覧の絞り込みは少し遅れて反映する。
@@ -81,6 +86,19 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
   function clearSelection() {
     selectPerson("");
     setInstanceSelection(undefined);
+    setReveal(undefined);
+  }
+  // フレンドの現在地のインスタンスを、インスタンス一覧で選択して表示する。
+  // 今の絞り込みでは一覧に出ない場合は、絞り込みを「全フレンド・すべて」に戻して一覧上でも見つけられるようにする。
+  function openInstance(target: string) {
+    const listed = visibleLocations({ scope, kind, sortOrder, members, byPlace, inGroup, placeAt }).includes(target);
+    if (!listed) {
+      setScope("all");
+      setKind("all");
+    }
+    setInstanceSelection({ location: target });
+    setReveal(target);
+    if (!instances) navigate("/instances");
   }
 
   const groupPicker = (
@@ -167,7 +185,12 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
             sortOrder={sortOrder}
             onSort={setSortOrder}
             selected={origin}
-            onSelect={(l) => setInstanceSelection({ location: l })}
+            onSelect={(l) => {
+              setReveal(undefined);
+              setInstanceSelection({ location: l });
+            }}
+            reveal={reveal}
+            onRevealed={clearReveal}
             scroller={scroller}
           />
         ) : (
@@ -205,6 +228,8 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
             ) : undefined
           }
           backToInstance={person && origin ? () => setInstanceSelection({ location: origin }) : undefined}
+          instanceOrigin={origin}
+          openInstance={openInstance}
           placeAt={data.placeAt}
           starred={!!person && starred.has(person.id)}
           onPerson={data.applyFriend}

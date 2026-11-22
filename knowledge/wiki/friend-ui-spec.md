@@ -91,7 +91,7 @@ sources:
 
 インスタンス一覧・詳細ともに、待機列が有効（`queueEnabled`）で、取得した待機人数（`queueSize`）が1人以上なら、人数・定員のそばに「3人待ち」の形式で表示する。待機列が無効、0人、または待機情報が未取得の場合はバッジを表示しない。満員でも人数・定員だけから待機人数を推測しない。[待機列の画面例（インスタンス・VRChatグループ主催）](../../design/friend-home.pen)・[インスタンスAPI](https://vrchat.community/reference/get-instance)
 
-インスタンス詳細（フレンド詳細の現在地を含む）では、主催グループ名の下にカテゴリ（`categoryId`）と雰囲気（VRChatのVibes。`vibeIds`、`displayVibeId` を先頭）を常に表示する。設定されていない項目は行ごと省く。最後には普段は閉じた「その他の情報」を置き、インスタンスの説明（`description`、なければ「なし」）、年齢制限（`ageGate`）、プラットフォーム別の人数（`platforms`）、閉鎖時刻（`closedAt`、ある場合のみ）と、VRChatのワールド設定画面と同じ並びの10項目の権限を表示する。権限はインスタンスの `contentSettings`、ワールドの `defaultContentSettings`、ワールドのタグ `feature_<項目>_disabled` の順に判定し、どれも取得できなければ「—」とする。アバターのサイズ変更・フォーカスビュー・三人称視点（`feature_third_person_view_disabled`）はタグだけで決まる。「プレイヤーの移動に影響するアイテム」は `disabledPropAbilities` に `player_movement` が含まれるかで判定し、インスタンスの値をワールドの値より優先する。値の対応は[ワールドのタグ一覧](https://vrchat.community/tags/world)と[VRCXのワールドタグ設定](https://github.com/vrcx-team/VRCX/blob/master/src/components/dialogs/WorldDialog/SetWorldTagsDialog.vue)で確認した。カテゴリ・雰囲気はAPIがIDだけを返すため、該当する項目があるインスタンスを開いたときに一覧API（`/instanceCategories`・`/instanceVibes`、認証不要）を呼び、Rust側でワールド情報と同じ期間保持する。名前はAPIの `name`・`title`（英語）をそのまま表示する。[実装](../../src/components/social/instanceExtras.tsx)・[インスタンスAPI](https://vrchat.community/reference/get-instance)・[カテゴリ一覧API](https://vrchat.community/reference/get-instance-categories)・[バイブス一覧API](https://vrchat.community/reference/get-instance-vibes)
+インスタンス詳細（フレンド詳細の現在地を含む）では、主催グループ名の下にカテゴリ（`categoryId`）と雰囲気（VRChatのVibes。`vibeIds`、`displayVibeId` を先頭）を常に表示する。設定されていない項目は行ごと省く。インスタンス詳細の最後には普段は閉じた「その他の情報」を置き（フレンド詳細の現在地には置かず、「インスタンス画面で見る」から確認する）、インスタンスの説明（`description`、なければ「なし」）、年齢制限（`ageGate`）、プラットフォーム別の人数（`platforms`）、閉鎖時刻（`closedAt`、ある場合のみ）と、VRChatのワールド設定画面と同じ並びの10項目の権限を表示する。権限はインスタンスの `contentSettings`、ワールドの `defaultContentSettings`、ワールドのタグ `feature_<項目>_disabled` の順に判定し、どれも取得できなければ「—」とする。アバターのサイズ変更・フォーカスビュー・三人称視点（`feature_third_person_view_disabled`）はタグだけで決まる。「プレイヤーの移動に影響するアイテム」は `disabledPropAbilities` に `player_movement` が含まれるかで判定し、インスタンスの値をワールドの値より優先する。値の対応は[ワールドのタグ一覧](https://vrchat.community/tags/world)と[VRCXのワールドタグ設定](https://github.com/vrcx-team/VRCX/blob/master/src/components/dialogs/WorldDialog/SetWorldTagsDialog.vue)で確認した。カテゴリ・雰囲気はAPIがIDだけを返すため、該当する項目があるインスタンスを開いたときに一覧API（`/instanceCategories`・`/instanceVibes`、認証不要）を呼び、Rust側でワールド情報と同じ期間保持する。名前はAPIの `name`・`title`（英語）をそのまま表示する。[実装](../../src/components/social/instanceExtras.tsx)・[インスタンスAPI](https://vrchat.community/reference/get-instance)・[カテゴリ一覧API](https://vrchat.community/reference/get-instance-categories)・[バイブス一覧API](https://vrchat.community/reference/get-instance-vibes)
 
 画面例では「全フレンド」と「グループ主催」を選択し、右側に主催グループ名を表示している。[画面例（インスタンス・VRChatグループ主催）](../../design/friend-home.pen)
 
@@ -165,6 +165,8 @@ sources:
 ## フレンドのプロフィール
 
 フレンドを選ぶと、右パネルにステータスと現在地を表示する。招待先を特定できたときは、同じパネルから自分に招待を送れる。[通常のフレンド詳細（ホーム・お気に入りと自己招待）](../../design/friend-home.pen)
+
+現在地のインスタンスを特定できたときは、インスタンス情報の下に「インスタンス画面で見る」を置く。押すとインスタンスタブへ移り、その場所を選択した状態でインスタンス詳細を開き、一覧はそのカードが中央に来るまでスクロールする。今の絞り込みでは一覧に出ない場所なら、絞り込みを「全フレンド・すべて」に戻す。フレンド一覧側の選択はそのまま保つ。インスタンス一覧から開いたフレンドが元の場所にいる場合は「インスタンス詳細に戻る」と重なるため表示せず、移動していた場合だけ移動先を開ける。[実装](../../src/screens/friendScreen.tsx)
 
 「Webでプロフィールを開く」はフレンド詳細・プロフィールのどちらからでも、その人のVRChat公式プロフィールを既定のブラウザで開く。[インスタンス経由の画面例（インスタンス詳細から開いたフレンド）](../../design/friend-home.pen)
 
