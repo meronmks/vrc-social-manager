@@ -25,11 +25,22 @@ export function favoriteIdsIn(favorites: Favorite[], group: string) {
 const nameOrder = new Intl.Collator().compare;
 
 // フレンド一覧に出す人。検索中は全フレンドから名前で探し、それ以外は表示範囲（全員かグループ）で絞る。
-// オンラインの人を先に、同じ状態の中では名前順に並べる。
+// オンラインで現在地（ワールドとインスタンス）が分かる人、移動中の人、現在地が分からないオンラインの人
+// （プライベートなど）、オフラインの人の順に並べ、同じ順位の中では名前順にする。
 export function visibleFriends(everyone: Person[], search: string, showAll: boolean, inGroup: Set<string>) {
   return everyone
     .filter((p) => (search ? p.displayName.toLocaleLowerCase().includes(search) : showAll || inGroup.has(p.id)))
-    .sort((a, b) => Number(!!b.online) - Number(!!a.online) || nameOrder(a.displayName, b.displayName));
+    .map((person) => ({ person, rank: friendRank(person) }))
+    .sort((a, b) => a.rank - b.rank || nameOrder(a.person.displayName, b.person.displayName))
+    .map(({ person }) => person);
+}
+
+// フレンド一覧での並び順の順位。小さいほど上に出す。
+function friendRank(person: Person) {
+  if (!person.online) return 3;
+  const location = locationOf(person);
+  if (destination(location)) return 0;
+  return location === "traveling" ? 1 : 2;
 }
 
 // オンラインのフレンドを、ワールドとインスタンスが分かる現在地ごとにまとめる。
