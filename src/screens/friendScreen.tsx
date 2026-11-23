@@ -18,7 +18,7 @@ import {
   visibleFriends,
   visibleLocations,
 } from "@/libs/friendView";
-import { Account, clock, Notify, useText } from "@/libs/social";
+import { Account, clock, locationOf, Notify, useText } from "@/libs/social";
 import { useSocialData, viewSources } from "@/libs/useSocialData";
 
 interface Props {
@@ -49,7 +49,7 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
   // フレンドが数千人いても軽く動くよう、絞り込みや並べ替えは元データが変わったときだけやり直す。
   // 検索語は入力を優先し、一覧の絞り込みは少し遅れて反映する。
   const search = useDeferredValue(query.trim().toLocaleLowerCase());
-  const { favorites, group, friends, showAll, members, placeAt } = data;
+  const { favorites, group, friends, me, showAll, members, placeAt } = data;
   const starred = useMemo(() => new Set(favorites.map((f) => f.favoriteId)), [favorites]);
   const inGroup = useMemo(() => favoriteIdsIn(favorites, group), [favorites, group]);
   const everyone = useMemo(() => Object.values(friends), [friends]);
@@ -57,13 +57,17 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
     () => (instances ? [] : visibleFriends(everyone, search, showAll, inGroup)),
     [instances, everyone, search, showAll, inGroup],
   );
-  const byPlace = useMemo(() => groupByPlace(everyone), [everyone]);
+  // インスタンス一覧では自分も参加者に含め、自分のいるインスタンスを常に先頭に置く。
+  const self = me?.online ? me : undefined;
+  const selfLocation = self && locationOf(self);
+  const byPlace = useMemo(() => groupByPlace(everyone, self), [everyone, self]);
+  const listOptions = { scope, kind, sortOrder, members, byPlace, inGroup, placeAt, selfLocation };
   const locations = useMemo(
     () =>
       instances
-        ? visibleLocations({ scope, kind, sortOrder, members, byPlace, inGroup, placeAt })
+        ? visibleLocations({ scope, kind, sortOrder, members, byPlace, inGroup, placeAt, selfLocation })
         : [],
-    [instances, scope, kind, sortOrder, members, byPlace, inGroup, placeAt],
+    [instances, scope, kind, sortOrder, members, byPlace, inGroup, placeAt, selfLocation],
   );
   const groups = useMemo(
     () => favoriteGroupOptions(data.groups, account.friendGroupNames),
@@ -91,7 +95,7 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
   // フレンドの現在地のインスタンスを、インスタンス一覧で選択して表示する。
   // 今の絞り込みでは一覧に出ない場合は、絞り込みを「全フレンド・すべて」に戻して一覧上でも見つけられるようにする。
   function openInstance(target: string) {
-    const listed = visibleLocations({ scope, kind, sortOrder, members, byPlace, inGroup, placeAt }).includes(target);
+    const listed = visibleLocations(listOptions).includes(target);
     if (!listed) {
       setScope("all");
       setKind("all");
@@ -178,6 +182,7 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
             byPlace={byPlace}
             placeAt={data.placeAt}
             account={account.id}
+            selfId={self?.id}
             starred={starred}
             friendsReady={friendsReady}
             busy={busy}
@@ -221,6 +226,7 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
               <PlaceFriends
                 friends={byPlace.get(location)}
                 account={account.id}
+                selfId={self?.id}
                 starred={starred}
                 friendsReady={friendsReady}
                 onSelect={(friendId) => setInstanceSelection({ location, friendId })}

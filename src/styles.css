@@ -744,6 +744,14 @@
 .place-friend .star {
   width: 12px;
 }
+.self-badge {
+  padding: 0 5px;
+  border-radius: var(--radius-s);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 10px;
+  line-height: 16px;
+}
 .person-web { flex-basis: 100%; }
 .place-friend .social-avatar {
   width: 18px;

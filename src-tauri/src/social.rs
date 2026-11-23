@@ -434,6 +434,8 @@ pub enum Resource {
     Invite { location: String },
     InstanceCategories,
     InstanceVibes,
+    /// ログイン中のユーザー自身（現在地つき）
+    Me,
 }
 
 async fn read_icon(client: &Client, source: &str) -> Outcome<cache::Image> {
@@ -676,6 +678,23 @@ pub async fn social_request(account: String, resource: Resource) -> Result<Value
             } else {
                 Err("invalid".into())
             };
+        }
+        // 自分自身の情報。現在地は `location` ではなく `presence` に入っているため、フレンドと同じ形に直す。
+        Resource::Me => {
+            let user = json_body(client.get(endpoint(&["auth", "user"])?)).await?;
+            let presence = user["presence"].clone();
+            let mut me = visible_person(user)?;
+            let world = presence["world"].as_str().unwrap_or_default();
+            let instance = presence["instance"].as_str().unwrap_or_default();
+            if world.starts_with("wrld_") && !instance.is_empty() {
+                me["location"] = json!(format!("{world}:{instance}"));
+                me["worldId"] = json!(world);
+                me["instanceId"] = json!(instance);
+            } else if !world.is_empty() {
+                // "offline"・"private"・"traveling" などはそのまま現在地として扱う
+                me["location"] = json!(world);
+            }
+            return Ok(me);
         }
         Resource::Invite { location } => {
             response(client.post(endpoint(&["invite", "myself", "to", &location])?)).await?;

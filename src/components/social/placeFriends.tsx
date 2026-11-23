@@ -5,6 +5,8 @@ import { Avatar } from "./media";
 interface Props {
   friends?: Person[];
   account: string;
+  /** ログイン中のユーザー自身の ID。一覧に含まれていれば「自分」と表示し、詳細は開かない */
+  selfId?: string;
   starred: Set<string>;
   /** フレンド一覧の取得が完了しているか（未完了なら 0 人と断定しない） */
   friendsReady: boolean;
@@ -13,7 +15,7 @@ interface Props {
 }
 
 // インスタンスにいるフレンドの一覧。
-export function PlaceFriends({ friends, account, starred, friendsReady, onSelect }: Props) {
+export function PlaceFriends({ friends, account, selfId, starred, friendsReady, onSelect }: Props) {
   const t = useText();
   if (!friends?.length) {
     return (
@@ -25,14 +27,16 @@ export function PlaceFriends({ friends, account, starred, friendsReady, onSelect
   return (
     <small className="place-friends">
       {friends.map((friend) => {
+        const self = friend.id === selfId;
         const content = (
           <>
             <Avatar person={friend} account={account} />
             <span>{friend.displayName}</span>
+            {self && <span className="self-badge">{t("自分", "You")}</span>}
             {starred.has(friend.id) && <FiStar className="star" aria-hidden="true" />}
           </>
         );
-        return onSelect ? (
+        return onSelect && !self ? (
           <button
             type="button"
             className="place-friend friend-detail-link"

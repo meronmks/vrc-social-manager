@@ -33,9 +33,10 @@ export function visibleFriends(everyone: Person[], search: string, showAll: bool
 }
 
 // オンラインのフレンドを、ワールドとインスタンスが分かる現在地ごとにまとめる。
-export function groupByPlace(everyone: Person[]) {
+// 自分（`me`）を渡すと、自分のいるインスタンスにも含める（その場所の先頭に置く）。
+export function groupByPlace(everyone: Person[], me?: Person) {
   const byPlace = new Map<string, Person[]>();
-  for (const person of everyone) {
+  for (const person of me ? [me, ...everyone] : everyone) {
     if (!person.online) continue;
     const location = locationOf(person);
     if (!destination(location)) continue;
@@ -61,8 +62,10 @@ export function visibleLocations(options: {
   byPlace: Map<string, Person[]>;
   inGroup: Set<string>;
   placeAt: (location: string) => Place | undefined;
+  /** 自分の現在地。一覧に含まれていれば、並び順にかかわらず先頭に置く */
+  selfLocation?: string;
 }) {
-  const { scope, kind, sortOrder, members, byPlace, inGroup, placeAt } = options;
+  const { scope, kind, sortOrder, members, byPlace, inGroup, placeAt, selfLocation } = options;
   const locations =
     scope === "members"
       ? [...members]
@@ -73,6 +76,8 @@ export function visibleLocations(options: {
   if (sortOrder === "friendCount") {
     locations.sort((a, b) => (byPlace.get(b)?.length ?? 0) - (byPlace.get(a)?.length ?? 0));
   }
+  const self = selfLocation ? locations.indexOf(selfLocation) : -1;
+  if (self > 0) locations.unshift(...locations.splice(self, 1));
   return locations;
 }
 
