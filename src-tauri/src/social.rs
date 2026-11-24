@@ -88,14 +88,67 @@ fn parse_retry_after(value: &str) -> Option<Duration> {
     value.trim().parse::<u64>().ok().map(Duration::from_secs)
 }
 
-async fn response(mut req: RequestBuilder) -> Outcome<reqwest::Response> {
+// ログに出す要求の表記（例: `GET /api/1/auth/user`）。クエリは長くなるため含めない。
+fn describe(method: &reqwest::Method, url: &Url) -> String {
+    format!("{method} {}", url.path())
+}
+
+// 通信エラーの原因を、内側の原因までたどって一行にまとめる。
+// URL は `describe` で別に出すため除き、タイムアウトは分かるように明示する。
+fn network_cause(error: reqwest::Error) -> String {
+    let timeout = error.is_timeout();
+    let error = error.without_url();
+    let mut parts = vec![error.to_string()];
+    let mut source = std::error::Error::source(&error);
+    while let Some(inner) = source {
+        let text = inner.to_string();
+        if parts.last() != Some(&text) {
+            parts.push(text);
+        }
+        source = inner.source();
+    }
+    let cause = parts.join(": ");
+    if timeout {
+        format!("タイムアウト: {cause}")
+    } else {
+        cause
+    }
+}
+
+// 失敗応答の本文から VRChat のエラーメッセージを取り出す（`{"error":{"message":"..."}}` 形式）。
+// 本文そのものは出さず、短いメッセージだけをログに残す。
+async fn failure_reason(res: reqwest::Response) -> Option<String> {
+    let body: Value = res.json().await.ok()?;
+    let message = body["error"]["message"]
+        .as_str()
+        .or_else(|| body["message"].as_str())?
+        .trim_matches('"')
+        .trim();
+    if message.is_empty() {
+        return None;
+    }
+    Some(message.chars().take(200).collect())
+}
+
+async fn response(req: RequestBuilder) -> Outcome<reqwest::Response> {
+    let (client, request) = req.build_split();
+    let mut request = request.map_err(|e| {
+        log::warn!("VRChat API の要求を組み立てられませんでした: {e}");
+        "invalid"
+    })?;
+    let label = describe(request.method(), request.url());
     let mut attempt = 0;
     loop {
         // 再試行に備えて送信前に複製しておく（本文が複製できない要求は再試行しない）。
-        let retry = req.try_clone();
+        let retry = request.try_clone();
         tokio::time::sleep_until(reserve_slot().await).await;
-        let res = req.send().await.map_err(|_| {
-            log::warn!("VRChat API の応答を受信できませんでした");
+        let started = Instant::now();
+        let res = client.execute(request).await.map_err(|e| {
+            log::warn!(
+                "{label}: 通信に失敗しました（{:.1} 秒経過）: {}",
+                started.elapsed().as_secs_f32(),
+                network_cause(e)
+            );
             "network"
         })?;
         let status = res.status();
@@ -109,43 +162,63 @@ async fn response(mut req: RequestBuilder) -> Outcome<reqwest::Response> {
             if let (Some(next), true) = (retry, wait <= MAX_RETRY_AFTER) {
                 attempt += 1;
                 log::warn!(
-                    "VRChat API HTTP 429: {} 秒待って再試行します（{attempt}/{MAX_RETRIES}）",
+                    "{label}: HTTP 429: {} 秒待って再試行します（{attempt}/{MAX_RETRIES}）",
                     wait.as_secs_f32()
                 );
                 hold_off(wait).await;
-                req = next;
+                request = next;
                 continue;
             }
         }
         if !status.is_success() {
-            let status = status.as_u16();
-            log::warn!("VRChat API HTTP {status}");
-            return Err(format!("http:{status}"));
+            let code = status.as_u16();
+            match failure_reason(res).await {
+                Some(reason) => log::warn!("{label}: HTTP {status}: {reason}"),
+                None => log::warn!("{label}: HTTP {status}"),
+            }
+            return Err(format!("http:{code}"));
         }
+        log::debug!("{label}: HTTP {status}");
         return Ok(res);
     }
 }
 
 async fn json_body(req: RequestBuilder) -> Outcome<Value> {
-    response(req)
-        .await?
-        .json()
-        .await
-        .map_err(|_| "invalid".into())
+    let res = response(req).await?;
+    let path = res.url().path().to_string();
+    res.json().await.map_err(|e| {
+        log::warn!("{path}: 応答を JSON として読めませんでした: {e}");
+        "invalid".into()
+    })
 }
 
 fn entry(app: &tauri::AppHandle, id: &str) -> Outcome<Entry> {
-    Entry::new(&app.config().identifier, id).map_err(|_| "storage".into())
+    Entry::new(&app.config().identifier, id)
+        .map_err(|e| storage_error("認証情報の保存先を開けませんでした", e))
+}
+
+// OS の資格情報ストアや設定ファイルの失敗を記録し、画面向けの "storage" に変える。
+fn storage_error(context: &str, error: impl std::fmt::Display) -> String {
+    log::error!("{context}: {error}");
+    "storage".into()
 }
 
 fn registry(
     app: &tauri::AppHandle,
 ) -> Outcome<(Arc<tauri_plugin_store::Store<tauri::Wry>>, Vec<Value>)> {
-    let store = app.store("store.json").map_err(|_| "storage")?;
+    let store = app
+        .store("store.json")
+        .map_err(|e| storage_error("設定ファイルを開けませんでした", e))?;
     let users = match store.get("users") {
         None => Vec::new(),
-        Some(Value::String(s)) => serde_json::from_str(&s).map_err(|_| "storage")?,
-        _ => return Err("storage".into()),
+        Some(Value::String(s)) => serde_json::from_str(&s)
+            .map_err(|e| storage_error("アカウント一覧を読み取れませんでした", e))?,
+        _ => {
+            return Err(storage_error(
+                "アカウント一覧を読み取れませんでした",
+                "文字列ではありません",
+            ))
+        }
     };
     Ok((store, users))
 }
@@ -163,7 +236,8 @@ fn save_registry(
     } else {
         store.delete("current-user-id");
     }
-    if store.save().is_err() {
+    if let Err(error) = store.save() {
+        log::error!("設定ファイルを保存できませんでした: {error}");
         for (key, old) in [("users", old_users), ("current-user-id", old_current)] {
             if let Some(v) = old {
                 store.set(key, v);
@@ -222,11 +296,11 @@ fn activate(
     let previous = match credential.get_password() {
         Ok(value) => Some(value),
         Err(keyring::Error::NoEntry) => None,
-        Err(_) => return Err("storage".into()),
+        Err(e) => return Err(storage_error("認証情報を読み取れませんでした", e)),
     };
     credential
         .set_password(&serde_json::to_string(&jar).map_err(|_| "storage")?)
-        .map_err(|_| "storage")?;
+        .map_err(|e| storage_error("認証情報を保存できませんでした", e))?;
     users.retain(|u| u["id"] != id);
     users.insert(0, account.clone());
     if let Err(e) = save_registry(&store, &users, Some(id)) {
@@ -266,14 +340,20 @@ pub async fn social_switch(app: tauri::AppHandle, id: String) -> Result<Value, S
     }
     let cookie = entry(&app, &id)?.get_password().map_err(|e| {
         if matches!(e, keyring::Error::NoEntry) {
-            "http:401"
+            log::warn!("保存された認証情報がありません");
+            "http:401".to_string()
         } else {
-            "storage"
+            storage_error("認証情報を読み取れませんでした", e)
         }
     })?;
-    let session = Session::new(serde_json::from_str(&cookie).map_err(|_| "http:401")?)?;
+    let jar = serde_json::from_str(&cookie).map_err(|e| {
+        log::warn!("保存された認証情報を読み取れませんでした: {e}");
+        "http:401"
+    })?;
+    let session = Session::new(jar)?;
     let user = json_body(session.client.get(format!("{API}/auth/user"))).await?;
     if user["id"].as_str() != Some(id.as_str()) {
+        log::warn!("保存された認証情報が別のアカウントのもの、または期限切れでした");
         return Err("http:401".into());
     }
     activate(&app, session, user, Some(&id), None)
@@ -383,11 +463,11 @@ pub async fn social_logout(app: tauri::AppHandle, id: String) -> Result<(), Stri
     let previous = match credential.get_password() {
         Ok(value) => Some(value),
         Err(keyring::Error::NoEntry) => None,
-        Err(_) => return Err("storage".into()),
+        Err(e) => return Err(storage_error("認証情報を読み取れませんでした", e)),
     };
     match credential.delete_credential() {
         Ok(()) | Err(keyring::Error::NoEntry) => {}
-        Err(_) => return Err("storage".into()),
+        Err(e) => return Err(storage_error("認証情報を削除できませんでした", e)),
     }
     if let Err(error) = save_registry(&store, &remaining, None) {
         if previous
@@ -419,7 +499,7 @@ pub async fn social_logout(app: tauri::AppHandle, id: String) -> Result<(), Stri
     Ok(())
 }
 
-#[derive(Serialize, Deserialize, specta::Type)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum Resource {
     Friends { offset: u32, n: u32, offline: bool },
@@ -605,6 +685,16 @@ fn visible_person(mut value: Value) -> Outcome<Value> {
 #[tauri::command]
 #[specta::specta]
 pub async fn social_request(account: String, resource: Resource) -> Result<Value, String> {
+    // 失敗したときに、画面のどの取得だったかをログで追えるようにする。
+    let label = format!("{resource:?}");
+    let result = fetch(account, resource).await;
+    if let Err(error) = &result {
+        log::warn!("{label} の取得に失敗しました: {error}");
+    }
+    result
+}
+
+async fn fetch(account: String, resource: Resource) -> Outcome<Value> {
     // 送信開始時にアカウント専用のクライアントを確保する。
     let client = client_for(&account)?;
     let endpoint = |segments: &[&str]| -> Outcome<Url> {
@@ -716,16 +806,18 @@ pub async fn social_request(account: String, resource: Resource) -> Result<Value
 pub fn save_active(app: &tauri::AppHandle) {
     if let Ok(active) = ACTIVE.read() {
         if let Some((id, session)) = active.as_ref() {
-            let result = (|| -> Outcome<()> {
-                let jar = session.cookies.lock().map_err(|_| "storage")?;
-                let value = serde_json::to_string(&*jar).map_err(|_| "storage")?;
+            // 失敗したときは storage_error が原因をログに残す。
+            let _ = (|| -> Outcome<()> {
+                let jar = session
+                    .cookies
+                    .lock()
+                    .map_err(|e| storage_error("Cookie を読み取れませんでした", e))?;
+                let value = serde_json::to_string(&*jar)
+                    .map_err(|e| storage_error("Cookie を書き出せませんでした", e))?;
                 entry(app, id)?
                     .set_password(&value)
-                    .map_err(|_| "storage".into())
+                    .map_err(|e| storage_error("認証情報を保存できませんでした", e))
             })();
-            if result.is_err() {
-                log::error!("認証情報を保存できませんでした");
-            }
         }
     }
 }

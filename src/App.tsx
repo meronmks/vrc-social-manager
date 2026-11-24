@@ -8,6 +8,7 @@ import { SessionForm } from "@/components/ui/sessionForm";
 import DebugScreen from "@/screens/debugScreen";
 import FriendScreen from "@/screens/friendScreen";
 import LicensesScreen from "@/screens/licensesScreen";
+import LogsScreen from "@/screens/logsScreen";
 import SettingsScreen from "@/screens/settingsScreen";
 import { AccountProblem, useAccounts } from "@/libs/useAccounts";
 import { useAppUpdates } from "@/libs/useAppUpdates";
@@ -36,7 +37,9 @@ function Workspace() {
   const { active, auth, busy, problem } = accounts;
 
   const licenses = pathname === "/settings/licenses";
-  const settings = pathname === "/settings" || licenses;
+  const logs = pathname === "/settings/logs";
+  const subpage = licenses || logs;
+  const settings = pathname === "/settings" || subpage;
   const tabs = [
     { url: "/", label: t("フレンド", "Friends"), icon: FiUsers },
     { url: "/instances", label: t("インスタンス", "Instances"), icon: FiLayers },
@@ -86,7 +89,7 @@ function Workspace() {
             {tabs.map(({ url, icon: Icon, label }) => (
               <button
                 key={url}
-                aria-current={url === pathname || (url === "/settings" && licenses) ? "page" : undefined}
+                aria-current={url === pathname || (url === "/settings" && subpage) ? "page" : undefined}
                 onClick={() => navigate(url)}
               >
                 <Icon />
@@ -115,7 +118,8 @@ function Workspace() {
               />
             </div>
             {licenses && <LicensesScreen />}
-            {settings && !licenses && (
+            {logs && <LogsScreen />}
+            {settings && !subpage && (
               <SettingsScreen account={active} logout={() => void accounts.logout()} updates={updates} />
             )}
           </main>

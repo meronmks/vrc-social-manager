@@ -17,9 +17,15 @@ export const cacheLimits = {
   lifetime: { fallback: 6, max: 168 },
 } as const;
 
-// 0 以上 max 以下の整数ならその値を、そうでなければ既定値を返す。
-function wholeNumber(value: JsonValue, { fallback, max }: { fallback: number; max: number }) {
-  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= max ? value : fallback;
+/** ログファイルの上限の既定値と範囲（src-tauri/src/logs.rs の定数と揃える） */
+export const logLimits = {
+  fileSizeMb: { fallback: 2, min: 1, max: 20 },
+  filesKept: { fallback: 5, min: 1, max: 20 },
+} as const;
+
+// min（省略時は 0）以上 max 以下の整数ならその値を、そうでなければ既定値を返す。
+function wholeNumber(value: JsonValue, { fallback, max, min = 0 }: { fallback: number; max: number; min?: number }) {
+  return typeof value === "number" && Number.isInteger(value) && value >= min && value <= max ? value : fallback;
 }
 
 export const userDataStore = {
@@ -65,6 +71,14 @@ export const userDataStore = {
     return wholeNumber(await read({ kind: "cacheLifetime" }), cacheLimits.lifetime);
   },
   setCacheLifetime: (hours: number) => write({ kind: "cacheLifetime" }, hours),
+  async getLogFileSizeMb() {
+    return wholeNumber(await read({ kind: "logFileSizeMb" }), logLimits.fileSizeMb);
+  },
+  setLogFileSizeMb: (mb: number) => write({ kind: "logFileSizeMb" }, mb),
+  async getLogFilesKept() {
+    return wholeNumber(await read({ kind: "logFilesKept" }), logLimits.filesKept);
+  },
+  setLogFilesKept: (count: number) => write({ kind: "logFilesKept" }, count),
   async getBetaUpdates() {
     return (await read({ kind: "betaUpdates" })) === true;
   },

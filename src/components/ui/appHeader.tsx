@@ -1,4 +1,5 @@
-import { FiBell, FiChevronDown, FiPlus, FiUsers } from "react-icons/fi";
+import { FiBell, FiChevronDown, FiFileText, FiPlus, FiUsers } from "react-icons/fi";
+import { useNavigate } from "react-router";
 import { Avatar } from "@/components/social/media";
 import { NoticeIcon } from "@/components/ui/appToasts";
 import { Account, clock, Notice, useText } from "@/libs/social";
@@ -21,6 +22,7 @@ interface Props {
 export function AppHeader({ updates, accounts, active, busy, authOpen, notices, onSwitch, onAddAccount }: Props) {
   const t = useText();
   const menu = usePopover<"accounts" | "notices">();
+  const navigate = useNavigate();
   return (
     <header className="app-header">
       <div className="branding">
@@ -107,6 +109,16 @@ export function AppHeader({ updates, accounts, active, busy, authOpen, notices, 
             ) : (
               <p className="notice-empty">{t("通知はありません", "No notifications")}</p>
             )}
+            {/* 失敗の通知から、原因を確認できる動作ログへ移動できるようにする。 */}
+            <button
+              onClick={() => {
+                menu.close();
+                navigate("/settings/logs");
+              }}
+            >
+              <FiFileText aria-hidden="true" />
+              {t("動作ログを見る", "View activity log")}
+            </button>
           </section>
         )}
       </div>

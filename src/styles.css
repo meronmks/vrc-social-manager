@@ -1177,8 +1177,87 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.logs-help {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--sub);
+  overflow-wrap: anywhere;
+}
+.logs-help code {
+  user-select: text;
+  font: 12px ui-monospace, monospace;
+}
+.logs-folder {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.logs-folder .logs-help {
+  flex: 1;
+  margin: 0;
+}
+.logs-folder .quiet-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.logs-page .form-error {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--warn-ink);
+}
+.log-list {
+  flex: 1 1 auto;
+  min-height: 160px;
+  margin-bottom: 12px;
+  overflow-y: auto;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.log-list > .empty-text {
+  padding: 12px;
+}
+.log-row {
+  display: grid;
+  grid-template-columns: auto 5ch minmax(0, 8em) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 12px;
+  font: 12px/1.5 ui-monospace, monospace;
+  /* 原因の文言をそのまま検索・共有できるよう選択可能にする */
+  user-select: text;
+}
+.log-row + .log-row {
+  border-top: 1px solid var(--line);
+}
+.log-row time,
+.log-source {
+  color: var(--sub);
+  white-space: nowrap;
+}
+.log-source {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.log-level {
+  font-weight: 700;
+  color: var(--sub);
+}
+.log-message {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.log-row:is([data-level="WARN"], [data-level="ERROR"]) {
+  background: var(--warn);
+}
+.log-row:is([data-level="WARN"], [data-level="ERROR"]) :is(.log-level, .log-message) {
+  color: var(--warn-ink);
+}
 @media (max-width: 650px) {
   .licenses-page { padding: 14px; }
+  .log-row { grid-template-columns: auto 5ch minmax(0, 1fr); }
+  .log-message { grid-column: 1 / -1; }
   .license-row { grid-template-columns: minmax(0, 1fr) 14px; gap: 3px 8px; }
   .license-id { grid-column: 1; }
   .license-row > svg { grid-column: 2; grid-row: 1 / 3; }
