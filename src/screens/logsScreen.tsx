@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
 import { FiArrowLeft, FiFolder, FiSearch } from "react-icons/fi";
 import { appLogDir } from "@tauri-apps/api/path";
 import { commands, LogEntry } from "@/bindings";
@@ -62,11 +61,10 @@ function plain(row: LogEntry) {
   return `${new Date(row.time).toISOString()} [${row.level}] ${row.target}: ${row.message}`;
 }
 
-// 設定のサブ画面。API 通信の失敗理由などの動作ログを新しい順に表示する。
-export default function LogsScreen() {
+// 動作ログのタブ。API 通信の失敗理由などの動作ログを新しい順に表示する。
+// onClose を渡すと（ログイン・認証のエラーから開いたとき）、元の画面へ戻るボタンを出す。
+export default function LogsScreen({ onClose }: { onClose?: () => void }) {
   const t = useText();
-  const navigate = useNavigate();
-  const { state } = useLocation();
   const { rows, failed, clear } = useLogs();
   const [level, setLevel] = useState<Level>("all");
   const [query, setQuery] = useState("");
@@ -85,7 +83,6 @@ export default function LogsScreen() {
     .filter((r) => level === "all" || r.level === "ERROR" || r.level === "WARN")
     .filter((r) => !search || (r.message + " " + r.target).toLowerCase().includes(search))
     .reverse();
-  const back = () => (state?.fromSettings ? navigate(-1) : navigate("/settings", { replace: true }));
   async function openFolder() {
     try {
       const result = await commands.logsOpenFolder();
@@ -106,9 +103,11 @@ export default function LogsScreen() {
   }
   return (
     <section className="settings-page licenses-page logs-page" aria-labelledby="logs-title">
-      <button className="license-back" onClick={back}>
-        <FiArrowLeft aria-hidden="true" /> {t("設定に戻る", "Back to settings")}
-      </button>
+      {onClose && (
+        <button className="license-back" onClick={onClose}>
+          <FiArrowLeft aria-hidden="true" /> {t("戻る", "Back")}
+        </button>
+      )}
       <h1 id="logs-title">{t("動作ログ", "Activity log")}</h1>
       <p className="logs-help">
         {t(

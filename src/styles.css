@@ -330,7 +330,8 @@
   background: var(--nav-active);
   color: var(--nav-active-ink);
 }
-.social-nav button:nth-child(3) {
+/* 設定だけは下端に置く */
+.social-nav .nav-bottom {
   margin-top: auto;
 }
 .social-nav .dev-link {
@@ -1201,6 +1202,10 @@
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+}
+/* ログイン・認証のエラーから開いた動作ログ（ナビなしで縦方向に広げる） */
+.error-logs {
+  min-height: 0;
 }
 .logs-page .form-error {
   margin: 8px 0 0;

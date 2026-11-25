@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { BrowserRouter, useLocation, useNavigate } from "react-router";
-import { FiLayers, FiSettings, FiTool, FiUsers } from "react-icons/fi";
+import { FiFileText, FiLayers, FiSettings, FiTool, FiUsers } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { AppHeader } from "@/components/ui/appHeader";
 import { AppToasts } from "@/components/ui/appToasts";
@@ -35,14 +36,16 @@ function Workspace() {
   });
   const notices = useNotices(accounts.isActive);
   const { active, auth, busy, problem } = accounts;
+  // ログイン・認証のエラーから開いた動作ログ。ナビを使えない状態でも見られるよう、画面全体に重ねて出す。
+  const [errorLogs, setErrorLogs] = useState(false);
 
   const licenses = pathname === "/settings/licenses";
-  const logs = pathname === "/settings/logs";
-  const subpage = licenses || logs;
-  const settings = pathname === "/settings" || subpage;
+  const logs = pathname === "/logs";
+  const settings = pathname === "/settings" || licenses;
   const tabs = [
     { url: "/", label: t("フレンド", "Friends"), icon: FiUsers },
     { url: "/instances", label: t("インスタンス", "Instances"), icon: FiLayers },
+    { url: "/logs", label: t("動作ログ", "Logs"), icon: FiFileText },
     { url: "/settings", label: t("設定", "Settings"), icon: FiSettings },
   ];
   if (import.meta.env.DEV && pathname === "/debug") return <DebugScreen />;
@@ -72,24 +75,34 @@ function Workspace() {
           dismissible={!accounts.gated}
           resolve={accounts.resolveProblem}
           dismiss={accounts.dismissProblem}
+          showLogs={() => setErrorLogs(true)}
         />
       )}
+      {errorLogs && (
+        <main className="social-main error-logs">
+          <LogsScreen onClose={() => setErrorLogs(false)} />
+        </main>
+      )}
       {auth && (
+        // 動作ログを見ている間も入力途中の内容を保つため、ログイン画面は隠すだけにする。
         <SessionForm
           key={auth.target?.id ?? "new"}
+          hidden={errorLogs}
           target={auth.target}
           adding={!!accounts.accounts.length}
           onSuccess={accounts.activate}
           cancel={accounts.accounts.length ? accounts.cancelAuth : undefined}
+          showLogs={() => setErrorLogs(true)}
         />
       )}
       {active && (
-        <div className="app-body" hidden={!!auth || accounts.gated || busy}>
+        <div className="app-body" hidden={!!auth || accounts.gated || busy || errorLogs}>
           <nav className="social-nav">
             {tabs.map(({ url, icon: Icon, label }) => (
               <button
                 key={url}
-                aria-current={url === pathname || (url === "/settings" && subpage) ? "page" : undefined}
+                className={url === "/settings" ? "nav-bottom" : undefined}
+                aria-current={url === pathname || (url === "/settings" && licenses) ? "page" : undefined}
                 onClick={() => navigate(url)}
               >
                 <Icon />
@@ -107,8 +120,8 @@ function Workspace() {
             )}
           </nav>
           <main className="social-main">
-            {/* 設定を開いている間もフレンド画面は破棄せず、取得済みの一覧と選択を保つ。 */}
-            <div hidden={settings} className="workspace-pane">
+            {/* 設定や動作ログを開いている間もフレンド画面は破棄せず、取得済みの一覧と選択を保つ。 */}
+            <div hidden={settings || logs} className="workspace-pane">
               <FriendScreen
                 key={active.id + accounts.epoch}
                 account={active}
@@ -119,7 +132,7 @@ function Workspace() {
             </div>
             {licenses && <LicensesScreen />}
             {logs && <LogsScreen />}
-            {settings && !subpage && (
+            {settings && !licenses && (
               <SettingsScreen account={active} logout={() => void accounts.logout()} updates={updates} />
             )}
           </main>
@@ -136,6 +149,7 @@ function ProblemBanner(props: {
   dismissible: boolean;
   resolve: () => void;
   dismiss: () => void;
+  showLogs: () => void;
 }) {
   const t = useText();
   const expired = isExpired(props.problem.reason);
@@ -150,6 +164,7 @@ function ProblemBanner(props: {
       <button onClick={props.resolve} disabled={props.busy}>
         {expired ? t("再ログイン", "Sign in again") : t("再試行", "Retry")}
       </button>
+      <button onClick={props.showLogs}>{t("動作ログを見る", "View logs")}</button>
       {props.dismissible && <button onClick={props.dismiss}>{t("閉じる", "Close")}</button>}
     </div>
   );

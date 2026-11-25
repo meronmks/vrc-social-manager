@@ -363,10 +363,6 @@ export default function SettingsScreen({ account, logout, updates }: Props) {
         </details>
         <h3>{t("このアプリについて", "About")}</h3>
         <div className="settings-box">
-          <button onClick={() => navigate("/settings/logs", { state: { fromSettings: true } })}>
-            {t("動作ログ", "Activity log")}
-            <FiChevronRight aria-hidden="true" />
-          </button>
           <button onClick={() => navigate("/settings/licenses", { state: { fromSettings: true } })}>
             {t("サードパーティライセンス", "Third-party licenses")}
             <FiChevronRight aria-hidden="true" />
