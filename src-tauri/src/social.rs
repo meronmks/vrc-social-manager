@@ -826,6 +826,9 @@ pub fn save_active(app: &tauri::AppHandle) {
 mod security_tests {
     use super::*;
 
+                // 自分自身の `state` はゲーム内にいても "offline" になることがあるため、
+                // presence に現在地が入っていればゲーム内として扱う
+                me["state"] = json!("online");
     #[test]
     fn only_display_fields_reach_the_person_view() {
         let person = json!({"id":"usr_demo","bio":"demo","location":"private","email":"demo@example.invalid","authToken":"fixture","futureField":true});
