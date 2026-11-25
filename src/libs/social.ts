@@ -125,6 +125,7 @@ interface Resources {
   group: { name: string };
   instanceCategories: InstanceCategory[];
   instanceVibes: InstanceVibe[];
+  me: Person;
 }
 export function request<Q extends Resource>(account: string, resource: Q) {
   return data<Resources[Q["kind"]]>(commands.socialRequest(account, resource));

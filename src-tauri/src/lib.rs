@@ -22,6 +22,7 @@ mod social;
 mod cache;
 mod account_migration;
 mod preferences;
+mod logs;
 
 #[cfg(dev)]
 static COOKIE_STORE: Lazy<Arc<CookieStoreMutex>> = Lazy::new(|| {
@@ -70,31 +71,6 @@ pub fn run() {
     commands::export_ts();
 
     tauri::Builder::default()
-        .plugin(
-            tauri_plugin_log::Builder::new()
-                .clear_targets()
-                .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
-                .level(
-                    #[cfg(debug_assertions)]
-                    LevelFilter::Debug,
-                    #[cfg(not(debug_assertions))]
-                    LevelFilter::Info
-                )
-                // HTTP・Cookie・資格情報ライブラリの診断には秘密値が含まれることがある。
-                .filter(|record| record.target().starts_with("vsm_lib::") || record.target() == "vsm_lib" || record.target().starts_with(tauri_plugin_log::WEBVIEW_TARGET))
-                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
-                .targets([
-                     tauri_plugin_log::Target::new(
-                         tauri_plugin_log::TargetKind::LogDir {
-                             file_name: Some("app".to_string()),
-                         },
-                     ),
-                     tauri_plugin_log::Target::new(
-                         tauri_plugin_log::TargetKind::Stdout,
-                     ),
-                ])
-                .build()
-        )
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(commands::handlers())
@@ -105,6 +81,40 @@ pub fn run() {
             });
         })
         .setup(move |app| {
+            // ログファイルの上限は設定から決めるため、設定ストアを読める setup で最初に初期化する。
+            // ロガーは起動中に作り直せないので、設定の変更は次回起動から反映される。
+            let (file_size_mb, files_kept) = preferences::log_limits(app.handle());
+            app.handle().plugin(
+                tauri_plugin_log::Builder::new()
+                    .clear_targets()
+                    .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
+                    .level(
+                        #[cfg(debug_assertions)]
+                        LevelFilter::Debug,
+                        #[cfg(not(debug_assertions))]
+                        LevelFilter::Info
+                    )
+                    // HTTP・Cookie・資格情報ライブラリの診断には秘密値が含まれることがある。
+                    .filter(|record| record.target().starts_with("vsm_lib::") || record.target() == "vsm_lib" || record.target().starts_with(tauri_plugin_log::WEBVIEW_TARGET))
+                    // ログファイルは 1 つ file_size_mb までとし、切り替えた古いファイルは新しい順に
+                    // files_kept 個だけ残す。起動時にも上限を超えた古いファイルを削除する。
+                    .max_file_size(u128::from(file_size_mb) * 1024 * 1024)
+                    .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(files_kept as usize))
+                    .targets([
+                        tauri_plugin_log::Target::new(
+                            tauri_plugin_log::TargetKind::LogDir {
+                                file_name: Some("app".to_string()),
+                            },
+                        ),
+                        tauri_plugin_log::Target::new(
+                            tauri_plugin_log::TargetKind::Stdout,
+                        ),
+                        // 設定画面の「動作ログ」で読めるよう、直近のログをメモリにも残す。
+                        logs::target(),
+                    ])
+                    .build(),
+            )?;
+
             let store = app.store("store.json")?;
             account_migration::migrate(&store)?;
             preferences::apply_cache_limits(app.handle());

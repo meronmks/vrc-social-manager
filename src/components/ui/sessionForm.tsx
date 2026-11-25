@@ -6,15 +6,20 @@ import { Account, session, useText } from "@/libs/social";
 interface Props {
   target?: Account;
   adding: boolean;
+  hidden?: boolean;
   onSuccess: (a: Account) => void;
   cancel?: () => void;
+  /** 原因の分からないエラーのときに、動作ログを開く */
+  showLogs?: () => void;
 }
-export function SessionForm({ target, adding, onSuccess, cancel }: Props) {
+export function SessionForm({ target, adding, hidden, onSuccess, cancel, showLogs }: Props) {
   const [loginId, setId] = useState(target?.loginId ?? "");
   const [password, setPassword] = useState("");
   const [method, setMethod] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
+  // 入力の誤りではなく、通信や保存の失敗など原因を動作ログで確かめたいエラーか
+  const [unexpected, setUnexpected] = useState(false);
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const t = useText();
@@ -25,6 +30,7 @@ export function SessionForm({ target, adding, onSuccess, cancel }: Props) {
     lock.current = true;
     setBusy(true);
     setError("");
+    setUnexpected(false);
     // 入力値は送信した時点でフォームから消す。
     if (method) setCode("");
     else setPassword("");
@@ -53,6 +59,7 @@ export function SessionForm({ target, adding, onSuccess, cancel }: Props) {
             : t("ログインIDとパスワードを確認してください", "Check your login ID and password"),
         );
       } else {
+        setUnexpected(true);
         if (method && reason !== "code") {
           setMethod("");
           setCode("");
@@ -72,7 +79,7 @@ export function SessionForm({ target, adding, onSuccess, cancel }: Props) {
     }
   }
   return (
-    <div className="auth-surface">
+    <div className="auth-surface" hidden={hidden}>
       <form className="auth-card" onSubmit={submit}>
         <h1>
           {target
@@ -143,6 +150,11 @@ export function SessionForm({ target, adding, onSuccess, cancel }: Props) {
         {error && (
           <p role="alert" className="list-state warn">
             {error}
+            {unexpected && showLogs && (
+              <button type="button" onClick={showLogs}>
+                {t("動作ログを見る", "View logs")}
+              </button>
+            )}
           </p>
         )}
         <button className="primary-action" disabled={busy}>
@@ -166,6 +178,7 @@ export function SessionForm({ target, adding, onSuccess, cancel }: Props) {
                 setMethod("");
                 setCode("");
                 setError("");
+                setUnexpected(false);
               }
             }}
           >

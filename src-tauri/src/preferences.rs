@@ -1,4 +1,4 @@
-use crate::cache;
+use crate::{cache, logs};
 use serde::Deserialize;
 use serde_json::Value;
 use tauri_plugin_store::StoreExt;
@@ -11,6 +11,10 @@ pub enum Preference {
     FetchFriendsCount,
     ImageCacheLimit,
     CacheLifetime,
+    /// ログファイル 1 つあたりの大きさ（MB）。次回起動から反映
+    LogFileSizeMb,
+    /// 残しておく過去のログファイル数。次回起動から反映
+    LogFilesKept,
     AutoCheckUpdates,
     BetaUpdates,
     ShowAllFriends { account: String },
@@ -27,6 +31,8 @@ impl Preference {
             Self::FetchFriendsCount => "fetch-friends-count".into(),
             Self::ImageCacheLimit => "image-cache-limit-mb".into(),
             Self::CacheLifetime => "cache-lifetime-hours".into(),
+            Self::LogFileSizeMb => "log-file-size-mb".into(),
+            Self::LogFilesKept => "log-files-kept".into(),
             Self::BetaUpdates => "beta-updates".into(),
             Self::AutoCheckUpdates => "auto-check-updates".into(),
             Self::ShowAllFriends { account } => format!("show-all-friends-{account}"),
@@ -47,6 +53,12 @@ impl Preference {
             Self::CacheLifetime => value
                 .as_u64()
                 .is_some_and(|n| n <= cache::MAX_LIFETIME_HOURS),
+            Self::LogFileSizeMb => value
+                .as_u64()
+                .is_some_and(|n| (1..=logs::MAX_FILE_SIZE_MB).contains(&n)),
+            Self::LogFilesKept => value
+                .as_u64()
+                .is_some_and(|n| (1..=logs::MAX_FILES_KEPT).contains(&n)),
             Self::AutoCheckUpdates | Self::BetaUpdates | Self::ShowAllFriends { .. } => value.is_boolean(),
             Self::FavoriteGroup { .. } => value
                 .as_str()
@@ -93,23 +105,35 @@ pub(crate) fn read(app: &tauri::AppHandle, setting: &Preference) -> Result<Value
     }
 }
 
+// 保存済みの数値設定を読む。未設定・不正な値は既定値を使う。
+fn number(app: &tauri::AppHandle, setting: Preference, default: u64) -> u64 {
+    read(app, &setting)
+        .ok()
+        .filter(|value| setting.writable(value))
+        .and_then(|value| value.as_u64())
+        .unwrap_or(default)
+}
+
 /// 保存済みのキャッシュ上限をキャッシュへ反映する。未設定・不正な値は既定値を使う。
 pub(crate) fn apply_cache_limits(app: &tauri::AppHandle) {
-    let number = |setting: Preference, default: u64| {
-        read(app, &setting)
-            .ok()
-            .filter(|value| setting.writable(value))
-            .and_then(|value| value.as_u64())
-            .unwrap_or(default)
-    };
     cache::set_image_limit_mb(number(
+        app,
         Preference::ImageCacheLimit,
         cache::DEFAULT_IMAGE_LIMIT_MB,
     ));
     cache::set_lifetime_hours(number(
+        app,
         Preference::CacheLifetime,
         cache::DEFAULT_LIFETIME_HOURS,
     ));
+}
+
+/// ログファイルの上限（1 つあたりの MB、残す過去ファイル数）を返す。未設定・不正な値は既定値を使う。
+pub(crate) fn log_limits(app: &tauri::AppHandle) -> (u64, u64) {
+    (
+        number(app, Preference::LogFileSizeMb, logs::DEFAULT_FILE_SIZE_MB),
+        number(app, Preference::LogFilesKept, logs::DEFAULT_FILES_KEPT),
+    )
 }
 
 #[tauri::command]
@@ -168,6 +192,14 @@ mod tests {
         assert!(!Preference::ImageCacheLimit.writable(&json!(-1)));
         assert!(!Preference::CacheLifetime.writable(&json!(1.5)));
         assert!(!Preference::CacheLifetime.writable(&json!(cache::MAX_LIFETIME_HOURS + 1)));
+        // ログの保持数・大きさは 0 を受け付けない（0 個保持はプラグイン内部で桁あふれする）。
+        assert!(!Preference::LogFilesKept.writable(&json!(0)));
+        assert!(Preference::LogFilesKept.writable(&json!(1)));
+        assert!(Preference::LogFilesKept.writable(&json!(logs::MAX_FILES_KEPT)));
+        assert!(!Preference::LogFilesKept.writable(&json!(logs::MAX_FILES_KEPT + 1)));
+        assert!(!Preference::LogFileSizeMb.writable(&json!(0)));
+        assert!(Preference::LogFileSizeMb.writable(&json!(logs::MAX_FILE_SIZE_MB)));
+        assert!(!Preference::LogFileSizeMb.writable(&json!(logs::MAX_FILE_SIZE_MB + 1)));
         assert!(!Preference::ShowAllFriends {
             account: "example".into()
         }

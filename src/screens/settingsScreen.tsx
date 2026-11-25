@@ -6,7 +6,7 @@ import type { AppUpdates } from "@/libs/useAppUpdates";
 import { useNavigate } from "react-router";
 import { Dropdown } from "@/components/ui/dropdown";
 import { Account, useText } from "@/libs/social";
-import { cacheLimits, userDataStore } from "@/libs/userDataStore";
+import { cacheLimits, logLimits, userDataStore } from "@/libs/userDataStore";
 import { commands } from "@/bindings";
 import i18n from "@/libs/i18n";
 
@@ -15,22 +15,23 @@ interface Props {
   logout: () => void;
   updates: AppUpdates;
 }
-// 0〜max の整数を入力し、確定したとき（フォーカスが外れたとき）に保存する入力欄。
+// min（省略時は 0）〜max の整数を入力し、確定したとき（フォーカスが外れたとき）に保存する入力欄。
 function WholeNumberSetting(props: {
   label: string;
   value: number;
+  min?: number;
   max: number;
   help: string;
   onSave: (value: number) => Promise<void>;
 }) {
-  const { label, value, max, help, onSave } = props;
+  const { label, value, min = 0, max, help, onSave } = props;
   const [text, setText] = useState(String(value));
   const [invalid, setInvalid] = useState(false);
   const t = useText();
   useEffect(() => setText(String(value)), [value]);
   function commit() {
     const n = Number(text);
-    if (!/^\d+$/.test(text) || n > max) {
+    if (!/^\d+$/.test(text) || n < min || n > max) {
       setInvalid(true);
       return;
     }
@@ -43,7 +44,7 @@ function WholeNumberSetting(props: {
         {label}
         <input
           type="number"
-          min={0}
+          min={min}
           max={max}
           step={1}
           value={text}
@@ -59,7 +60,7 @@ function WholeNumberSetting(props: {
         />
       </label>
       <p className={invalid ? "form-error" : ""}>
-        {invalid ? t(`0〜${max}の整数を入力してください`, `Enter a whole number from 0 to ${max}`) : help}
+        {invalid ? t(`${min}〜${max}の整数を入力してください`, `Enter a whole number from ${min} to ${max}`) : help}
       </p>
     </>
   );
@@ -71,6 +72,8 @@ export default function SettingsScreen({ account, logout, updates }: Props) {
   const [count, setCount] = useState("50");
   const [imageLimit, setImageLimit] = useState<number>(cacheLimits.image.fallback);
   const [lifetime, setLifetime] = useState<number>(cacheLimits.lifetime.fallback);
+  const [logFileSize, setLogFileSize] = useState<number>(logLimits.fileSizeMb.fallback);
+  const [logFilesKept, setLogFilesKept] = useState<number>(logLimits.filesKept.fallback);
   const [purged, setPurged] = useState(false);
   const [version, setVersion] = useState("");
   const [invalid, setInvalid] = useState(false);
@@ -87,15 +90,19 @@ export default function SettingsScreen({ account, logout, updates }: Props) {
       userDataStore.getFetchFriendsCount(),
       userDataStore.getImageCacheLimit(),
       userDataStore.getCacheLifetime(),
+      userDataStore.getLogFileSizeMb(),
+      userDataStore.getLogFilesKept(),
       getVersion(),
     ])
-      .then(([v, a, c, image, hours, version]) => {
+      .then(([v, a, c, image, hours, logSize, logKept, version]) => {
         if (live) {
           setTheme(v);
           setAuto(a);
           setCount(String(c));
           setImageLimit(image);
           setLifetime(hours);
+          setLogFileSize(logSize);
+          setLogFilesKept(logKept);
           setVersion(version);
           setReady(true);
         }
@@ -308,6 +315,50 @@ export default function SettingsScreen({ account, logout, updates }: Props) {
                   "画像・ワールド・グループ情報のキャッシュを削除します。次回の表示から取得し直します。",
                   "Clears cached images, worlds, and groups. They will be fetched again when shown.",
                 )}
+          </p>
+        </details>
+        <details className="settings-box">
+          <summary>
+            {t("ログファイルの保存", "Log files")}
+            <FiChevronDown aria-hidden="true" />
+          </summary>
+          <WholeNumberSetting
+            label={t("1ファイルの大きさ（MB）", "Size per file (MB)")}
+            value={logFileSize}
+            min={logLimits.fileSizeMb.min}
+            max={logLimits.fileSizeMb.max}
+            help={t(
+              `${logLimits.fileSizeMb.min}〜${logLimits.fileSizeMb.max}MBで指定できます。この大きさを超えると新しいファイルに切り替えます。`,
+              `Enter ${logLimits.fileSizeMb.min}–${logLimits.fileSizeMb.max} MB. A new file starts when a file reaches this size.`,
+            )}
+            onSave={(mb) =>
+              save(async () => {
+                await userDataStore.setLogFileSizeMb(mb);
+                setLogFileSize(mb);
+              })
+            }
+          />
+          <WholeNumberSetting
+            label={t("残す過去のファイル数", "Older files to keep")}
+            value={logFilesKept}
+            min={logLimits.filesKept.min}
+            max={logLimits.filesKept.max}
+            help={t(
+              `${logLimits.filesKept.min}〜${logLimits.filesKept.max}個で指定できます。これより古いファイルは自動で削除します。`,
+              `Enter ${logLimits.filesKept.min}–${logLimits.filesKept.max}. Older files are deleted automatically.`,
+            )}
+            onSave={(count) =>
+              save(async () => {
+                await userDataStore.setLogFilesKept(count);
+                setLogFilesKept(count);
+              })
+            }
+          />
+          <p>
+            {t(
+              "変更はアプリの次回起動から反映されます。",
+              "Changes apply the next time the app starts.",
+            )}
           </p>
         </details>
         <h3>{t("このアプリについて", "About")}</h3>

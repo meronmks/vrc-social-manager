@@ -89,6 +89,29 @@ async socialRequest(account: string, resource: Resource) : Promise<Result<JsonVa
 async cachePurge() : Promise<void> {
     await TAURI_INVOKE("cache_purge");
 },
+/**
+ * 保持している動作ログを古い順に返す。`after` を渡すとその番号より後のものだけを返す。
+ */
+async logsGet(after: number | null) : Promise<LogEntry[]> {
+    return await TAURI_INVOKE("logs_get", { after });
+},
+/**
+ * 画面に表示している動作ログを消す（ログファイルは消さない）。
+ */
+async logsClear() : Promise<void> {
+    await TAURI_INVOKE("logs_clear");
+},
+/**
+ * ログファイルの保存先フォルダを OS のファイルマネージャーで開く。
+ */
+async logsOpenFolder() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("logs_open_folder") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async login(userName: string, password: string) : Promise<Result<string, RustError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("login", { userName, password }) };
@@ -247,8 +270,37 @@ export type ApiResponse = { status: string; data: string }
 export type AppUpdate = { currentVersion: string; version: string; notes: string | null }
 export type DebugApiRequest = { method: string; endpoint: string; data?: string | null }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
-export type Preference = { kind: "theme" } | { kind: "language" } | { kind: "fetchFriendsCount" } | { kind: "imageCacheLimit" } | { kind: "cacheLifetime" } | { kind: "autoCheckUpdates" } | { kind: "betaUpdates" } | { kind: "showAllFriends"; account: string } | { kind: "favoriteGroup"; account: string } | { kind: "accounts" } | { kind: "currentAccount" }
-export type Resource = { kind: "friends"; offset: number; n: number; offline: boolean } | { kind: "groups" } | { kind: "favorites"; offset: number } | { kind: "memberInstances" } | { kind: "friend"; id: string } | { kind: "profile"; id: string } | { kind: "world"; id: string } | { kind: "group"; id: string } | { kind: "instance"; location: string } | { kind: "invite"; location: string } | { kind: "instanceCategories" } | { kind: "instanceVibes" }
+export type LogEntry = { 
+/**
+ * 起動してからの通し番号。差分取得に使う。
+ */
+seq: number; 
+/**
+ * 記録した時刻（UNIX エポックからのミリ秒）
+ */
+time: number; 
+/**
+ * "ERROR" | "WARN" | "INFO" | "DEBUG" | "TRACE"
+ */
+level: string; 
+/**
+ * 出力元のモジュール（例: `vsm_lib::social`、画面側は `webview`）
+ */
+target: string; message: string }
+export type Preference = { kind: "theme" } | { kind: "language" } | { kind: "fetchFriendsCount" } | { kind: "imageCacheLimit" } | { kind: "cacheLifetime" } | 
+/**
+ * ログファイル 1 つあたりの大きさ（MB）。次回起動から反映
+ */
+{ kind: "logFileSizeMb" } | 
+/**
+ * 残しておく過去のログファイル数。次回起動から反映
+ */
+{ kind: "logFilesKept" } | { kind: "autoCheckUpdates" } | { kind: "betaUpdates" } | { kind: "showAllFriends"; account: string } | { kind: "favoriteGroup"; account: string } | { kind: "accounts" } | { kind: "currentAccount" }
+export type Resource = { kind: "friends"; offset: number; n: number; offline: boolean } | { kind: "groups" } | { kind: "favorites"; offset: number } | { kind: "memberInstances" } | { kind: "friend"; id: string } | { kind: "profile"; id: string } | { kind: "world"; id: string } | { kind: "group"; id: string } | { kind: "instance"; location: string } | { kind: "invite"; location: string } | { kind: "instanceCategories" } | { kind: "instanceVibes" } | 
+/**
+ * ログイン中のユーザー自身（現在地つき）
+ */
+{ kind: "me" }
 export type RustError = { type: "Unrecoverable"; message: string }
 
 /** tauri-specta globals **/

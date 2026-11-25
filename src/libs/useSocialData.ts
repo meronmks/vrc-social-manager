@@ -37,6 +37,8 @@ const loadingPhases: Record<Source, Phase> = {
 
 export function useSocialData(account: string, notify: Notify, expire: () => void) {
   const [friends, setFriends] = useState<Record<string, Person>>({});
+  // ログイン中のユーザー自身。インスタンス一覧で自分のいる場所を示すために使う。
+  const [me, setMe] = useState<Person>();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [groups, setGroups] = useState<FavoriteGroup[]>([]);
   const [showAll, setShowAll] = useState<boolean>();
@@ -258,6 +260,17 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
         });
       }
       try {
+        // 自分の現在地を先に確認し、自分のいるインスタンスの情報から取得する。
+        try {
+          const self = await request(account, { kind: "me" });
+          if (!live) return;
+          const mine = { ...self, online: isInGame(self) };
+          setMe(mine);
+          if (mine.online) queuePlace(locationOf(mine));
+        } catch (e) {
+          // 自分の現在地が分からなくても一覧は出せるため、認証切れ以外は無視する
+          if (isExpired(e)) throw e;
+        }
         const n = await userDataStore.getFetchFriendsCount();
         const merge = (page: Person[], offline: boolean) => {
           const batch: Record<string, Person> = {};
@@ -353,6 +366,7 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
 
   return {
     friends,
+    me,
     favorites,
     groups,
     group,

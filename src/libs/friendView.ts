@@ -25,17 +25,29 @@ export function favoriteIdsIn(favorites: Favorite[], group: string) {
 const nameOrder = new Intl.Collator().compare;
 
 // フレンド一覧に出す人。検索中は全フレンドから名前で探し、それ以外は表示範囲（全員かグループ）で絞る。
-// オンラインの人を先に、同じ状態の中では名前順に並べる。
+// オンラインで現在地（ワールドとインスタンス）が分かる人、移動中の人、現在地が分からないオンラインの人
+// （プライベートなど）、オフラインの人の順に並べ、同じ順位の中では名前順にする。
 export function visibleFriends(everyone: Person[], search: string, showAll: boolean, inGroup: Set<string>) {
   return everyone
     .filter((p) => (search ? p.displayName.toLocaleLowerCase().includes(search) : showAll || inGroup.has(p.id)))
-    .sort((a, b) => Number(!!b.online) - Number(!!a.online) || nameOrder(a.displayName, b.displayName));
+    .map((person) => ({ person, rank: friendRank(person) }))
+    .sort((a, b) => a.rank - b.rank || nameOrder(a.person.displayName, b.person.displayName))
+    .map(({ person }) => person);
+}
+
+// フレンド一覧での並び順の順位。小さいほど上に出す。
+function friendRank(person: Person) {
+  if (!person.online) return 3;
+  const location = locationOf(person);
+  if (destination(location)) return 0;
+  return location === "traveling" ? 1 : 2;
 }
 
 // オンラインのフレンドを、ワールドとインスタンスが分かる現在地ごとにまとめる。
-export function groupByPlace(everyone: Person[]) {
+// 自分（`me`）を渡すと、自分のいるインスタンスにも含める（その場所の先頭に置く）。
+export function groupByPlace(everyone: Person[], me?: Person) {
   const byPlace = new Map<string, Person[]>();
-  for (const person of everyone) {
+  for (const person of me ? [me, ...everyone] : everyone) {
     if (!person.online) continue;
     const location = locationOf(person);
     if (!destination(location)) continue;
@@ -61,8 +73,10 @@ export function visibleLocations(options: {
   byPlace: Map<string, Person[]>;
   inGroup: Set<string>;
   placeAt: (location: string) => Place | undefined;
+  /** 自分の現在地。一覧に含まれていれば、並び順にかかわらず先頭に置く */
+  selfLocation?: string;
 }) {
-  const { scope, kind, sortOrder, members, byPlace, inGroup, placeAt } = options;
+  const { scope, kind, sortOrder, members, byPlace, inGroup, placeAt, selfLocation } = options;
   const locations =
     scope === "members"
       ? [...members]
@@ -73,6 +87,8 @@ export function visibleLocations(options: {
   if (sortOrder === "friendCount") {
     locations.sort((a, b) => (byPlace.get(b)?.length ?? 0) - (byPlace.get(a)?.length ?? 0));
   }
+  const self = selfLocation ? locations.indexOf(selfLocation) : -1;
+  if (self > 0) locations.unshift(...locations.splice(self, 1));
   return locations;
 }
 

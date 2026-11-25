@@ -82,6 +82,8 @@ interface ListProps {
   byPlace: Map<string, Person[]>;
   placeAt: (location: string) => Place | undefined;
   account: string;
+  /** ログイン中のユーザー自身の ID */
+  selfId?: string;
   starred: Set<string>;
   friendsReady: boolean;
   busy: boolean;
@@ -163,6 +165,7 @@ export function InstanceList(props: ListProps) {
                 <PlaceFriends
                   friends={props.byPlace.get(location)}
                   account={props.account}
+                  selfId={props.selfId}
                   starred={props.starred}
                   friendsReady={props.friendsReady}
                 />
