@@ -1,47 +1,47 @@
 {
-  "version": "1.0.0-beta.2",
-  "notes": "## What's Changed\n* Feat/api pacing and notice UI by @meronmks in https://github.com/meronmks/vrc-social-manager/pull/289\n* Release v1.0.0-beta.2 by @github-actions[bot] in https://github.com/meronmks/vrc-social-manager/pull/290\n\n\n**Full Changelog**: https://github.com/meronmks/vrc-social-manager/compare/v1.0.0-beta.1...v1.0.0-beta.2",
-  "pub_date": "2026-11-22T13:43:41.832Z",
+  "version": "1.0.0-beta.3",
+  "notes": "## What's Changed\n* Feat/api pacing and notice UI by @meronmks in https://github.com/meronmks/vrc-social-manager/pull/292\n* build(deps): bump the npm-security group across 1 directory with 10 updates by @dependabot[bot] in https://github.com/meronmks/vrc-social-manager/pull/291\n* Release v1.0.0-beta.3 by @github-actions[bot] in https://github.com/meronmks/vrc-social-manager/pull/294\n\n\n**Full Changelog**: https://github.com/meronmks/vrc-social-manager/compare/v1.0.0-beta.2...v1.0.0-beta.3",
+  "pub_date": "2026-11-25T14:57:22.031Z",
   "platforms": {
-    "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWko3bW9MS1lBTjhIK0hlUWlkQ2QzejVGUDB6NnBmY1lXWUxOTzQwR2NXQWkyc3RnbTViUXNjMUZxZ0NRR214WDRXbXlENitEUTd0NWxsS1lSN0tTOHdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzU0ODQwCWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyXzEuMC4wLWJldGEuMl94NjQtc2V0dXAuZXhlCmZoVDV6K2hKZ251a1FLMk5BVm43RXdIOFpZSU92WG9RVVNMUVRlYWY1MTcvMTY1UktPU2RMTnZ4UjV2VWRRVzF3dzZ4d3JyM2pBeWlNZUZ3L0xXcURBPT0K",
-      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.2/vrc-social-manager_1.0.0-beta.2_x64-setup.exe"
-    },
-    "windows-x86_64-nsis": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWko3bW9MS1lBTjhIK0hlUWlkQ2QzejVGUDB6NnBmY1lXWUxOTzQwR2NXQWkyc3RnbTViUXNjMUZxZ0NRR214WDRXbXlENitEUTd0NWxsS1lSN0tTOHdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzU0ODQwCWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyXzEuMC4wLWJldGEuMl94NjQtc2V0dXAuZXhlCmZoVDV6K2hKZ251a1FLMk5BVm43RXdIOFpZSU92WG9RVVNMUVRlYWY1MTcvMTY1UktPU2RMTnZ4UjV2VWRRVzF3dzZ4d3JyM2pBeWlNZUZ3L0xXcURBPT0K",
-      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.2/vrc-social-manager_1.0.0-beta.2_x64-setup.exe"
-    },
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWk0wdmx4b1kyaHIzODlrTFVYMHBiNHJrYzgxT3cvV3B4NjdIMkJrQW5XYXZLMjJOQ1IrRTJoS0prOFA3Y1FNK3NlQkNFNkxNRG1PUEFzL2V5RlZwN0FjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzU0OTQ2CWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyXzEuMC4wLWJldGEuMl9hbWQ2NC5BcHBJbWFnZQpwR0pDR2EvMzkyc2pFcDBYUEpnYmJsSzVRYnlWQXFSbHp1OGNuY0w3ZklaL01LQU5HMmptbWF5OHI1TmMycDJjZnBzWHgrRHFydGdSZW9PWHdRaTFBUT09Cg==",
-      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.2/vrc-social-manager_1.0.0-beta.2_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWk9GRGNCb1pGU0ZJb3paM1dYb01GQzJ4L0p3VmhISHVKM25taGxDZDZPQ1J6Mm1HQVFTa3R4cnNDWEtwS3pDdmdkUVBKb1B4NUlFQ1BhKzlJdS9YV3dBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NjE4NDcyCWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyXzEuMC4wLWJldGEuM19hbWQ2NC5BcHBJbWFnZQpvZDZsbW1XaFNCNVljaTRNR3FSNHB0dERSUlhMQ2IwYmF5b25MU0hpZUlrYlFxcW0zUHppZWJ3Z1R0S0dBd2FPelpYNk5yeHJoWjZ0bnQ2dWhoVy9Cdz09Cg==",
+      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.3/vrc-social-manager_1.0.0-beta.3_amd64.AppImage"
     },
     "linux-x86_64-appimage": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWk0wdmx4b1kyaHIzODlrTFVYMHBiNHJrYzgxT3cvV3B4NjdIMkJrQW5XYXZLMjJOQ1IrRTJoS0prOFA3Y1FNK3NlQkNFNkxNRG1PUEFzL2V5RlZwN0FjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzU0OTQ2CWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyXzEuMC4wLWJldGEuMl9hbWQ2NC5BcHBJbWFnZQpwR0pDR2EvMzkyc2pFcDBYUEpnYmJsSzVRYnlWQXFSbHp1OGNuY0w3ZklaL01LQU5HMmptbWF5OHI1TmMycDJjZnBzWHgrRHFydGdSZW9PWHdRaTFBUT09Cg==",
-      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.2/vrc-social-manager_1.0.0-beta.2_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWk9GRGNCb1pGU0ZJb3paM1dYb01GQzJ4L0p3VmhISHVKM25taGxDZDZPQ1J6Mm1HQVFTa3R4cnNDWEtwS3pDdmdkUVBKb1B4NUlFQ1BhKzlJdS9YV3dBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NjE4NDcyCWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyXzEuMC4wLWJldGEuM19hbWQ2NC5BcHBJbWFnZQpvZDZsbW1XaFNCNVljaTRNR3FSNHB0dERSUlhMQ2IwYmF5b25MU0hpZUlrYlFxcW0zUHppZWJ3Z1R0S0dBd2FPelpYNk5yeHJoWjZ0bnQ2dWhoVy9Cdz09Cg==",
+      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.3/vrc-social-manager_1.0.0-beta.3_amd64.AppImage"
     },
     "linux-x86_64-deb": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWkRNWXpUTHNqUzNraE9vYmVTdHcwNDlROGl0b2NQT2hCOWgwUGM2Tk02UzUwVWdsWnFUOFhuZlM1UWZMdG15anYvWUY4NmdVZ1Y3UnRtenNpYnhQYmdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzU0OTQ2CWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyXzEuMC4wLWJldGEuMl9hbWQ2NC5kZWIKN1VZTDZFTmxpa2VWOXVHbkw0U0Z5TDlrelhjOFpMU1lteWpyZmxMbThsNnZ5Z3lKQlZpVkJyb1dGdlI2bUU0a2kycnNVTmpDRXAxaU04RDc4aERrQ1E9PQo=",
-      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.2/vrc-social-manager_1.0.0-beta.2_amd64.deb"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWkljVEhnalh5YVcwcGlJT0FtV1FPNmFaY3dQSXRrY2t0a25lbnljMlBOZ2FHRGNMdmpHdXR4a0hITTM2ZkIrNktvMUdiVFliak9mYVQ0MnhXdVlTUEFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NjE4NDcyCWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyXzEuMC4wLWJldGEuM19hbWQ2NC5kZWIKclU2N1ZpNzU4Z0c2ZnQrcVlwL3lZRTFkbWpqL2ZOQVF2T29EUU8yOUFLUFk4ZnR5N3A2ekNjOGlhSWhmakRwbXhsKzlDbnFHVmErdkNsMmVzZVorRHc9PQo=",
+      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.3/vrc-social-manager_1.0.0-beta.3_amd64.deb"
     },
     "linux-x86_64-rpm": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWkk3WHJUUEppQTdIVG1wWTZMUUxTdHRNalZqbjhvai9zWEV5VHhBZVNhbUZBYklmU1dPaGIzb0tDc2kyY2dXN1pSWk00K2dvNVVBTmNNbVg1NUx2S2dFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzU0OTQ2CWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyLTEuMC4wLWJldGEuMi0xLng4Nl82NC5ycG0KbXNsTHgvc1Z6UE5VdkZSc3hZNGR5dEVxc0prRFhmL3FGTWY0OTZWQ05PTjV2ZllhUWNUQllXQVhtRzR3QjFmdFloU0RZbUNNbmlzdnRiVkVla2xZQ3c9PQo=",
-      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.2/vrc-social-manager-1.0.0-beta.2-1.x86_64.rpm"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWkpCKzBVVHZaZHZwc2pQUVdZbktGYThTSWlwY0F6UXlRRy9zZlVlT0pySVlWM1lCWEptVDNnWjZmVmNKTkRDNnFmLzgxRnBobFhQdjRzMU9Scnp0emdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NjE4NDcyCWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyLTEuMC4wLWJldGEuMy0xLng4Nl82NC5ycG0KejlwNmNEV0tZd1ViNml2WVNxd0F2ZmVFR29vdlF4VzhBUERHaFkyQUlxVnNxd3dVOWxGV1M3UnoyWWF0dGdpTUxCbFVhZm1ZUi9lZ0JnV1Y5REdqQWc9PQo=",
+      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.3/vrc-social-manager-1.0.0-beta.3-1.x86_64.rpm"
+    },
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWlBNdDZURmdhR210Qk5MU3hldWxvWC9VY1ErS0NhanQ3b0VsSU5mcnNTaWRpNlhWem1COE9vY0VDSkowb0E1MkVxanlPbWFmWE95SlRBUkk4Q0t1QXcwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NjE4NjIyCWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyXzEuMC4wLWJldGEuM194NjQtc2V0dXAuZXhlCnhWQkFRbG1NRU91VHRHWEJma24wUDNpYXAxSjlWMGtrMjdLVTVTNGlSY3RRNVA5aWVJZFYvb2JYQXdzNDlmL0tNeWtRNVRCZkhvS3lrVXllWjNPckJnPT0K",
+      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.3/vrc-social-manager_1.0.0-beta.3_x64-setup.exe"
+    },
+    "windows-x86_64-nsis": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWlBNdDZURmdhR210Qk5MU3hldWxvWC9VY1ErS0NhanQ3b0VsSU5mcnNTaWRpNlhWem1COE9vY0VDSkowb0E1MkVxanlPbWFmWE95SlRBUkk4Q0t1QXcwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NjE4NjIyCWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyXzEuMC4wLWJldGEuM194NjQtc2V0dXAuZXhlCnhWQkFRbG1NRU91VHRHWEJma24wUDNpYXAxSjlWMGtrMjdLVTVTNGlSY3RRNVA5aWVJZFYvb2JYQXdzNDlmL0tNeWtRNVRCZkhvS3lrVXllWjNPckJnPT0K",
+      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.3/vrc-social-manager_1.0.0-beta.3_x64-setup.exe"
     },
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWkNvNE8rU2o4MUgvNklna3EwTldtamJvWmpOckNkMFlEd0lwbkV2NHc3U3BDS0Rnc3d3RmlqeVRZMUpuSDRncjJZUGtOampENE12amJ6ZHIxZDdVL0FZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzU1MDE4CWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyLmFwcC50YXIuZ3oKQjN3bHZNWVltb3NwR3htNExvdE85dStGVFdURUg5aVhtSW5qeTRET1dWd2FyaTVnV2t4cSs5VG12ODJPYTVpTTJlejVpNnQrYWg0MUVtR281UUVYQ2c9PQo=",
-      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.2/vrc-social-manager_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWkhXTm1ueFRacU83NkNKOUt4ZFEzcUxCWXdjYTRMaWVLbmlOa0xPRncxZUkwaS9TN3M5MTdrVkNYTWFtNlhjV2FKMzRjKzZkbnl2c3RCTFdqZktNcXdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NjE4NjM2CWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyLmFwcC50YXIuZ3oKQUgrd3pOOTRhUWtLMHAzbFNBTlE0VzN0enMwVE82bWtsN1p2WThTaEJJQndmQmRiYTV3em1heGEvNTR6SUJtWkpnak14dm5WcExUREFWcDVCc01RREE9PQo=",
+      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.3/vrc-social-manager_universal.app.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWkNvNE8rU2o4MUgvNklna3EwTldtamJvWmpOckNkMFlEd0lwbkV2NHc3U3BDS0Rnc3d3RmlqeVRZMUpuSDRncjJZUGtOampENE12amJ6ZHIxZDdVL0FZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzU1MDE4CWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyLmFwcC50YXIuZ3oKQjN3bHZNWVltb3NwR3htNExvdE85dStGVFdURUg5aVhtSW5qeTRET1dWd2FyaTVnV2t4cSs5VG12ODJPYTVpTTJlejVpNnQrYWg0MUVtR281UUVYQ2c9PQo=",
-      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.2/vrc-social-manager_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWkhXTm1ueFRacU83NkNKOUt4ZFEzcUxCWXdjYTRMaWVLbmlOa0xPRncxZUkwaS9TN3M5MTdrVkNYTWFtNlhjV2FKMzRjKzZkbnl2c3RCTFdqZktNcXdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NjE4NjM2CWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyLmFwcC50YXIuZ3oKQUgrd3pOOTRhUWtLMHAzbFNBTlE0VzN0enMwVE82bWtsN1p2WThTaEJJQndmQmRiYTV3em1heGEvNTR6SUJtWkpnak14dm5WcExUREFWcDVCc01RREE9PQo=",
+      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.3/vrc-social-manager_universal.app.tar.gz"
     },
     "darwin-aarch64-app": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWkNvNE8rU2o4MUgvNklna3EwTldtamJvWmpOckNkMFlEd0lwbkV2NHc3U3BDS0Rnc3d3RmlqeVRZMUpuSDRncjJZUGtOampENE12amJ6ZHIxZDdVL0FZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzU1MDE4CWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyLmFwcC50YXIuZ3oKQjN3bHZNWVltb3NwR3htNExvdE85dStGVFdURUg5aVhtSW5qeTRET1dWd2FyaTVnV2t4cSs5VG12ODJPYTVpTTJlejVpNnQrYWg0MUVtR281UUVYQ2c9PQo=",
-      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.2/vrc-social-manager_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWkhXTm1ueFRacU83NkNKOUt4ZFEzcUxCWXdjYTRMaWVLbmlOa0xPRncxZUkwaS9TN3M5MTdrVkNYTWFtNlhjV2FKMzRjKzZkbnl2c3RCTFdqZktNcXdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NjE4NjM2CWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyLmFwcC50YXIuZ3oKQUgrd3pOOTRhUWtLMHAzbFNBTlE0VzN0enMwVE82bWtsN1p2WThTaEJJQndmQmRiYTV3em1heGEvNTR6SUJtWkpnak14dm5WcExUREFWcDVCc01RREE9PQo=",
+      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.3/vrc-social-manager_universal.app.tar.gz"
     },
     "darwin-x86_64-app": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWkNvNE8rU2o4MUgvNklna3EwTldtamJvWmpOckNkMFlEd0lwbkV2NHc3U3BDS0Rnc3d3RmlqeVRZMUpuSDRncjJZUGtOampENE12amJ6ZHIxZDdVL0FZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzU1MDE4CWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyLmFwcC50YXIuZ3oKQjN3bHZNWVltb3NwR3htNExvdE85dStGVFdURUg5aVhtSW5qeTRET1dWd2FyaTVnV2t4cSs5VG12ODJPYTVpTTJlejVpNnQrYWg0MUVtR281UUVYQ2c9PQo=",
-      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.2/vrc-social-manager_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWm9EQ3RrbXhmWkhXTm1ueFRacU83NkNKOUt4ZFEzcUxCWXdjYTRMaWVLbmlOa0xPRncxZUkwaS9TN3M5MTdrVkNYTWFtNlhjV2FKMzRjKzZkbnl2c3RCTFdqZktNcXdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NjE4NjM2CWZpbGU6dnJjLXNvY2lhbC1tYW5hZ2VyLmFwcC50YXIuZ3oKQUgrd3pOOTRhUWtLMHAzbFNBTlE0VzN0enMwVE82bWtsN1p2WThTaEJJQndmQmRiYTV3em1heGEvNTR6SUJtWkpnak14dm5WcExUREFWcDVCc01RREE9PQo=",
+      "url": "https://github.com/meronmks/vrc-social-manager/releases/download/v1.0.0-beta.3/vrc-social-manager_universal.app.tar.gz"
     }
   }
 }
