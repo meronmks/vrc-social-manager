@@ -88,9 +88,29 @@ fn parse_retry_after(value: &str) -> Option<Duration> {
     value.trim().parse::<u64>().ok().map(Duration::from_secs)
 }
 
+// インスタンスの場所（`wrld_…:123~private(usr_…)~nonce(…)`）に含まれる nonce は、
+// 招待制インスタンスへ入るための合言葉に当たる。ログはコピーして共有されることがあるため伏せる。
+// 閉じ括弧がない（途中で切り詰められた）場合は末尾まで伏せる。
+fn mask_secrets(text: &str) -> String {
+    const MARKER: &str = "~nonce(";
+    let mut masked = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(start) = rest.find(MARKER) {
+        let value_start = start + MARKER.len();
+        masked.push_str(&rest[..value_start]);
+        masked.push_str("***");
+        match rest[value_start..].find(')') {
+            Some(end) => rest = &rest[value_start + end..],
+            None => return masked,
+        }
+    }
+    masked.push_str(rest);
+    masked
+}
+
 // ログに出す要求の表記（例: `GET /api/1/auth/user`）。クエリは長くなるため含めない。
 fn describe(method: &reqwest::Method, url: &Url) -> String {
-    format!("{method} {}", url.path())
+    mask_secrets(&format!("{method} {}", url.path()))
 }
 
 // 通信エラーの原因を、内側の原因までたどって一行にまとめる。
@@ -127,13 +147,24 @@ async fn failure_reason(res: reqwest::Response) -> Option<String> {
     if message.is_empty() {
         return None;
     }
-    Some(message.chars().take(200).collect())
+    // サーバーから来た文字列なので、改行などでログの行を偽装されないよう制御文字は空白にする。
+    let message: String = message
+        .chars()
+        .take(200)
+        .map(|c| if c.is_control() { ' ' } else { c })
+        .collect();
+    // エラーメッセージには要求したインスタンスの場所がそのまま入ることがある。
+    Some(mask_secrets(&message))
 }
 
 async fn response(req: RequestBuilder) -> Outcome<reqwest::Response> {
     let (client, request) = req.build_split();
     let mut request = request.map_err(|e| {
-        log::warn!("VRChat API の要求を組み立てられませんでした: {e}");
+        // reqwest のエラー表記には URL（クエリ・場所の nonce を含む）が付くため外す。
+        log::warn!(
+            "VRChat API の要求を組み立てられませんでした: {}",
+            e.without_url()
+        );
         "invalid"
     })?;
     let label = describe(request.method(), request.url());
@@ -185,9 +216,12 @@ async fn response(req: RequestBuilder) -> Outcome<reqwest::Response> {
 
 async fn json_body(req: RequestBuilder) -> Outcome<Value> {
     let res = response(req).await?;
-    let path = res.url().path().to_string();
+    let path = mask_secrets(res.url().path());
     res.json().await.map_err(|e| {
-        log::warn!("{path}: 応答を JSON として読めませんでした: {e}");
+        log::warn!(
+            "{path}: 応答を JSON として読めませんでした: {}",
+            e.without_url()
+        );
         "invalid".into()
     })
 }
@@ -195,6 +229,17 @@ async fn json_body(req: RequestBuilder) -> Outcome<Value> {
 fn entry(app: &tauri::AppHandle, id: &str) -> Outcome<Entry> {
     Entry::new(&app.config().identifier, id)
         .map_err(|e| storage_error("認証情報の保存先を開けませんでした", e))
+}
+
+// serde_json のエラー表記は `invalid type: string "…"` のように入力値の一部を含むことがある。
+// Cookie などの秘密値をログに残さないよう、種類と位置だけにする。
+fn json_error(error: &serde_json::Error) -> String {
+    format!(
+        "{:?} (line {}, column {})",
+        error.classify(),
+        error.line(),
+        error.column()
+    )
 }
 
 // OS の資格情報ストアや設定ファイルの失敗を記録し、画面向けの "storage" に変える。
@@ -212,7 +257,7 @@ fn registry(
     let users = match store.get("users") {
         None => Vec::new(),
         Some(Value::String(s)) => serde_json::from_str(&s)
-            .map_err(|e| storage_error("アカウント一覧を読み取れませんでした", e))?,
+            .map_err(|e| storage_error("アカウント一覧を読み取れませんでした", json_error(&e)))?,
         _ => {
             return Err(storage_error(
                 "アカウント一覧を読み取れませんでした",
@@ -347,7 +392,7 @@ pub async fn social_switch(app: tauri::AppHandle, id: String) -> Result<Value, S
         }
     })?;
     let jar = serde_json::from_str(&cookie).map_err(|e| {
-        log::warn!("保存された認証情報を読み取れませんでした: {e}");
+        log::warn!("保存された認証情報を読み取れませんでした: {}", json_error(&e));
         "http:401"
     })?;
     let session = Session::new(jar)?;
@@ -686,7 +731,8 @@ fn visible_person(mut value: Value) -> Outcome<Value> {
 #[specta::specta]
 pub async fn social_request(account: String, resource: Resource) -> Result<Value, String> {
     // 失敗したときに、画面のどの取得だったかをログで追えるようにする。
-    let label = format!("{resource:?}");
+    // Instance・Invite の場所には nonce が含まれるため伏せてから残す。
+    let label = mask_secrets(&format!("{resource:?}"));
     let result = fetch(account, resource).await;
     if let Err(error) = &result {
         log::warn!("{label} の取得に失敗しました: {error}");
@@ -780,6 +826,9 @@ async fn fetch(account: String, resource: Resource) -> Outcome<Value> {
                 me["location"] = json!(format!("{world}:{instance}"));
                 me["worldId"] = json!(world);
                 me["instanceId"] = json!(instance);
+                // 自分自身の `state` はゲーム内にいても "offline" になることがあるため、
+                // presence に現在地が入っていればゲーム内として扱う
+                me["state"] = json!("online");
             } else if !world.is_empty() {
                 // "offline"・"private"・"traveling" などはそのまま現在地として扱う
                 me["location"] = json!(world);
@@ -826,9 +875,6 @@ pub fn save_active(app: &tauri::AppHandle) {
 mod security_tests {
     use super::*;
 
-                // 自分自身の `state` はゲーム内にいても "offline" になることがあるため、
-                // presence に現在地が入っていればゲーム内として扱う
-                me["state"] = json!("online");
     #[test]
     fn only_display_fields_reach_the_person_view() {
         let person = json!({"id":"usr_demo","bio":"demo","location":"private","email":"demo@example.invalid","authToken":"fixture","futureField":true});
@@ -885,5 +931,34 @@ mod pacing_tests {
         let before = tokio::time::Instant::now();
         hold_off(Duration::from_secs(3)).await;
         assert!(reserve_slot().await - before >= Duration::from_secs(3));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn nonce_is_masked_in_logs() {
+        assert_eq!(
+            mask_secrets("GET /api/1/instances/wrld_a:123~private(usr_b)~nonce(secret-1)~region(jp)"),
+            "GET /api/1/instances/wrld_a:123~private(usr_b)~nonce(***)~region(jp)"
+        );
+        // 複数あってもすべて伏せる。
+        assert_eq!(
+            mask_secrets("a~nonce(x) b~nonce(y)"),
+            "a~nonce(***) b~nonce(***)"
+        );
+        // 切り詰めで閉じ括弧がなくても末尾まで伏せる。
+        assert_eq!(mask_secrets("wrld_a:1~nonce(abcd"), "wrld_a:1~nonce(***");
+        assert_eq!(mask_secrets("GET /api/1/auth/user"), "GET /api/1/auth/user");
+    }
+
+    #[test]
+    fn json_error_does_not_echo_input() {
+        let error = serde_json::from_str::<Vec<u32>>(r#""authcookie_secret""#).unwrap_err();
+        assert!(!json_error(&error).contains("authcookie_secret"));
+        // 元の表記には入力値が含まれることを確認しておく（伏せる理由）。
+        assert!(error.to_string().contains("authcookie_secret"));
     }
 }
