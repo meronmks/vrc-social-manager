@@ -33,6 +33,8 @@ interface Props {
 export default function FriendScreen({ account, instances, notify, expire }: Props) {
   const data = useSocialData(account.id, notify, expire);
   const [query, setQuery] = useState("");
+  // インスタンス一覧の検索語。フレンド一覧の検索とは対象が違うため別に持つ。
+  const [placeQuery, setPlaceQuery] = useState("");
   const [scope, setScope] = useState<InstanceScope>("all");
   const [sortOrder, setSortOrder] = useState<SortOrder>("friendCount");
   const [kind, setKind] = useState<InstanceKind>("all");
@@ -49,6 +51,7 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
   // フレンドが数千人いても軽く動くよう、絞り込みや並べ替えは元データが変わったときだけやり直す。
   // 検索語は入力を優先し、一覧の絞り込みは少し遅れて反映する。
   const search = useDeferredValue(query.trim().toLocaleLowerCase());
+  const placeSearch = useDeferredValue(placeQuery.trim().toLocaleLowerCase());
   const { favorites, group, friends, me, showAll, members, placeAt } = data;
   const starred = useMemo(() => new Set(favorites.map((f) => f.favoriteId)), [favorites]);
   const inGroup = useMemo(() => favoriteIdsIn(favorites, group), [favorites, group]);
@@ -61,13 +64,11 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
   const self = me?.online ? me : undefined;
   const selfLocation = self && locationOf(self);
   const byPlace = useMemo(() => groupByPlace(everyone, self), [everyone, self]);
-  const listOptions = { scope, kind, sortOrder, members, byPlace, inGroup, placeAt, selfLocation };
+  const listOptions = { scope, kind, sortOrder, search: placeSearch, members, byPlace, inGroup, placeAt, selfLocation };
+  // listOptions は描画のたびに作り直されるため、依存には中身の値を並べる
   const locations = useMemo(
-    () =>
-      instances
-        ? visibleLocations({ scope, kind, sortOrder, members, byPlace, inGroup, placeAt, selfLocation })
-        : [],
-    [instances, scope, kind, sortOrder, members, byPlace, inGroup, placeAt, selfLocation],
+    () => (instances ? visibleLocations(listOptions) : []),
+    [instances, scope, kind, sortOrder, placeSearch, members, byPlace, inGroup, placeAt, selfLocation],
   );
   const groups = useMemo(
     () => favoriteGroupOptions(data.groups, account.friendGroupNames),
@@ -93,12 +94,14 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
     setReveal(undefined);
   }
   // フレンドの現在地のインスタンスを、インスタンス一覧で選択して表示する。
-  // 今の絞り込みでは一覧に出ない場合は、絞り込みを「全フレンド・すべて」に戻して一覧上でも見つけられるようにする。
+  // 今の絞り込みや検索では一覧に出ない場合は、絞り込みを「全フレンド・すべて」に戻し、検索も消して
+  // 一覧上でも見つけられるようにする。
   function openInstance(target: string) {
     const listed = visibleLocations(listOptions).includes(target);
     if (!listed) {
       setScope("all");
       setKind("all");
+      setPlaceQuery("");
     }
     setInstanceSelection({ location: target });
     setReveal(target);
@@ -133,24 +136,36 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
           </button>
         </div>
         {instances ? (
-          <InstanceFilters
-            scope={scope}
-            kind={kind}
-            groupLabel={groups.find((g) => g.name === data.group)?.label}
-            groupPicker={groupPicker}
-            onScope={(value) => {
-              setScope(value);
-              setInstanceSelection(undefined);
-            }}
-            onKind={(value) => {
-              setKind(value);
-              setInstanceSelection(undefined);
-            }}
-          />
+          <>
+            <SearchBox
+              query={placeQuery}
+              label={t("ワールド名・フレンド名などで検索", "Search by world, friend, or group name")}
+              onChange={(value) => {
+                setPlaceQuery(value);
+                setInstanceSelection(undefined);
+                setReveal(undefined);
+              }}
+            />
+            <InstanceFilters
+              scope={scope}
+              kind={kind}
+              groupLabel={groups.find((g) => g.name === data.group)?.label}
+              groupPicker={groupPicker}
+              onScope={(value) => {
+                setScope(value);
+                setInstanceSelection(undefined);
+              }}
+              onKind={(value) => {
+                setKind(value);
+                setInstanceSelection(undefined);
+              }}
+            />
+          </>
         ) : (
           <>
             <SearchBox
               query={query}
+              label={t("全フレンドから名前で検索", "Search all friends by name")}
               onChange={(value) => {
                 setQuery(value);
                 selectPerson("");
@@ -187,6 +202,7 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
             friendsReady={friendsReady}
             busy={busy}
             failed={failed}
+            query={placeQuery}
             sortOrder={sortOrder}
             onSort={setSortOrder}
             selected={origin}
@@ -254,15 +270,15 @@ export default function FriendScreen({ account, instances, notify, expire }: Pro
   );
 }
 
-// 全フレンドを名前で探す検索欄。
-function SearchBox({ query, onChange }: { query: string; onChange: (query: string) => void }) {
+// 一覧を名前で探す検索欄。`label` は何を探せるかの説明（入力欄の案内と読み上げに使う）。
+function SearchBox({ query, label, onChange }: { query: string; label: string; onChange: (query: string) => void }) {
   const t = useText();
   return (
     <label className="search-box">
       <FiSearch />
       <input
-        aria-label={t("全フレンドから名前で検索", "Search all friends by name")}
-        placeholder={t("全フレンドから名前で検索", "Search all friends by name")}
+        aria-label={label}
+        placeholder={label}
         value={query}
         onChange={(e) => onChange(e.target.value)}
       />

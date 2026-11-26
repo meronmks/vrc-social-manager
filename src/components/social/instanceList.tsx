@@ -88,6 +88,8 @@ interface ListProps {
   friendsReady: boolean;
   busy: boolean;
   failed: boolean;
+  /** 検索欄に入力中の語（空なら検索していない） */
+  query: string;
   sortOrder: SortOrder;
   onSort: (order: SortOrder) => void;
   selected?: string;
@@ -103,7 +105,7 @@ interface ListProps {
 // インスタンス一覧（件数と並び順、各カード、空のときの案内）。
 // カードは仮想スクロールで見えている範囲だけを描画する。
 export function InstanceList(props: ListProps) {
-  const { locations, busy, failed, reveal, onRevealed } = props;
+  const { locations, busy, failed, query, reveal, onRevealed } = props;
   const t = useText();
   const virtuoso = useRef<VirtuosoHandle>(null);
   // 移動してきたインスタンスのカードを一覧の中央に表示する。一覧の取得が終わる前なら、届いたときに改めてスクロールする。
@@ -175,7 +177,11 @@ export function InstanceList(props: ListProps) {
         />
       )}
       {!locations.length && !busy && !failed && (
-        <p className="empty-text">{t("表示するインスタンスはありません", "No matching instances")}</p>
+        <p className="empty-text">
+          {query.trim()
+            ? t("「" + query + "」に一致するインスタンスはありません", "No instances match “" + query + "”")
+            : t("表示するインスタンスはありません", "No matching instances")}
+        </p>
       )}
     </>
   );
