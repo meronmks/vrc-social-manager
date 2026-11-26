@@ -148,7 +148,7 @@ export function SessionForm({ target, adding, hidden, onSuccess, cancel, showLog
           </>
         )}
         {error && (
-          <p role="alert" className="list-state warn">
+          <p role="alert" className="list-state error">
             {error}
             {unexpected && showLogs && (
               <button type="button" onClick={showLogs}>

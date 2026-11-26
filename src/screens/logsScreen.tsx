@@ -142,7 +142,7 @@ export default function LogsScreen({ onClose }: { onClose?: () => void }) {
         </button>
       </div>
       {failed && (
-        <div className="list-state warn" role="alert">
+        <div className="list-state error" role="alert">
           {t("動作ログを読み込めませんでした", "Could not load the activity log")}
         </div>
       )}

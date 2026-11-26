@@ -286,7 +286,7 @@ function ListStatus(props: {
   const t = useText();
   if (!props.busy && !props.failed) return null;
   return (
-    <div className={props.failed ? "list-state warn" : "list-state"} role="status">
+    <div className={props.failed ? "list-state error" : "list-state"} role="status">
       {props.failed ? (
         <>
           {props.message}{" "}
