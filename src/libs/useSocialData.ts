@@ -76,19 +76,20 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
     setShowAll(all);
     void userDataStore
       .setShowAllFriends(account, all)
-      .catch(() =>
-        callbacks.current.notify("表示範囲を保存できませんでした", "Could not save the friend filter", true),
+      .catch((e) =>
+        callbacks.current.notify("表示範囲を保存できませんでした", "Could not save the friend filter", true, e),
       );
   }
 
   function saveFavoriteGroup(name: string) {
     void userDataStore
       .setFavoriteGroup(account, name)
-      .catch(() =>
+      .catch((e) =>
         callbacks.current.notify(
           "グループの選択を保存できませんでした",
           "Could not save the selected group",
           true,
+          e,
         ),
       );
   }
@@ -166,7 +167,7 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
     function fail(key: Source, e: unknown, ja: string, en: string) {
       if (!live) return;
       phase(key, "failed");
-      callbacks.current.notify(ja, en, true);
+      callbacks.current.notify(ja, en, true, e);
       if (isExpired(e)) callbacks.current.expire();
     }
     async function pages<T>(
@@ -302,7 +303,7 @@ export function useSocialData(account: string, notify: Notify, expire: () => voi
       try {
         await placeQueue;
         if (stopped) throw stopped;
-        if (incomplete) throw new Error();
+        if (incomplete) throw new Error("取得できなかったインスタンスがあります（個々の原因は直前の警告を参照）");
         phase("places", "ready");
       } catch (e) {
         fail("places", e, "一部のインスタンスを取得できませんでした", "Some instances could not be loaded");

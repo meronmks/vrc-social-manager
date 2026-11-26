@@ -37,7 +37,7 @@ export function SelfInvite({
       if (isExpired(e)) expire();
       const definitive = isDefinitiveFailure(e);
       setState(definitive ? "failed" : "unknown");
-      if (definitive) notify("招待を送れませんでした", "Could not send the invitation", true);
+      if (definitive) notify("招待を送れませんでした", "Could not send the invitation", true, e);
       else notify("送信結果を確認できませんでした", "Could not confirm delivery");
     } finally {
       lock.current = false;
