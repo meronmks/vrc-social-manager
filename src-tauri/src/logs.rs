@@ -26,6 +26,8 @@ pub struct LogEntry {
     /// 起動してからの通し番号。差分取得に使う。
     pub seq: u32,
     /// 記録した時刻（UNIX エポックからのミリ秒）
+    // 常に有限値なので、TypeScript 側では null を含まない number として扱う
+    #[specta(type = specta_typescript::Number)]
     pub time: f64,
     /// "ERROR" | "WARN" | "INFO" | "DEBUG" | "TRACE"
     pub level: String,

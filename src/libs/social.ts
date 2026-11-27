@@ -1,4 +1,4 @@
-import { commands, JsonValue, Resource, Result } from "@/bindings";
+import { commands, type Value, type Resource } from "@/bindings";
 import { useTranslation } from "react-i18next";
 
 export type Text = (ja: string, en: string) => string;
@@ -97,7 +97,10 @@ export interface Place {
 }
 export type PublicProfile = UserImages & Pick<Person, "bio" | "bioLinks">;
 export type AuthReply = Account | { method: "emailOtp" | "totp" };
-async function data<T>(call: Promise<Result<JsonValue, string>>): Promise<T> {
+// コマンドの戻り値（tauri-specta の Result 形式）
+type CommandResult<T, E> = { status: "ok"; data: T } | { status: "error"; error: E };
+
+async function data<T>(call: Promise<CommandResult<Value, string>>): Promise<T> {
   const result = await call;
   if (result.status === "error") throw result.error;
   return result.data as T;

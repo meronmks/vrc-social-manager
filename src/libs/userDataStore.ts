@@ -1,4 +1,4 @@
-import { commands, type JsonValue, type Preference } from "@/bindings";
+import { commands, type Value as JsonValue, type Preference } from "@/bindings";
 
 async function read(setting: Preference) {
   const result = await commands.settingsGet(setting);
