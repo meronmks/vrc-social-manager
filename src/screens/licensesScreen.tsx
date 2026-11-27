@@ -103,7 +103,7 @@ export default function LicensesScreen() {
       </button>
       <h1 id="licenses-title">{t("サードパーティライセンス", "Third-party licenses")}</h1>
       {failed ? (
-        <div className="list-state warn" role="alert">
+        <div className="list-state error" role="alert">
           {t("ライセンスを読み込めませんでした", "Could not load licenses")}
           <button className="quiet-action" onClick={retry}>
             {t("再試行", "Retry")}

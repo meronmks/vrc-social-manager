@@ -71,7 +71,6 @@ pub fn run() {
     commands::export_ts();
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(commands::handlers())
         // 認証が必要な VRChat の画像を、IPC を通さず `<img>` から直接読めるようにする。

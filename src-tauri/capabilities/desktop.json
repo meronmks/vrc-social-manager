@@ -9,7 +9,6 @@
     "main"
   ],
   "permissions": [
-    "clipboard-manager:allow-write-text",
     "core:default",
     "shell:allow-open",
     "shell:default",

@@ -64,11 +64,20 @@ function matchesKind(place: Place | undefined, kind: InstanceKind) {
   return Boolean(place?.type && place.type !== "group");
 }
 
+// 検索語（小文字にしたもの）が、ワールド名・インスタンス名・主催グループ名・そこにいる人の名前のどれかに含まれるか。
+function matchesSearch(place: Place | undefined, people: Person[] | undefined, search: string) {
+  const names = [place?.world?.name, place?.displayName, place?.groupName, ...(people ?? []).map((p) => p.displayName)];
+  return names.some((name) => name?.toLocaleLowerCase().includes(search));
+}
+
 // インスタンス一覧に出す場所。所属グループの一覧はそのまま、フレンドの現在地は対象と種別で絞る。
+// 検索語があれば、さらに名前で絞る。
 export function visibleLocations(options: {
   scope: InstanceScope;
   kind: InstanceKind;
   sortOrder: SortOrder;
+  /** 小文字にした検索語。空なら名前では絞らない */
+  search: string;
   members: string[];
   byPlace: Map<string, Person[]>;
   inGroup: Set<string>;
@@ -76,14 +85,15 @@ export function visibleLocations(options: {
   /** 自分の現在地。一覧に含まれていれば、並び順にかかわらず先頭に置く */
   selfLocation?: string;
 }) {
-  const { scope, kind, sortOrder, members, byPlace, inGroup, placeAt, selfLocation } = options;
-  const locations =
+  const { scope, kind, sortOrder, search, members, byPlace, inGroup, placeAt, selfLocation } = options;
+  const locations = (
     scope === "members"
       ? [...members]
       : [...byPlace.keys()].filter((location) => {
           if (scope === "favorite" && !byPlace.get(location)?.some((f) => inGroup.has(f.id))) return false;
           return matchesKind(placeAt(location), kind);
-        });
+        })
+  ).filter((location) => !search || matchesSearch(placeAt(location), byPlace.get(location), search));
   if (sortOrder === "friendCount") {
     locations.sort((a, b) => (byPlace.get(b)?.length ?? 0) - (byPlace.get(a)?.length ?? 0));
   }

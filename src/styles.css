@@ -23,8 +23,11 @@
   --pale: #e4f3e9;
   --accent: #116552;
   --on-accent: #fff;
+  /* 注意（ログインの注意書き・入場待ちなど）は --warn、失敗（取得・保存・認証の失敗、入力の誤り）は --error を使う */
   --warn: #fff1d8;
   --warn-ink: #744813;
+  --error: #fde4e1;
+  --error-ink: #8a1f1a;
   --nav: #163235;
   --nav-ink: #d6e2de;
   --nav-active: #2a5052;
@@ -63,6 +66,8 @@
   --on-accent: #10302a;
   --warn: #473921;
   --warn-ink: #f5d69d;
+  --error: #4a2626;
+  --error-ink: #f6c3bb;
   --nav: #0f1d1e;
   --nav-ink: #c3d4cf;
   --nav-active: #24413f;
@@ -276,7 +281,7 @@
   color: var(--accent);
 }
 .notice-list li[data-error] > svg {
-  color: var(--warn-ink);
+  color: var(--error-ink);
 }
 .notice-list small {
   white-space: nowrap;
@@ -621,10 +626,10 @@
   border-radius: var(--radius-s);
   margin: 7px 0;
 }
-.list-state.warn,
+.list-state.error,
 .problem {
-  background: var(--warn);
-  color: var(--warn-ink);
+  background: var(--error);
+  color: var(--error-ink);
 }
 .list-state button,
 .problem button {
@@ -1115,7 +1120,7 @@
   color: var(--sub);
 }
 .settings-box .form-error {
-  color: var(--warn-ink);
+  color: var(--error-ink);
 }
 .licenses-page {
   display: flex;
@@ -1210,7 +1215,7 @@
 .logs-page .form-error {
   margin: 8px 0 0;
   font-size: 12px;
-  color: var(--warn-ink);
+  color: var(--error-ink);
 }
 .log-list {
   flex: 1 1 auto;
@@ -1253,11 +1258,17 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.log-row:is([data-level="WARN"], [data-level="ERROR"]) {
+.log-row[data-level="WARN"] {
   background: var(--warn);
 }
-.log-row:is([data-level="WARN"], [data-level="ERROR"]) :is(.log-level, .log-message) {
+.log-row[data-level="WARN"] :is(.log-level, .log-message) {
   color: var(--warn-ink);
+}
+.log-row[data-level="ERROR"] {
+  background: var(--error);
+}
+.log-row[data-level="ERROR"] :is(.log-level, .log-message) {
+  color: var(--error-ink);
 }
 @media (max-width: 650px) {
   .licenses-page { padding: 14px; }
@@ -1327,11 +1338,15 @@
     "Yu Gothic UI",
     sans-serif;
 }
-.Toastify .app-toast.Toastify__toast--error,
 .Toastify .app-toast.Toastify__toast--warning {
   background: var(--warn);
   color: var(--warn-ink);
   border-color: color-mix(in srgb, var(--warn-ink) 25%, transparent);
+}
+.Toastify .app-toast.Toastify__toast--error {
+  background: var(--error);
+  color: var(--error-ink);
+  border-color: color-mix(in srgb, var(--error-ink) 25%, transparent);
 }
 .app-toast .Toastify__toast-icon {
   width: 16px;

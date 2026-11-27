@@ -1,4 +1,4 @@
-import { commands, JsonValue, Resource, Result } from "@/bindings";
+import { commands, type Value, type Resource } from "@/bindings";
 import { useTranslation } from "react-i18next";
 
 export type Text = (ja: string, en: string) => string;
@@ -97,7 +97,10 @@ export interface Place {
 }
 export type PublicProfile = UserImages & Pick<Person, "bio" | "bioLinks">;
 export type AuthReply = Account | { method: "emailOtp" | "totp" };
-async function data<T>(call: Promise<Result<JsonValue, string>>): Promise<T> {
+// コマンドの戻り値（tauri-specta の Result 形式）
+type CommandResult<T, E> = { status: "ok"; data: T } | { status: "error"; error: E };
+
+async function data<T>(call: Promise<CommandResult<Value, string>>): Promise<T> {
   const result = await call;
   if (result.status === "error") throw result.error;
   return result.data as T;
@@ -217,4 +220,33 @@ export interface Notice {
   en: string;
   error?: boolean;
 }
-export type Notify = (ja: string, en: string, error?: boolean) => void;
+/** 失敗の通知。cause を渡すと、その原因と再試行で直りそうかを動作ログに残す */
+export type Notify = (ja: string, en: string, error?: boolean, cause?: unknown) => void;
+
+// Rust 側から返るエラーの種類（"http:503" など）を、動作ログ向けの原因と対処の説明にする。
+export function describeFailure(error: unknown): string {
+  const reason = error instanceof Error ? error.message : String(error);
+  const http = /^http:(\d{3})$/.exec(reason);
+  if (http) {
+    const code = Number(http[1]);
+    if (code === 401) return "HTTP 401: 認証の有効期限切れです。再ログインが必要です";
+    if (code === 403) return "HTTP 403: 権限がありません。再試行しても解決しない可能性があります";
+    if (code === 404) return "HTTP 404: 対象が見つかりません。削除済みか、公開範囲外の可能性があります";
+    if (code === 429)
+      return "HTTP 429: 短時間に要求しすぎて VRChat に制限されています。しばらく待ってから再試行してください";
+    if (code >= 500) return `HTTP ${code}: VRChat 側の一時的な障害です。時間をおいて再試行してください`;
+    return `HTTP ${code}: VRChat が要求を受け付けませんでした`;
+  }
+  switch (reason) {
+    case "network":
+      return "通信できませんでした（接続できない・タイムアウトなど）。ネットワークを確認して再試行してください";
+    case "invalid":
+      return "VRChat の応答を読み取れませんでした。仕様変更などアプリ側の問題の可能性があります";
+    case "storage":
+      return "認証情報や設定の保存先を読み書きできませんでした";
+    case "inactive":
+      return "このアカウントの認証情報が見つかりません。再ログインが必要です";
+    default:
+      return reason || "原因不明";
+  }
+}

@@ -22,7 +22,7 @@ jobs:
       prerelease: ${{ steps.release.outputs.prerelease }}
       release_body: ${{ steps.release_notes.outputs.result }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ inputs.tag_name || github.ref }}
@@ -62,7 +62,7 @@ jobs:
 
       - name: リリースノートを生成
         id: release_notes
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           TAG_NAME: ${{ steps.release.outputs.tag_name }}
         with:
@@ -96,7 +96,7 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ needs.prepare.outputs.tag_name }}
@@ -108,7 +108,7 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: pnpmをセットアップ
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: latest
 
@@ -135,7 +135,7 @@ jobs:
         run: cargo install cargo-bundle-licenses
 
       - name: アプリをビルドしてドラフトリリースへ追加
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}

@@ -126,7 +126,7 @@ function Workspace() {
                 key={active.id + accounts.epoch}
                 account={active}
                 instances={pathname === "/instances"}
-                notify={(ja, en, error) => notices.notify(active.id, ja, en, error)}
+                notify={(ja, en, error, cause) => notices.notify(active.id, ja, en, error, cause)}
                 expire={() => accounts.expire(active.id)}
               />
             </div>

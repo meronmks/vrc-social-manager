@@ -100,11 +100,11 @@ pub(crate) fn export_ts() {
             get_release_note,
             get_favorites_user_instances,
         ])
-        .export(
-            specta_typescript::Typescript::default()
-                .bigint(specta_typescript::BigIntExportBehavior::Number),
-            "../src/bindings.ts",
-        )
+        // フロントエンドは `{ status: "ok" | "error" }` 形式の戻り値を前提にしているため、従来どおり Result 形式で出力する
+        .error_handling(tauri_specta::ErrorHandlingMode::Result)
+        // 64bit 整数は従来どおり TypeScript の number として出力する（値は JS の安全な整数範囲に収まる用途のみ）
+        .dangerously_cast_bigints_to_number()
+        .export(specta_typescript::Typescript::default(), "../src/bindings.ts")
         .unwrap();
 }
 
@@ -133,7 +133,6 @@ static APP_STATE: Lazy<Arc<RwLock<AppState>>> =
     Lazy::new(|| Arc::new(RwLock::new(AppState::default())));
 
 #[derive(Debug, Clone, Serialize, specta::Type)]
-#[specta(export)]
 #[serde(tag = "type")]
 pub enum RustError {
     Unrecoverable { message: String },
@@ -520,7 +519,6 @@ pub async fn get_release_note(tag_name: &str) -> Result<String, RustError> {
 
 #[cfg(dev)]
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
-#[specta(export)]
 pub struct DebugApiRequest {
     pub method: String,
     pub endpoint: String,

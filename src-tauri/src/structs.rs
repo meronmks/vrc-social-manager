@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, specta::Type)]
-#[specta(export)]
 pub struct ApiResponse {
     pub status: String,
     pub data: String,
